@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import org.eclipse.jgit.util.FileUtils;
 import org.eclipse.jgit.api.Git;
@@ -452,20 +454,21 @@ static ForkList populateForkList(String inputFile) throws Exception {
 }
 
 
-static void dumpFile(String filePath, ForkList l) throws IOException { // TODO: zip the dump
+static void dumpFile(String filePath, ForkList l) throws IOException {
   File dump = new File(filePath);
   if (dump.exists()) dump.delete();
-  ObjectOutput out = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(dump)));
+  GZIPOutputStream gzOut = new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(dump)));
+  ObjectOutput out = new ObjectOutputStream(gzOut);
   l.writeExternal(out);
+  gzOut.finish();
   out.close();
 }
 
 
-// TODO: unzip the dump
 static ForkList importForkList(String filePath) throws FileNotFoundException, IOException,
     ClassNotFoundException {
   ForkList res = new ForkList();
-  ObjectInput in = new ObjectInputStream(new BufferedInputStream(new FileInputStream(filePath)));
+  ObjectInput in = new ObjectInputStream(new GZIPInputStream(new BufferedInputStream(new FileInputStream(filePath))));
   res.readExternal(in);
   return res;
 }
