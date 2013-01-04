@@ -48,6 +48,7 @@ public static String field_sep = "    "; // field separator in input datafile's 
 public static String id_sep = "/"; // the string that separates owner and name in a fork id string
 public static String list_sep = ","; // fork id separator in the list taken from the input dataset
                                      // file
+public static String log_sep = "<#>"; // field separator within a git log output line
 public static String repo_dir; // the absolute path to the dir that contains the git repos to be
                                // imported in jgit data structures
 public static String[] ids = null; // list of repos to be considered to build the fork tree and
@@ -250,7 +251,7 @@ static void printCommits(String outFile, RevWalk walk) throws IOException, NoHea
   PrintWriter pout = new PrintWriter(new FileWriter(outFile), true);
   RevCommit c = walk.next();
   while (c != null && !c.has(RevFlag.UNINTERESTING)) {
-    pout.println("===========\n" + printCommit(c));
+    pout.println(printCommit(c));
     c = walk.next();
   }
   walk.reset();
@@ -284,15 +285,16 @@ static void printCommits(String outFile, Git git, String from_ref, String to_ref
 }
 
 
+// format the output like in --pretty="%H<#>%aN<#>%at<#>%cN<#>%ct<#>%s
 static String printCommit(RevCommit c) {
   String out = "";
   PersonIdent author = c.getAuthorIdent();
   PersonIdent committer = c.getCommitterIdent();
-  // long commitTime = ((long)c.getCommitTime())*1000; // == committer.getWhen() in (milli)seconds
-  out += ""// (new java.util.Date(commitTime)) + "\n"
-      + committer.getName() + field_sep + committer.getWhen() + "\n" + author.getName()
-      + field_sep
-      + author.getWhen() + "\n" + c.getFullMessage(); // c.getShortMessage());
+  // long commitTime = (long)c.getCommitTime() == committer.getWhen().getTime() / 1000 (in seconds)
+  out += "" + c.name()
+      + log_sep + author.getName() + log_sep + author.getWhen().getTime()
+      + log_sep + committer.getName() + log_sep + committer.getWhen().getTime()
+      + log_sep + c.getShortMessage(); //c.getFullMessage(); c.getShortMessage();
   return out;
 }
 
