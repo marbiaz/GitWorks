@@ -456,7 +456,7 @@ static ForkList populateForkList(String inputFile) throws Exception {
 }
 
 
-static void dumpFile(String filePath, ForkList l) throws IOException {
+static void exportForkList(String filePath, ForkList l) throws IOException {
   File dump = new File(filePath);
   if (dump.exists()) dump.delete();
   GZIPOutputStream gzOut = new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(dump)));
@@ -508,7 +508,7 @@ public static void main(String[] args) throws Exception {
   //projects = importForkList(trees_out_dir + "listDump");
   computeAggregates(ids, projects, 100); // with a large param value the complete fork trees will be
                                          // visited
-  // dumpFile(trees_out_dir + "listDump", projects);
+  exportForkList(trees_out_dir + "listDump", projects);
   // computeAggregates(null, projects, 1); // reset all projects aggregates
   System.out.println(projects.toString());
 
