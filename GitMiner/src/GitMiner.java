@@ -477,6 +477,46 @@ static ForkList importForkList(String filePath) throws FileNotFoundException, IO
 }
 
 
+/**
+ * It adds {@link java.lang.Comparable} objects (of any type) to the given list.
+ * The list will be always ordered according to the natural ordering of the items.
+ * No duplicates are allowed in the list, thus no addition occurs if an item is
+ * already in the list.<br>
+ * No type checking on the objects being added is performed. Thus the caller must
+ * be sure that the items being added are consistent with respect to their
+ * mutual comparison.
+ *
+ * @param set The list that hosts the items
+ * @param item The object to be added
+ */
+@SuppressWarnings({ "unchecked", "rawtypes" })
+static private void addUnique(List set, Comparable item) {
+  int i = Collections.binarySearch(set, item);
+  if (i < 0) {
+    set.add(-i - 1, item);
+  }
+}
+
+
+/**
+ * It provides the printout of all the objects in the given array,
+ * one per line, each line starting with the array index of the object.
+ *
+ * @param a array of objects to be printed
+ * @return A String containing the objects printout.
+ */
+static public String printArray(Object[] a) {
+  String res = "";
+  if (a == null) {
+    res = "\nNULL!\n";
+  } else {
+    for (int i = 0; i < a.length; i++) {
+      res += "[" + i + "] " + a[i].toString() + "\n";
+    }
+  }
+  return res;
+}
+
 public static void main(String[] args) throws Exception {
 
   boolean anew = true; // flag to differentiate tests
