@@ -527,9 +527,10 @@ public static void main(String[] args) throws Exception {
     // System.out.println(printRepoInfo(git.getRepository()));
 
     /************** create big tree ****************/
-
-    purgeMissingForks(projects, fe); // IRREVERSIBLE!!!
-    addRemotes(git, fe, 100); // with a large param value the complete fork tree will be built
+    if (!anew) {
+      purgeMissingForks(projects, fe); // IRREVERSIBLE!!!
+      addRemotes(git, fe, 0); // with a large param value the complete fork tree will be built
+    }
 
     /************** print commits & checkout ****************/
 
