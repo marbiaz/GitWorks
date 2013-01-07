@@ -16,13 +16,18 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import org.eclipse.jgit.util.FileUtils;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.ListBranchCommand.ListMode;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.NoHeadException;
 import org.eclipse.jgit.lib.AnyObjectId;
@@ -31,6 +36,7 @@ import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectLoader;
 import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.PersonIdent;
+import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.StoredConfig;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -580,6 +586,26 @@ public static void main(String[] args) throws Exception {
       git.checkout().setStartPoint(refspec).setCreateBranch(anew)
           .setName(getProjectNameAsRemote(fe)).call(); // .getResult() for a dry-run
       // createTree(fe, makeTree(walk, from));
+    /************** build a map with all the branches in the big tree ***************/
+
+    ArrayList<Ref> temp = null; Ref r;
+    Iterator<Ref> brIt, allBranches = ((ArrayList<Ref>)git.branchList().setListMode(ListMode.REMOTE).call()).iterator();
+    HashMap<String, ArrayList<Ref>> branches = new HashMap<String, ArrayList<Ref>>();
+    String bName = ""; // getProjectNameAsRemote(fe);
+    while (allBranches.hasNext()) {
+      r = allBranches.next();
+      if (!r.getName().split("/")[2].equals(bName)) { // geName() format is refs/remotes/<remote-name>/<branch-name>
+        bName = r.getName().split("/")[2];
+        temp = new ArrayList<Ref>();
+        branches.put(bName, temp);
+      }
+      temp.add(r);
+    }
+    //Iterator<ArrayList<Ref>> it = branches.values().iterator();
+    //while (it.hasNext()) {
+    //  System.out.println(printArray(it.next().toArray()));
+    //}
+
     }
 
   }
