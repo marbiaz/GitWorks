@@ -273,6 +273,7 @@ static void printCommits(String outFile, Git git, String from_ref, String to_ref
   if (to != null) walk.markUninteresting(walk.parseCommit(to));
 
   printCommits(outFile, walk);
+  walk.dispose();
   // PrintWriter pout = new PrintWriter(new FileWriter(outFile), true);
   // Iterator<RevCommit> itc = git.log().add(from).call().iterator();
   // RevCommit c;
@@ -545,7 +546,7 @@ public static void main(String[] args) throws Exception {
     e.printStackTrace();
   }
   finally {
-    if (walk != null) walk.release();
+    if (walk != null) walk.dispose();
     if (git != null) git.getRepository().close();
   }
 }
