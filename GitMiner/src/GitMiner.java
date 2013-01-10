@@ -466,6 +466,29 @@ static ForkList populateForkList(String inputFile) throws Exception {
 }
 
 
+static int buildBranchesMap(Git git, HashMap<String, ArrayList<Ref>> map) throws GitAPIException {
+  ArrayList<Ref> temp = null;
+  Ref r;
+  int res = 0;
+  Iterator<Ref> allBranches = ((ArrayList<Ref>)git.branchList().setListMode(ListMode.REMOTE).call())
+      .iterator();
+  String bName = "";
+  while (allBranches.hasNext()) {
+    r = allBranches.next();
+    if (!("refs/remotes/" + r.getName().split("/")[2]).equals(bName)) {
+      bName = "refs/remotes/" + r.getName().split("/")[2]; // geName() format is
+                                                           // refs/remotes/<remote-name>/<branch-name>
+      temp = new ArrayList<Ref>();
+      map.put(bName, temp);
+    }
+    temp.add(r);
+    res++;
+  }
+  // Iterator<ArrayList<Ref>> rit = map.values().iterator();
+  // Iterator<String> sit = map.keySet().iterator();
+  // while (rit.hasNext()) {
+  // System.out.println("\t" + sit.next() + ":\n" + printArray(rit.next().toArray()));
+  // }
   return res;
 }
 
@@ -543,22 +566,8 @@ public static void main(String[] args) throws Exception {
       // createTree(fe, makeTree(walk, from));
     /************** build a map with all the branches in the big tree ***************/
 
-    ArrayList<Ref> temp = null; Ref r;
-    Iterator<Ref> brIt, allBranches = ((ArrayList<Ref>)git.branchList().setListMode(ListMode.REMOTE).call()).iterator();
     HashMap<String, ArrayList<Ref>> branches = new HashMap<String, ArrayList<Ref>>();
-    String bName = ""; // getProjectNameAsRemote(fe);
-    while (allBranches.hasNext()) {
-      r = allBranches.next();
-      if (!r.getName().split("/")[2].equals(bName)) { // geName() format is refs/remotes/<remote-name>/<branch-name>
-        bName = r.getName().split("/")[2];
-        temp = new ArrayList<Ref>();
-        branches.put(bName, temp);
-      }
-      temp.add(r);
-    }
-    //Iterator<ArrayList<Ref>> it = branches.values().iterator();
-    //while (it.hasNext()) {
-    //  System.out.println(printArray(it.next().toArray()));
+    int bSize = buildBranchesMap(git, branches);
     //}
 
     }
