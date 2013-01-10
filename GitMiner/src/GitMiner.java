@@ -493,7 +493,42 @@ static int buildBranchesMap(Git git, HashMap<String, ArrayList<Ref>> map) throws
 }
 
 
+static HashMap<ObjectId, ArrayList<Ref>> findAllBranches(Git git,
+    HashMap<String, ArrayList<Ref>> branches, int bSize) throws NoHeadException, GitAPIException,
+    IOException {
+  HashMap<ObjectId, ArrayList<Ref>> structure = new HashMap<ObjectId, ArrayList<Ref>>();
+  ArrayList<Ref> vals; Iterator<Ref> brIt;
+  Iterator<ArrayList<Ref>> bit; Entry<ObjectId, ArrayList<Ref>> re; Ref r; ObjectId k;
+  Iterator<Entry<ObjectId, ArrayList<Ref>>> sit;
+  Iterator<RevCommit> allIn = git.log().all().call().iterator();
+  RevWalk walk = new RevWalk(git.getRepository());
+  walk.setRetainBody(false); // this walk is for multiple usage
+  while (allIn.hasNext()) {
+    vals = new ArrayList<Ref>();
+    vals.ensureCapacity(bSize);
+    structure.put(allIn.next().getId(), vals);
   }
+  sit = structure.entrySet().iterator();
+  while (sit.hasNext()) {
+    re = sit.next();
+    k = re.getKey();
+    vals = re.getValue();
+    bit = branches.values().iterator();
+    while (bit.hasNext()) {
+      brIt = bit.next().iterator();
+      while (brIt.hasNext()) {
+        r = brIt.next();
+        if (walk.isMergedInto(walk.parseCommit(k),
+            walk.parseCommit(r.getObjectId()))) {
+          vals.add(r);
+        }
+      }
+    }
+    vals.trimToSize();
+    //System.out.print(re.getKey().getName() + " :\n" + printArray(re.getValue().toArray()));
+  }
+  walk.dispose();
+  return structure;
 }
 
 
@@ -568,6 +603,14 @@ public static void main(String[] args) throws Exception {
 
     HashMap<String, ArrayList<Ref>> branches = new HashMap<String, ArrayList<Ref>>();
     int bSize = buildBranchesMap(git, branches);
+    // find all branches that contain a given commit
+    HashMap<ObjectId, ArrayList<Ref>> structure = findAllBranches(git, branches, bSize);
+    //Entry<ObjectId, ArrayList<Ref>> re;
+    //Iterator<Entry<ObjectId, ArrayList<Ref>>> sit;
+    //sit = structure.entrySet().iterator();
+    //while (sit.hasNext()) {
+    //  re = sit.next();
+    //  System.out.print(re.getKey().getName() + " :\n" + printArray(re.getValue().toArray()));
     //}
 
     }
