@@ -74,6 +74,7 @@ HashMap<String, ArrayList<ObjectId>> commitsInR;
 HashMap<String, ArrayList<Ref>> branches;
 HashMap<String, ArrayList<ObjectId>> commitsNotInR;
 HashMap<String, ArrayList<ObjectId>> commitsOnlyInR;
+HashMap<String, ArrayList<ObjectId>> commitsInB;
 int bSize;
 Git git;
 
@@ -664,6 +665,53 @@ HashMap<String, ArrayList<ObjectId>> getCommitsNotInR(RevWalk walk) throws Missi
   return commits;
 }
 
+
+// find commits that are unique to a given branch
+HashMap<String, ArrayList<ObjectId>> getCommitsInB(RevWalk walk) throws MissingObjectException,
+    IncorrectObjectTypeException, IOException {
+
+  Iterator<Ref> brIt;
+  HashMap<String, ArrayList<ObjectId>> commits = new HashMap<String, ArrayList<ObjectId>>();
+  ArrayList<RevCommit> comm;
+  ArrayList<ObjectId> ids;
+  ArrayList<RevCommit> included = new ArrayList<RevCommit>();
+  ArrayList<RevCommit> excluded = new ArrayList<RevCommit>();
+  // excluded.add(walk.parseCommit(git.getRepository().resolve("ajaxorg--ace/anchor"))); // refspec
+  // included.add(walk.parseCommit(git.getRepository().resolve("ajaxorg--ace/issue-42"))); // ui/optimize-experimental
+  // included.add(walk.parseCommit(git.getRepository().resolve("ajaxorg--ace/concorde"))); // fix/search_ui
+
+  ArrayList<Ref> allBranches = new ArrayList<Ref>();
+  ArrayList<Ref> temp = new ArrayList<Ref>();
+  Iterator<ArrayList<Ref>> cit = branches.values().iterator();
+  allBranches.ensureCapacity(bSize);
+  while (cit.hasNext()) {
+  allBranches.addAll(cit.next());
+  }
+  temp.ensureCapacity(bSize - 1);
+  excluded.ensureCapacity(bSize - 1);
+  for (int i = 0; i < allBranches.size(); i++) {
+  temp.clear();
+  if (i > 0) temp.addAll(allBranches.subList(0, i));
+  temp.addAll(allBranches.subList(i + 1, allBranches.size()));
+  included.add(walk.parseCommit(allBranches.get(i).getObjectId()));
+  brIt = temp.iterator();
+  while (brIt.hasNext()) {
+  excluded.add(walk.parseCommit(brIt.next().getObjectId()));
+  }
+  comm = findCommits(walk, included, excluded, false);
+  ids = comm != null ? getIds(comm.toArray(new RevObject[0])) : null;
+  commits.put(allBranches.get(i).getName(), ids);
+  included.clear();
+  excluded.clear();
+  }
+  included.trimToSize();
+  included.ensureCapacity(50);
+  excluded.trimToSize();
+  excluded.ensureCapacity(50);
+
+
+  return commits;
+}
 ArrayList<ObjectId> getIds(RevObject[] a) {
   if (a == null) return null;
   ArrayList<ObjectId> res = new ArrayList<ObjectId>();
@@ -753,63 +801,15 @@ void analyzeForkTree(String[] args) throws Exception {
     /************** find interesting commits ***************/
 
     walk = new RevWalk(git.getRepository());
-    walk.setRetainBody(false); // this walk is for multiple usage
-    //walk.sort(RevSort.COMMIT_TIME_DESC);
-    //walk.sort(RevSort.TOPO);
-    //walk.sort(RevSort.NONE);
-
-    Iterator<Ref> brIt;    HashMap<String, ArrayList<ObjectId>> commits = new HashMap<String, ArrayList<ObjectId>>();
-    ArrayList<RevObject> comm;
-    ArrayList<ObjectId> ids;
-    ArrayList<RevCommit> included = new ArrayList<RevCommit>();
-    ArrayList<RevCommit> excluded = new ArrayList<RevCommit>();
-    //excluded.add(walk.parseCommit(git.getRepository().resolve("ajaxorg--ace/anchor"))); // refspec
-    //included.add(walk.parseCommit(git.getRepository().resolve("ajaxorg--ace/issue-42"))); // ui/optimize-experimental
-    //included.add(walk.parseCommit(git.getRepository().resolve("ajaxorg--ace/concorde"))); // fix/search_ui
+    // walk.setRetainBody(false); // this walk is for multiple usage
+    // walk.sort(RevSort.COMMIT_TIME_DESC);
+    // walk.sort(RevSort.TOPO);
+    // walk.sort(RevSort.NONE);
 
     commitsOnlyInR = getCommitsInR(walk, true); // XXX
     commitsInR = getCommitsInR(walk, false);
     commitsNotInR = getCommitsNotInR(walk);
-
-    // find commits that are unique to a given branch
-    ArrayList<Ref> allBranches = new ArrayList<Ref>();
-    ArrayList<Ref> temp = new ArrayList<Ref>();
-    Iterator<ArrayList<Ref>> cit = branches.values().iterator();
-    allBranches.ensureCapacity(bSize);
-    while (cit.hasNext()) {
-      allBranches.addAll(cit.next());
-    }
-    temp.ensureCapacity(bSize - 1);
-    excluded.ensureCapacity(bSize - 1);
-    for (int i = 0; i < allBranches.size(); i++) {
-      temp.clear();
-      if (i > 0) temp.addAll(allBranches.subList(0, i));
-      temp.addAll(allBranches.subList(i + 1, allBranches.size()));
-      included.add(walk.parseCommit(allBranches.get(i).getObjectId()));
-      brIt = temp.iterator();
-      while (brIt.hasNext()) {
-        excluded.add(walk.parseCommit(brIt.next().getObjectId()));
-      }
-      comm = findCommits(walk, included, excluded, true);
-      // TODO: get the commits-related stats
-      ids = getIds(comm);
-      commits.put(allBranches.get(i).getName(), ids);
-      included.clear();
-      excluded.clear();
-      walk.reset();
-    }
-    included.trimToSize();
-    included.ensureCapacity(50);
-    excluded.trimToSize();
-    excluded.ensureCapacity(50);
-
-    Entry<String,ArrayList<ObjectId>> ec = null; RevCommit c = null;
-    Iterator<Entry<String,ArrayList<ObjectId>>> ecit = commits.entrySet().iterator();
-    while (ecit.hasNext()) { //  && (ec = ecit.next()).getValue() == null
-      ec = ecit.next();
-      if (ec.getValue() != null) { c = walk.parseCommit(ec.getValue().get(0)); walk.parseBody(c); }
-      System.out.print(ec.getKey() + ((ec.getValue() != null) ? ":\n" + c.getFullMessage() : ": NO COMMIT\n")); // printArray(ec.getValue().toArray())
-    }
+    commitsInB = getCommitsInB(walk);
 
   }
   catch (Exception e) {
