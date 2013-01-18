@@ -70,8 +70,9 @@ public String trees_out_dir; // the relative path to the dir which will contain 
 boolean anew = false; // flag to differentiate tests
 boolean bare = false; // flag to differentiate tests
 
-HashMap<String, ArrayList<ObjectId>> commits;
+HashMap<String, ArrayList<ObjectId>> commitsInR;
 HashMap<String, ArrayList<Ref>> branches;
+HashMap<String, ArrayList<ObjectId>> commitsOnlyInR;
 int bSize;
 Git git;
 
@@ -474,12 +475,14 @@ static ForkList populateForkList(String inputFile) throws Exception {
 }
 
 
+// depending on getBody, the runtime type of the results will be either RevCommit or Commit
 ArrayList<RevCommit> findCommits(RevWalk walk, ArrayList<RevCommit> included,
-    ArrayList<RevCommit> excluded, boolean getBody) throws MissingObjectException, IncorrectObjectTypeException,
-    IOException {
-  ArrayList<RevObject> commits = new ArrayList<RevObject>();
+    ArrayList<RevCommit> excluded, boolean getBody) throws MissingObjectException,
+    IncorrectObjectTypeException, IOException {
+  ArrayList<RevCommit> commits = new ArrayList<RevCommit>();
   walk.markStart(included);
-  RevCommit c; Iterator<RevCommit> it = excluded.iterator();
+  RevCommit c;
+  Iterator<RevCommit> it = excluded.iterator();
   while (it.hasNext()) {
     walk.markUninteresting(it.next());
   }
@@ -488,14 +491,11 @@ ArrayList<RevCommit> findCommits(RevWalk walk, ArrayList<RevCommit> included,
     c = it.next();
     if (getBody) walk.parseBody(c);
     // addUnique(commits, c); // commits are naturally ordered by SHA-1
-    commits.add(c);
+    commits.add(getBody == false ? c : Commit.parse(c.getRawBuffer()));
   }
-  if (!getBody) walk.reset();
+  walk.reset();
   return commits.size() > 0 ? commits : null;
 }
-
-
-
 
 
 int buildBranchesMap() throws GitAPIException {
@@ -569,11 +569,60 @@ HashMap<ObjectId, ArrayList<Ref>> findAllBranches() throws Exception {
 }
 
 
-public static ArrayList<ObjectId> getIds(ArrayList<RevObject> a) {
+// find commits that are (only?) in each remote XXX
+HashMap<String, ArrayList<ObjectId>> getCommitsInR(RevWalk walk, boolean only)
+    throws MissingObjectException, IncorrectObjectTypeException, IOException {
+
+  Iterator<Ref> brIt;
+  HashMap<String, ArrayList<ObjectId>> comms = new HashMap<String, ArrayList<ObjectId>>();
+  ArrayList<RevCommit> comm;
+  ArrayList<ObjectId> ids;
+  ArrayList<RevCommit> included = new ArrayList<RevCommit>();
+  ArrayList<RevCommit> excluded = new ArrayList<RevCommit>();
+  Entry<String,ArrayList<Ref>> er; String r;
+  Iterator<Entry<String,ArrayList<Ref>>> erit;
+  Iterator<String> sit = branches.keySet().iterator();
+  if (only) excluded.ensureCapacity(bSize - 1);
+  while (sit.hasNext()) {
+    r = sit.next();
+    erit = branches.entrySet().iterator();
+    while (erit.hasNext()) {
+      er = erit.next();
+      brIt = er.getValue().iterator();
+      if (er.getKey().equals(r)) {
+        while (brIt.hasNext()) {
+          included.add(walk.parseCommit(brIt.next().getObjectId()));
+        }
+      } else if (only) {
+        while (brIt.hasNext()) {
+          excluded.add(walk.parseCommit(brIt.next().getObjectId()));
+        }
+      }
+    }
+    comm = findCommits(walk, included, excluded, !only);
+    if (only) {
+      // TODO add to a global ArrayList with all Commits (call findAllBranches)
+    } else {
+      ids = comm != null ? getIds(comm.toArray(new RevObject[0])) : null;
+      comms.put(r, ids);
+    }
+    included.clear();
+    excluded.clear();
+  }
+  included.trimToSize();
+  included.ensureCapacity(50);
+  excluded.trimToSize();
+  excluded.ensureCapacity(50);
+
+  return comms;
+}
+
+
+ArrayList<ObjectId> getIds(RevObject[] a) {
   if (a == null) return null;
   ArrayList<ObjectId> res = new ArrayList<ObjectId>();
-  res.ensureCapacity(a.size());
-  for (RevObject i : a.toArray(new RevObject[0])) {
+  res.ensureCapacity(a.length);
+  for (RevObject i : a) {
     res.add(i.copy());
   }
   return res;
@@ -701,6 +750,8 @@ void analyzeForkTree(String[] args) throws Exception {
       included.ensureCapacity(50);
       excluded.trimToSize();
       excluded.ensureCapacity(50);
+    commitsOnlyInR = getCommitsInR(walk, true); // XXX
+    commitsInR = getCommitsInR(walk, false);
 
     // find commits that are unique to a given branch
     ArrayList<Ref> allBranches = new ArrayList<Ref>();
