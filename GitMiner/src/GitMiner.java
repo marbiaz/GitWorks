@@ -374,7 +374,7 @@ HashMap<ObjectId, ArrayList<Ref>> findAllBranches() throws Exception {
 
 
 // find commits that are (only?) in each remote XXX
-HashMap<String, ArrayList<ObjectId>> getCommitsInR(RevWalk walk, boolean only)
+void getCommitsInR(RevWalk walk, boolean only)
     throws MissingObjectException, IncorrectObjectTypeException, IOException {
 
   Iterator<Ref> brIt;
@@ -419,12 +419,15 @@ HashMap<String, ArrayList<ObjectId>> getCommitsInR(RevWalk walk, boolean only)
   excluded.trimToSize();
   excluded.ensureCapacity(50);
 
-  return comms;
+  if (only)
+    commitsOnlyInR = comms;
+  else
+    commitsInR = comms;
 }
 
 
 // find commits that are not in a given remote
-HashMap<String, ArrayList<ObjectId>> getCommitsNotInR(RevWalk walk) throws MissingObjectException,
+void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
     IncorrectObjectTypeException, IOException {
   Iterator<Ref> brIt;
   HashMap<String, ArrayList<ObjectId>> commits = new HashMap<String, ArrayList<ObjectId>>();
@@ -465,12 +468,12 @@ HashMap<String, ArrayList<ObjectId>> getCommitsNotInR(RevWalk walk) throws Missi
   excluded.trimToSize();
   excluded.ensureCapacity(50);
 
-  return commits;
+  commitsNotInR = commits;
 }
 
 
 // find commits that are unique to a given branch
-HashMap<String, ArrayList<ObjectId>> getCommitsInB(RevWalk walk) throws MissingObjectException,
+void getCommitsInB(RevWalk walk) throws MissingObjectException,
     IncorrectObjectTypeException, IOException {
 
   Iterator<Ref> brIt;
@@ -512,7 +515,7 @@ HashMap<String, ArrayList<ObjectId>> getCommitsInB(RevWalk walk) throws MissingO
   excluded.trimToSize();
   excluded.ensureCapacity(50);
 
-  return commits;
+  commitsInB = commits;
 }
 ArrayList<ObjectId> getIds(RevObject[] a) {
   if (a == null) return null;
@@ -567,10 +570,9 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     // walk.sort(RevSort.TOPO);
     // walk.sort(RevSort.NONE);
 
-    commitsOnlyInR = getCommitsInR(walk, true); // XXX
-    commitsInR = getCommitsInR(walk, false);
-    commitsNotInR = getCommitsNotInR(walk);
-    commitsInB = getCommitsInB(walk);
+    getCommitsInR(walk, true); // XXX
+    getCommitsNotInR(walk);
+    getCommitsInB(walk);
 
   }
   catch (Exception e) {
