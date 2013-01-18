@@ -498,17 +498,17 @@ ArrayList<RevCommit> findCommits(RevWalk walk, ArrayList<RevCommit> included,
 }
 
 
-int buildBranchesMap() throws GitAPIException {
+void buildBranchesMap() throws GitAPIException {
 
   if (branches != null) {
     System.err.println("The map of the branches has already been built!!!");
-    return bSize;
+    return;
   }
   branches = new HashMap<String, ArrayList<Ref>>();
 
   ArrayList<Ref> temp = null;
   Ref r;
-  int res = 0;
+  bSize = 0;
   Iterator<Ref> allBranches = ((ArrayList<Ref>)git.branchList().setListMode(ListMode.REMOTE).call())
       .iterator();
   String bName = "";
@@ -521,14 +521,13 @@ int buildBranchesMap() throws GitAPIException {
       branches.put(bName, temp);
     }
     temp.add(r);
-    res++;
+    bSize++;
   }
   // Iterator<ArrayList<Ref>> rit = map.values().iterator();
   // Iterator<String> sit = map.keySet().iterator();
   // while (rit.hasNext()) {
   // System.out.println("\t" + sit.next() + ":\n" + printArray(rit.next().toArray()));
   // }
-  return res;
 }
 
 
@@ -788,11 +787,10 @@ void analyzeForkTree(String[] args) throws Exception {
       // createTree(fe, makeTree(walk, from));
     }
 
-    /************** build a map with all the branches in the big tree ***************/
-
-    bSize = buildBranchesMap();
 
     /************** find interesting commits ***************/
+
+    buildBranchesMap(); // build a map with all the branches in the big tree
 
     walk = new RevWalk(git.getRepository());
     // walk.setRetainBody(false); // this walk is for multiple usage
