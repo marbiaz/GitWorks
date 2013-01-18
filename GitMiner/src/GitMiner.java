@@ -604,10 +604,10 @@ HashMap<String, ArrayList<ObjectId>> getCommitsInR(RevWalk walk, boolean only)
     }
     comm = findCommits(walk, included, excluded, !only);
     if (only) {
-      // TODO add to a global ArrayList with all Commits (call findAllBranches)
-    } else {
       ids = comm != null ? getIds(comm.toArray(new RevObject[0])) : null;
       comms.put(r, ids);
+    } else {
+      // TODO add to a global ArrayList with all Commits (call findAllBranches)
     }
     included.clear();
     excluded.clear();
