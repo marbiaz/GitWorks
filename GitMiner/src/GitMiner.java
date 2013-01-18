@@ -791,15 +791,6 @@ void analyzeForkTree(String[] args) throws Exception {
     /************** build a map with all the branches in the big tree ***************/
 
     bSize = buildBranchesMap();
-    // find all branches that contain a given commit
-    HashMap<ObjectId, ArrayList<Ref>> structure = findAllBranches(git, branches, bSize);
-    //Entry<ObjectId, ArrayList<Ref>> re;
-    //Iterator<Entry<ObjectId, ArrayList<Ref>>> sit;
-    //sit = structure.entrySet().iterator();
-    //while (sit.hasNext()) {
-    //  re = sit.next();
-    //  System.out.print(re.getKey().getName() + " :\n" + printArray(re.getValue().toArray()));
-    //}
 
     /************** find interesting commits ***************/
 
