@@ -112,7 +112,7 @@ public String toString() {
 void addMetaEntries() throws Exception {
   ForkEntry roots[] = repos.toArray(new ForkEntry[0]);
   for (int i = 0; i < roots.length; i++) {
-    GitMiner.dfsVisit(Integer.MAX_VALUE, roots[i], ForkEntry.addTreeToList, this);
+    GitWorks.dfsVisit(Integer.MAX_VALUE, roots[i], ForkEntry.addTreeToList, this);
   }
 }
 

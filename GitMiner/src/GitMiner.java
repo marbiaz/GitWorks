@@ -1,29 +1,16 @@
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.ObjectInput;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutput;
-import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 
 import org.eclipse.jgit.util.FileUtils;
 import org.eclipse.jgit.api.Git;
@@ -52,23 +39,6 @@ import org.eclipse.jgit.treewalk.TreeWalk;
 
 public class GitMiner {
 
-public static String prefix = "JGIT_"; // to be prepended to any jgit-generated output file name
-public static String field_sep = "    "; // field separator in input datafile's lines
-public static String id_sep = "/"; // the string that separates owner and name in a fork id string
-public static String list_sep = ","; // fork id separator in the list taken from the input file
-public static String log_sep = "<#>"; // field separator within a git log output line
-public static String repo_dir; // the absolute path to the dir that contains the git repos to be
-                               // imported in jgit data structures
-public String[] ids = null; // list of repos to be considered to build the fork tree and
-                              // perform analysis.
-public String gits_out_dir; // the relative path to the dir which will contain the
-                             // jgit-generated git repos to analyse
-public String trees_out_dir; // the relative path to the dir which will contain the
-                              // jgit-generated trees of the repos
-
-boolean anew = false; // flag to differentiate tests
-boolean bare = false; // flag to differentiate tests
-
 HashMap<String, ArrayList<ObjectId>> commitsInR;
 HashMap<String, ArrayList<Ref>> branches;
 HashMap<String, ArrayList<ObjectId>> commitsNotInR;
@@ -96,11 +66,11 @@ static DfsOperator addAsRemote = new DfsOperator() {
   public void run(ForkEntry fe, Object arg) throws Exception {
     Git git = (Git)arg;
     RefSpec all;
-    String fork = getProjectNameAsRemote(fe);
+    String fork = GitWorks.getProjectNameAsRemote(fe);
     // System.out.print("Adding " + fork + " as mainline ...");
     // System.out.flush();
     StoredConfig config = git.getRepository().getConfig();
-    config.setString("remote", fork, "url", "file:///" + getProjectPath(fe));
+    config.setString("remote", fork, "url", "file:///" + GitWorks.getProjectPath(fe));
     config.setString("remote", fork, "fetch", "+refs/heads/*:refs/remotes/" + fork + "/*");
     config.save();
     all = new RefSpec(config.getString("remote", fork, "fetch"));
@@ -115,34 +85,6 @@ static DfsOperator addAsRemote = new DfsOperator() {
 
 
 // TODO: factorize dfsVists
-static void dfsVisit(int depth, ForkEntry f, DfsOperator t, ForkList l) throws Exception {
-  if (t == null) {
-    System.err.println("WARNING: dfsVisit called with null operator.");
-    return;
-  }
-  if (f == null) {
-    System.err.println("WARNING: DfsOperator " + t.getID() + " called on a null instance.");
-    return;
-  }
-  if (l == null) {
-    System.err.println("WARNING: DfsOperator " + t.getID() + " called with a null argument.");
-    return;
-  }
-  if (depth > 0 && f.hasForks()) {
-    t.initialize(f);
-    Iterator<ForkEntry> it = f.getForks();
-    while (it.hasNext()) {
-      dfsVisit(depth - 1, it.next(), t, l);
-      if (!t.runOnce()) t.run(f, l);
-    }
-    if (t.runOnce()) t.run(f, l);
-  } else {
-    t.run(f, l);
-  }
-  t.finalize(f);
-}
-
-
 static void dfsVisit(int depth, ForkEntry f, DfsOperator t, Git git) throws Exception {
   if (t == null) {
     System.err.println("WARNING: dfsVisit called with null operator.");
@@ -171,34 +113,10 @@ static void dfsVisit(int depth, ForkEntry f, DfsOperator t, Git git) throws Exce
 }
 
 
-static void dfsVisit(int depth, ForkEntry f, DfsOperator t, int[] t_arg) throws Exception {
-  if (t == null) {
-    System.err.println("WARNING: dfsVisit called with null operator.");
-    return;
-  }
-  if (f == null) {
-    System.err.println("WARNING: DfsOperator " + t.getID() + " called on a null instance.");
-    return;
-  }
-  if (t_arg == null) {
-    System.err.println("WARNING: DfsOperator " + t.getID() + " called with a null argument.");
-    return;
-  }
-  if (depth > 0 && f.hasForks()) {
-    t.initialize(f);
-    int[] temp = new int[t_arg.length];
-    Iterator<ForkEntry> it = f.getForks();
-    while (it.hasNext()) {
-      System.arraycopy(t_arg, 0, temp, 0, t_arg.length);
-      dfsVisit(depth - 1, it.next(), t, temp);
-      if (!t.runOnce()) t.run(f, temp);
-    }
-    if (t.runOnce()) t.run(f, temp);
-    System.arraycopy(temp, 0, t_arg, 0, t_arg.length);
-  } else {
-    t.run(f, t_arg);
-  }
-  t.finalize(f);
+//add remotes to a jgit repo, using a given ForkEntry data structure
+void addRemotes(Git git, ForkEntry project, int depth) throws Exception {
+  dfsVisit(depth, project, GitMiner.addAsRemote, git);
+  git.getRepository().scanForRepoChanges();
 }
 
 
@@ -232,8 +150,8 @@ void createTree(ForkEntry fe, TreeWalk treeWalk) throws Exception {
     }
     catch (Exception e) {
       if (perr == null)
-        perr = new PrintWriter(new FileWriter(trees_out_dir + "/" + getProjectNameAsRemote(fe)
-            + "/" + prefix + "errors.log"), true);
+        perr = new PrintWriter(new FileWriter(GitWorks.trees_out_dir + "/" + GitWorks.getProjectNameAsRemote(fe)
+            + "/" + GitWorks.prefix + "errors.log"), true);
       // e.printStackTrace(perr);
       if (objId.equals(ObjectId.zeroId()))
         perr.println("Object " + objId.getName() + " (" + path + ") is all-null!");
@@ -242,18 +160,18 @@ void createTree(ForkEntry fe, TreeWalk treeWalk) throws Exception {
       continue;
     }
     if (loader.getType() == Constants.OBJ_BLOB) {
-      pout = new PrintStream(new FileOutputStream(new File(trees_out_dir + "/"
-          + getProjectNameAsRemote(fe) + "/" + path), false), true);
+      pout = new PrintStream(new FileOutputStream(new File(GitWorks.trees_out_dir + "/"
+          + GitWorks.getProjectNameAsRemote(fe) + "/" + path), false), true);
       loader.copyTo(pout);
       pout.close();
     } else if (treeWalk.isSubtree()) { // loader.getType() == Constants.OBJ_TREE
-      if ((new File(trees_out_dir + "/" + getProjectNameAsRemote(fe) + "/" + path)).mkdirs()) {
+      if ((new File(GitWorks.trees_out_dir + "/" + GitWorks.getProjectNameAsRemote(fe) + "/" + path)).mkdirs()) {
         treeWalk.enterSubtree();
         // System.out.println("Getting into a new tree of depth " + treeWalk.getDepth());
       } else {
         if (perr == null)
-          perr = new PrintWriter(new FileWriter(trees_out_dir + "/" + getProjectNameAsRemote(fe)
-              + "/" + prefix + "errors.log"), true);
+          perr = new PrintWriter(new FileWriter(GitWorks.trees_out_dir + "/" + GitWorks.getProjectNameAsRemote(fe)
+              + "/" + GitWorks.prefix + "errors.log"), true);
         perr.println("Dir " + path + "(Object " + objId.getName() + ") could not be created!");
       }
     }
@@ -312,9 +230,9 @@ String printCommit(RevCommit c) {
   PersonIdent committer = c.getCommitterIdent();
   // long commitTime = (long)c.getCommitTime() == committer.getWhen().getTime() / 1000 (in seconds)
   out += "" + c.name()
-      + log_sep + author.getName() + log_sep + author.getWhen().getTime()
-      + log_sep + committer.getName() + log_sep + committer.getWhen().getTime()
-      + log_sep + c.getShortMessage(); //c.getFullMessage(); c.getShortMessage();
+      + GitWorks.log_sep + author.getName() + GitWorks.log_sep + author.getWhen().getTime()
+      + GitWorks.log_sep + committer.getName() + GitWorks.log_sep + committer.getWhen().getTime()
+      + GitWorks.log_sep + c.getShortMessage(); //c.getFullMessage(); c.getShortMessage();
   return out;
 }
 
@@ -343,7 +261,7 @@ Repository createRepo(String repoDir, String gitDir) throws IOException {
 
   File gd = new File(gitDir);
   File rd = new File(repoDir);
-  if (anew) {
+  if (GitWorks.anew) {
     if (rd.exists()) FileUtils.delete(rd, FileUtils.RECURSIVE);
     rd.mkdirs();
     if (gd.exists()) FileUtils.delete(gd, FileUtils.RECURSIVE);
@@ -352,126 +270,10 @@ Repository createRepo(String repoDir, String gitDir) throws IOException {
   Repository repository = new FileRepositoryBuilder().setWorkTree(rd).setGitDir(gd)
       .readEnvironment() // scan environment GIT_* variables
       .findGitDir() // scan up the file system tree
-      .setMustExist(!anew).build();
-  if (anew) repository.create(bare);
+      .setMustExist(!GitWorks.anew).build();
+  if (GitWorks.anew) repository.create(GitWorks.bare);
 
   return repository;
-}
-
-
-// Returns the project ID formatted in a convenient way to serve as a remote name...
-static String getProjectNameAsRemote(ForkEntry f) {
-  return f.getId().replace("/", "--");
-}
-
-
-// It gives the absolute path (internal URI) of the repo corresponding to the given ForkEntry.
-static String getProjectPath(ForkEntry f) {
-  String t[] = f.getId().split(id_sep);
-  return GitMiner.repo_dir + t[1] + "/" + t[0] + "/" + t[1] + ".git";
-}
-
-
-// add remotes to a jgit repo, using a given ForkEntry data structure
-void addRemotes(Git git, ForkEntry project, int depth) throws Exception {
-  dfsVisit(depth, project, GitMiner.addAsRemote, git);
-  git.getRepository().scanForRepoChanges();
-}
-
-
-// as of now, it is meant to compute things in the big fork tree of each project, so that for forks
-// at different layers the computed aggregation depth is parent's one - 1.
-static void computeAggregates(String ids[], ForkList fl, int depth) throws Exception {
-  if (fl.size() == 0 || depth < 1) {
-    System.err.println("computeAggregates : input ERROR.");
-    return;
-  }
-  int[] r = new int[4];
-  if (ids == null || ids.length == 0) {
-    ids = new String[fl.size()];
-    for (int i = 0; i < fl.size(); i++) {
-      ids[i] = fl.get(i).getId();
-    }
-  }
-  for (String id : ids) {
-    if (!ForkEntry.isValidId(id)) {
-      System.err.println("computeAggregates : input ERROR (invalid id: " + id + ").");
-      continue;
-    }
-    Arrays.fill(r, 0);
-    dfsVisit(depth, fl.get(id), ForkEntry.computeAggregates, r);
-  }
-}
-
-
-// delete from the children ForkList of the argument all the entries whose repo
-// cannot be found in the local FS.
-static void purgeMissingForks(ForkList globalList, ForkEntry f) throws Exception {
-  File fi;
-  int c = 0; // String out = "";
-  Iterator<ForkEntry> it = f.getForks();
-  ForkEntry fe, fks[] = new ForkEntry[f.howManyForks()];
-  while (it.hasNext()) {
-    fe = it.next();
-    fi = new File(getProjectPath(fe));
-    if (!fi.canRead()) {
-      fks[c++] = fe;
-      // out += " " + fe.getId();
-      globalList.remove(fe); // remove fe from the main projects list (no dangling entries)!
-    }
-  }
-  // System.out.print("Deleting missing repos entries from the lists (" + out + " ) ... ");
-  f.removeForks(Arrays.copyOf(fks, c));
-  // System.out.println("done!");
-}
-
-
-static ForkList populateForkList(String inputFile) throws Exception {
-
-  ForkEntry fe, fc;
-  String line, tokens[];
-  int c = 0, cc = 0;
-  ArrayList<String> children = new ArrayList<String>();
-  BufferedReader listFile = new BufferedReader(
-      new InputStreamReader(new FileInputStream(inputFile)));
-  ForkList l = new ForkList();
-
-  while ((line = listFile.readLine()) != null) {
-    c++;
-    tokens = line.split(field_sep);
-    if (ForkEntry.isValidId(tokens[1] + id_sep + tokens[0])) {
-      cc = l.add(new ForkEntry(tokens[1], tokens[0], Integer.valueOf(tokens[3])));
-      if (cc < 0) {
-        children.add(-cc - 1, tokens.length == 5 ? tokens[4] : "");
-      } else {
-        System.err.println("WARNING: duplicate entry in input file (" + tokens[1] + id_sep
-            + tokens[0] + ").");
-      }
-    } else {
-      System.err.println("Error while reading fork data from file, at line " + c + ".");
-    }
-  }
-  listFile.close();
-  Iterator<ForkEntry> it = l.getAll();
-  for (int i = 0; it.hasNext(); i++) {
-    fe = it.next();
-    if (!"".equals(children.get(i))) {
-      cc = 0;
-      tokens = children.get(i).split(list_sep);
-      for (String f : tokens) {
-        cc++;
-        fc = l.get(f);
-        if (fc != null) {
-          fe.addFork(fc);
-        } else {
-          System.err.println("Error while reading fork data from file, for project " + fe.getId()
-              + " about fork # " + cc + " (" + f + ").");
-        }
-      }
-    }
-  }
-  l.setTreeCounter();
-  return l;
 }
 
 
@@ -710,7 +512,6 @@ HashMap<String, ArrayList<ObjectId>> getCommitsInB(RevWalk walk) throws MissingO
   excluded.trimToSize();
   excluded.ensureCapacity(50);
 
-
   return commits;
 }
 ArrayList<ObjectId> getIds(RevObject[] a) {
@@ -724,69 +525,37 @@ ArrayList<ObjectId> getIds(RevObject[] a) {
 }
 
 
-void analyzeForkTree(String[] args) throws Exception {
+void analyzeForkTree(ForkEntry fe) throws Exception {
 
-  ForkList projects;
-  ForkEntry fe;
   RevWalk walk = null;
-
-  if (args.length < 5) {
-    System.err
-        .println("Usage: java GitMiner <repo list file path> <repo dir path> <jgit gits out dir> <jgit trees out dir> <comma-separated no-space list of fork ids>");
-    System.exit(2);
-  }
-  repo_dir = args[1].trim() + (args[1].trim().endsWith("/") ? "" : "/");
-  ids = args[4].trim().split(",");
-  gits_out_dir = args[2].trim() + (args[2].trim().endsWith("/") ? "" : "/");
-  trees_out_dir = args[3].trim() + (args[3].trim().endsWith("/") ? "" : "/");
-  if (!new File(repo_dir).isDirectory() || !(new File(trees_out_dir)).isDirectory()
-      || !new File(gits_out_dir).isDirectory()) {
-    System.err
-        .println("FATAL ERROR : Cannot find repos dir (" + repo_dir + ") or gits output dir ("
-            + gits_out_dir + ") or trees output dir (" + trees_out_dir + ")");
-    System.exit(1);
-  }
-
-  /************** create fork list ****************/
-
-  projects = populateForkList(args[0].trim());
-  //projects = importForkList(trees_out_dir + "listDump");
-  computeAggregates(ids, projects, 100); // with a large param value the complete fork trees will be
-                                         // visited
-  exportForkList(trees_out_dir + "listDump", projects);
-  // computeAggregates(null, projects, 1); // reset all projects aggregates
-  System.out.println(projects.toString());
 
   /************** create/load git repo ****************/
 
-  fe = projects.get(ids[0]);
-  String gitDirPath = gits_out_dir + getProjectNameAsRemote(fe)
-      + ((bare == true) ? ".git" : "/.git");
-  String treeDirPath = trees_out_dir + getProjectNameAsRemote(fe);
-  String refspec = "refs/remotes/" + getProjectNameAsRemote(fe) + "/master";
+  String gitDirPath = GitWorks.gits_out_dir + GitWorks.getProjectNameAsRemote(fe)
+      + ((GitWorks.bare == true) ? ".git" : "/.git");
+  String treeDirPath = GitWorks.trees_out_dir + GitWorks.getProjectNameAsRemote(fe);
+
   try {
     // with git.init() it is not possible to specify a different tree path!!
     // git = Git.init().setBare(bare).setDirectory(new File(gitDirPath)).call();
     git = Git.wrap(createRepo(treeDirPath, gitDirPath));
-    System.out.println(printRepoInfo());
+//    System.out.println(printRepoInfo());
 
     /************** create big tree ****************/
 
-    if (!anew) {
-      purgeMissingForks(projects, fe); // IRREVERSIBLE!!!
+    if (GitWorks.anew) {
       addRemotes(git, fe, 0); // with a large param value the complete fork tree will be built
     }
 
     /************** print commits & checkout ****************/
 
-    printCommits(trees_out_dir + prefix + getProjectNameAsRemote(fe) + "-commitList.log", refspec, null);
-
-    if (!bare) {
-      git.checkout().setStartPoint(refspec).setCreateBranch(anew)
-          .setName(getProjectNameAsRemote(fe)).call(); // .getResult() for a dry-run
+//    printCommits(GitWorks.trees_out_dir + GitWorks.prefix + GitWorks.getProjectNameAsRemote(fe) + "-commitList.log", refspec, null);
+    String refspec = "refs/remotes/" + GitWorks.getProjectNameAsRemote(fe) + "/master";
+    if (!GitWorks.bare) {
+      git.checkout().setStartPoint(refspec).setCreateBranch(GitWorks.anew)
+          .setName(GitWorks.getProjectNameAsRemote(fe)).call(); // .getResult() for a dry-run
       // createTree(fe, makeTree(walk, from));
     }
-
 
     /************** find interesting commits ***************/
 
@@ -814,33 +583,9 @@ void analyzeForkTree(String[] args) throws Exception {
 }
 
 
-static void main(String[] args) throws Exception {
 
-  GitMiner gm = new GitMiner();
-  gm.analyzeForkTree(args);
 }
 
-
-static void exportForkList(String filePath, ForkList l) throws IOException {
-  File dump = new File(filePath);
-  if (dump.exists()) dump.delete();
-  GZIPOutputStream gzOut = new GZIPOutputStream(
-      new BufferedOutputStream(new FileOutputStream(dump)));
-  ObjectOutput out = new ObjectOutputStream(gzOut);
-  l.writeExternal(out);
-  gzOut.finish();
-  out.close();
-}
-
-
-static ForkList importForkList(String filePath) throws FileNotFoundException, IOException,
-    ClassNotFoundException {
-  ForkList res = new ForkList();
-  ObjectInput in = new ObjectInputStream(new GZIPInputStream(new BufferedInputStream(
-      new FileInputStream(filePath))));
-  res.readExternal(in);
-  return res;
-}
 
 
 /**

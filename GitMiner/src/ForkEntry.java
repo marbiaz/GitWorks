@@ -86,11 +86,11 @@ public static DfsOperator computeAggregates = new DfsOperator() {
 
 
 public static boolean isValidId(String s) {
-  int i = s.indexOf(GitMiner.id_sep);
+  int i = s.indexOf(GitWorks.id_sep);
   boolean b = !s.matches("[0-9A-Za-z_/\\.\\-]+") // contains invalid characters
       || i <= 0 // owner is an empty string
       || i == s.length() - 1 // name is an empty string
-      || s.indexOf(GitMiner.id_sep, i + 1) != -1; // the format is not 'owner/name'
+      || s.indexOf(GitWorks.id_sep, i + 1) != -1; // the format is not 'owner/name'
   return !b;
 }
 
@@ -99,7 +99,7 @@ protected ForkEntry() {};
 
 
 public ForkEntry(String id) {
-  String[] t = id.split(GitMiner.id_sep);
+  String[] t = id.split(GitWorks.id_sep);
   name = t[1];
   owner = t[0];
 }
@@ -152,7 +152,7 @@ boolean addFork(ForkEntry f) throws Exception {
         dfsAggregateDepth = 1;
         dfsNumForks = forks.size();
       } else {
-        GitMiner.dfsVisit(1, this, ForkEntry.computeAggregates, new int[4]);
+        GitWorks.dfsVisit(1, this, ForkEntry.computeAggregates, new int[4]);
       }
       setAncestorsDfsKo();
       return true;
@@ -173,7 +173,7 @@ boolean removeFork(String fid) throws Exception {
 boolean removeFork(ForkEntry f) throws Exception {
   if (forks != null) {
     if (forks.remove(f) != null) {
-      GitMiner.dfsVisit(dfsAggregateDepth, this, ForkEntry.computeAggregates, new int[4]);
+      GitWorks.dfsVisit(dfsAggregateDepth, this, ForkEntry.computeAggregates, new int[4]);
       setAncestorsDfsKo();
       return true;
     }
@@ -193,7 +193,7 @@ boolean removeForks(ForkEntry[] fks) throws Exception {
       }
     }
     if (res) {
-      GitMiner.dfsVisit(dfsAggregateDepth, this, ForkEntry.computeAggregates, new int[4]);
+      GitWorks.dfsVisit(dfsAggregateDepth, this, ForkEntry.computeAggregates, new int[4]);
       setAncestorsDfsKo();
     }
   }
@@ -202,7 +202,7 @@ boolean removeForks(ForkEntry[] fks) throws Exception {
 
 
 public String getId() {
-  return "".equals(owner) ? null : owner + GitMiner.id_sep + name;
+  return "".equals(owner) ? null : owner + GitWorks.id_sep + name;
 }
 
 
@@ -226,7 +226,7 @@ String getForksIds() {
   Iterator<ForkEntry> it = getForks();
   out += it.next().getId();
   while (it.hasNext()) {
-    out += GitMiner.list_sep + it.next().getId();
+    out += GitWorks.list_sep + it.next().getId();
   }
   return out;
 }
@@ -234,9 +234,9 @@ String getForksIds() {
 
 public String toString() {
   String out; // name + GitMiner.field_sep + owner // (hasForks() ? forks.size() : "0")
-  out = getId() + GitMiner.field_sep + watchers + GitMiner.field_sep + dfsNumForks 
-      + GitMiner.field_sep + dfsChildrenWatchers + GitMiner.field_sep + dfsMaxWatchers
-      + (hasForks() ? GitMiner.field_sep + getForksIds() : "");
+  out = getId() + GitWorks.field_sep + watchers + GitWorks.field_sep + dfsNumForks 
+      + GitWorks.field_sep + dfsChildrenWatchers + GitWorks.field_sep + dfsMaxWatchers
+      + (hasForks() ? GitWorks.field_sep + getForksIds() : "");
   return out;
 }
 
