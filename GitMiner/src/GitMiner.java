@@ -60,12 +60,20 @@ public static String list_sep = ","; // fork id separator in the list taken from
 public static String log_sep = "<#>"; // field separator within a git log output line
 public static String repo_dir; // the absolute path to the dir that contains the git repos to be
                                // imported in jgit data structures
-public static String[] ids = null; // list of repos to be considered to build the fork tree and
-                                   // perform analysis.
-public static String gits_out_dir; // the relative path to the dir which will contain the
-                                   // jgit-generated git repos to analyse
-public static String trees_out_dir; // the relative path to the dir which will contain the
-                                    // jgit-generated trees of the repos
+public String[] ids = null; // list of repos to be considered to build the fork tree and
+                              // perform analysis.
+public String gits_out_dir; // the relative path to the dir which will contain the
+                             // jgit-generated git repos to analyse
+public String trees_out_dir; // the relative path to the dir which will contain the
+                              // jgit-generated trees of the repos
+
+boolean anew = false; // flag to differentiate tests
+boolean bare = false; // flag to differentiate tests
+
+HashMap<String, ArrayList<ObjectId>> commits;
+HashMap<String, ArrayList<Ref>> branches;
+int bSize;
+Git git;
 
 // this operator requires a Git object as parameter
 static DfsOperator addAsRemote = new DfsOperator() {
@@ -192,7 +200,7 @@ static void dfsVisit(int depth, ForkEntry f, DfsOperator t, int[] t_arg) throws 
 }
 
 
-static TreeWalk makeTree(RevWalk walk, AnyObjectId ref) throws Exception {
+TreeWalk makeTree(RevWalk walk, AnyObjectId ref) throws Exception {
 
   TreeWalk treeWalk = new TreeWalk(walk.getObjectReader());
   // treeWalk.setRecursive(true);
@@ -203,7 +211,7 @@ static TreeWalk makeTree(RevWalk walk, AnyObjectId ref) throws Exception {
 
 
 // checkout from a given jgit tree pointer
-static void createTree(ForkEntry fe, TreeWalk treeWalk) throws Exception {
+void createTree(ForkEntry fe, TreeWalk treeWalk) throws Exception {
 
   String path;
   ObjectReader reader = treeWalk.getObjectReader();
@@ -254,7 +262,7 @@ static void createTree(ForkEntry fe, TreeWalk treeWalk) throws Exception {
 
 
 // printout all commit messages in a given range -> use and reset an existing RevWalk
-static void printCommits(String outFile, RevWalk walk) throws IOException, NoHeadException,
+void printCommits(String outFile, RevWalk walk) throws IOException, NoHeadException,
     GitAPIException {
 
   PrintWriter pout = new PrintWriter(new FileWriter(outFile), true);
@@ -269,7 +277,7 @@ static void printCommits(String outFile, RevWalk walk) throws IOException, NoHea
 
 
 // printout all commit messages in a given range -> expensive: creates a one-time only RevWalk
-static void printCommits(String outFile, Git git, String from_ref, String to_ref)
+void printCommits(String outFile, String from_ref, String to_ref)
     throws IOException, NoHeadException, GitAPIException {
 
   AnyObjectId from = git.getRepository().resolve(from_ref);
@@ -296,7 +304,7 @@ static void printCommits(String outFile, Git git, String from_ref, String to_ref
 
 
 // format the output like in --pretty="%H<#>%aN<#>%at<#>%cN<#>%ct<#>%s
-static String printCommit(RevCommit c) {
+String printCommit(RevCommit c) {
   String out = "";
   PersonIdent author = c.getAuthorIdent();
   PersonIdent committer = c.getCommitterIdent();
@@ -310,10 +318,10 @@ static String printCommit(RevCommit c) {
 
 
 // print some structural info about the git repo
-static String printRepoInfo(Repository repository) {
+String printRepoInfo() {
 
-  String out = "Current GIT_DIR : " + repository.getDirectory().getAbsolutePath() + "\n";
-  StoredConfig config = repository.getConfig();
+  String out = "Current GIT_DIR : " + git.getRepository().getDirectory().getAbsolutePath() + "\n";
+  StoredConfig config = git.getRepository().getConfig();
   Set<String> sections = config.getSections();
   Set<String> subsections;
   out += "This repository has " + sections.size() + " sections:\n";
@@ -329,7 +337,7 @@ static String printRepoInfo(Repository repository) {
 
 
 // import a git repo in jgit data structures or create a new one
-static Repository createRepo(String repoDir, String gitDir, boolean anew, boolean bare)
+Repository createRepo(String repoDir, String gitDir)
     throws IOException {
 
   File gd = new File(gitDir);
@@ -364,7 +372,7 @@ static String getProjectPath(ForkEntry f) {
 
 
 // add remotes to a jgit repo, using a given ForkEntry data structure
-static void addRemotes(Git git, ForkEntry project, int depth) throws Exception {
+void addRemotes(Git git, ForkEntry project, int depth) throws Exception {
   dfsVisit(depth, project, GitMiner.addAsRemote, git);
   git.getRepository().scanForRepoChanges();
 }
@@ -466,7 +474,7 @@ static ForkList populateForkList(String inputFile) throws Exception {
 }
 
 
-static ArrayList<RevObject> findCommits(RevWalk walk, ArrayList<RevCommit> included,
+ArrayList<RevCommit> findCommits(RevWalk walk, ArrayList<RevCommit> included,
     ArrayList<RevCommit> excluded, boolean getBody) throws MissingObjectException, IncorrectObjectTypeException,
     IOException {
   ArrayList<RevObject> commits = new ArrayList<RevObject>();
@@ -487,7 +495,17 @@ static ArrayList<RevObject> findCommits(RevWalk walk, ArrayList<RevCommit> inclu
 }
 
 
-static int buildBranchesMap(Git git, HashMap<String, ArrayList<Ref>> map) throws GitAPIException {
+
+
+
+int buildBranchesMap() throws GitAPIException {
+
+  if (branches != null) {
+    System.err.println("The map of the branches has already been built!!!");
+    return bSize;
+  }
+  branches = new HashMap<String, ArrayList<Ref>>();
+
   ArrayList<Ref> temp = null;
   Ref r;
   int res = 0;
@@ -500,7 +518,7 @@ static int buildBranchesMap(Git git, HashMap<String, ArrayList<Ref>> map) throws
       bName = "refs/remotes/" + r.getName().split("/")[2]; // geName() format is
                                                            // refs/remotes/<remote-name>/<branch-name>
       temp = new ArrayList<Ref>();
-      map.put(bName, temp);
+      branches.put(bName, temp);
     }
     temp.add(r);
     res++;
@@ -514,9 +532,7 @@ static int buildBranchesMap(Git git, HashMap<String, ArrayList<Ref>> map) throws
 }
 
 
-static HashMap<ObjectId, ArrayList<Ref>> findAllBranches(Git git,
-    HashMap<String, ArrayList<Ref>> branches, int bSize) throws NoHeadException, GitAPIException,
-    IOException {
+HashMap<ObjectId, ArrayList<Ref>> findAllBranches() throws Exception {
   HashMap<ObjectId, ArrayList<Ref>> structure = new HashMap<ObjectId, ArrayList<Ref>>();
   ArrayList<Ref> vals; Iterator<Ref> brIt;
   Iterator<ArrayList<Ref>> bit; Entry<ObjectId, ArrayList<Ref>> re; Ref r; ObjectId k;
@@ -564,14 +580,11 @@ public static ArrayList<ObjectId> getIds(ArrayList<RevObject> a) {
 }
 
 
-public static void main(String[] args) throws Exception {
+void analyzeForkTree(String[] args) throws Exception {
 
-  boolean anew = true; // flag to differentiate tests
-  boolean bare = false; // flag to differentiate tests
   ForkList projects;
   ForkEntry fe;
   RevWalk walk = null;
-  Git git = null;
 
   if (args.length < 5) {
     System.err
@@ -610,8 +623,8 @@ public static void main(String[] args) throws Exception {
   try {
     // with git.init() it is not possible to specify a different tree path!!
     // git = Git.init().setBare(bare).setDirectory(new File(gitDirPath)).call();
-    git = Git.wrap(createRepo(treeDirPath, gitDirPath, anew, bare));
-    // System.out.println(printRepoInfo(git.getRepository()));
+    git = Git.wrap(createRepo(treeDirPath, gitDirPath));
+     System.out.println(printRepoInfo());
 
     /************** create big tree ****************/
     if (!anew) {
@@ -621,16 +634,15 @@ public static void main(String[] args) throws Exception {
 
     /************** print commits & checkout ****************/
 
-    printCommits(trees_out_dir + prefix + getProjectNameAsRemote(fe) + "-commitList.log", git,
-        refspec, null);
+     printCommits(trees_out_dir + prefix + getProjectNameAsRemote(fe) + "-commitList.log",
+         refspec, null);
     if (!bare) {
       git.checkout().setStartPoint(refspec).setCreateBranch(anew)
           .setName(getProjectNameAsRemote(fe)).call(); // .getResult() for a dry-run
       // createTree(fe, makeTree(walk, from));
     /************** build a map with all the branches in the big tree ***************/
 
-    HashMap<String, ArrayList<Ref>> branches = new HashMap<String, ArrayList<Ref>>();
-    int bSize = buildBranchesMap(git, branches);
+    bSize = buildBranchesMap();
     // find all branches that contain a given commit
     HashMap<ObjectId, ArrayList<Ref>> structure = findAllBranches(git, branches, bSize);
     //Entry<ObjectId, ArrayList<Ref>> re;
@@ -738,6 +750,13 @@ public static void main(String[] args) throws Exception {
     if (walk != null) walk.dispose();
     if (git != null) git.getRepository().close();
   }
+}
+
+
+static void main(String[] args) throws Exception {
+
+  GitMiner gm = new GitMiner();
+  gm.analyzeForkTree(args);
 }
 
 
