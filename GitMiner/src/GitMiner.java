@@ -55,8 +55,7 @@ public class GitMiner {
 public static String prefix = "JGIT_"; // to be prepended to any jgit-generated output file name
 public static String field_sep = "    "; // field separator in input datafile's lines
 public static String id_sep = "/"; // the string that separates owner and name in a fork id string
-public static String list_sep = ","; // fork id separator in the list taken from the input dataset
-                                     // file
+public static String list_sep = ","; // fork id separator in the list taken from the input file
 public static String log_sep = "<#>"; // field separator within a git log output line
 public static String repo_dir; // the absolute path to the dir that contains the git repos to be
                                // imported in jgit data structures
@@ -265,8 +264,8 @@ void createTree(ForkEntry fe, TreeWalk treeWalk) throws Exception {
 
 
 // printout all commit messages in a given range -> use and reset an existing RevWalk
-void printCommits(String outFile, RevWalk walk) throws IOException, NoHeadException,
-    GitAPIException {
+void printCommits(String outFile, RevWalk walk)
+    throws IOException, NoHeadException, GitAPIException {
 
   PrintWriter pout = new PrintWriter(new FileWriter(outFile), true);
   RevCommit c = walk.next();
@@ -340,8 +339,7 @@ String printRepoInfo() {
 
 
 // import a git repo in jgit data structures or create a new one
-Repository createRepo(String repoDir, String gitDir)
-    throws IOException {
+Repository createRepo(String repoDir, String gitDir) throws IOException {
 
   File gd = new File(gitDir);
   File rd = new File(repoDir);
@@ -406,8 +404,8 @@ static void computeAggregates(String ids[], ForkList fl, int depth) throws Excep
 }
 
 
-// delete from the children ForkList of the argument all the entries whose repo cannot be found in
-// the local FS.
+// delete from the children ForkList of the argument all the entries whose repo
+// cannot be found in the local FS.
 static void purgeMissingForks(ForkList globalList, ForkEntry f) throws Exception {
   File fi;
   int c = 0; // String out = "";
@@ -536,8 +534,12 @@ int buildBranchesMap() throws GitAPIException {
 
 HashMap<ObjectId, ArrayList<Ref>> findAllBranches() throws Exception {
   HashMap<ObjectId, ArrayList<Ref>> structure = new HashMap<ObjectId, ArrayList<Ref>>();
-  ArrayList<Ref> vals; Iterator<Ref> brIt;
-  Iterator<ArrayList<Ref>> bit; Entry<ObjectId, ArrayList<Ref>> re; Ref r; ObjectId k;
+  ArrayList<Ref> vals;
+  Iterator<Ref> brIt;
+  Iterator<ArrayList<Ref>> bit;
+  Entry<ObjectId, ArrayList<Ref>> re;
+  Ref r;
+  ObjectId k;
   Iterator<Entry<ObjectId, ArrayList<Ref>>> sit;
   Iterator<RevCommit> allIn = git.log().all().call().iterator();
   RevWalk walk = new RevWalk(git.getRepository());
@@ -557,14 +559,13 @@ HashMap<ObjectId, ArrayList<Ref>> findAllBranches() throws Exception {
       brIt = bit.next().iterator();
       while (brIt.hasNext()) {
         r = brIt.next();
-        if (walk.isMergedInto(walk.parseCommit(k),
-            walk.parseCommit(r.getObjectId()))) {
+        if (walk.isMergedInto(walk.parseCommit(k), walk.parseCommit(r.getObjectId()))) {
           vals.add(r);
         }
       }
     }
     vals.trimToSize();
-    //System.out.print(re.getKey().getName() + " :\n" + printArray(re.getValue().toArray()));
+    // System.out.print(re.getKey().getName() + " :\n" + printArray(re.getValue().toArray()));
   }
   walk.dispose();
   return structure;
@@ -581,8 +582,9 @@ HashMap<String, ArrayList<ObjectId>> getCommitsInR(RevWalk walk, boolean only)
   ArrayList<ObjectId> ids;
   ArrayList<RevCommit> included = new ArrayList<RevCommit>();
   ArrayList<RevCommit> excluded = new ArrayList<RevCommit>();
-  Entry<String,ArrayList<Ref>> er; String r;
-  Iterator<Entry<String,ArrayList<Ref>>> erit;
+  Entry<String, ArrayList<Ref>> er;
+  String r;
+  Iterator<Entry<String, ArrayList<Ref>>> erit;
   Iterator<String> sit = branches.keySet().iterator();
   if (only) excluded.ensureCapacity(bSize - 1);
   while (sit.hasNext()) {
@@ -767,9 +769,10 @@ void analyzeForkTree(String[] args) throws Exception {
     // with git.init() it is not possible to specify a different tree path!!
     // git = Git.init().setBare(bare).setDirectory(new File(gitDirPath)).call();
     git = Git.wrap(createRepo(treeDirPath, gitDirPath));
-     System.out.println(printRepoInfo());
+    System.out.println(printRepoInfo());
 
     /************** create big tree ****************/
+
     if (!anew) {
       purgeMissingForks(projects, fe); // IRREVERSIBLE!!!
       addRemotes(git, fe, 0); // with a large param value the complete fork tree will be built
@@ -777,8 +780,8 @@ void analyzeForkTree(String[] args) throws Exception {
 
     /************** print commits & checkout ****************/
 
-     printCommits(trees_out_dir + prefix + getProjectNameAsRemote(fe) + "-commitList.log",
-         refspec, null);
+    printCommits(trees_out_dir + prefix + getProjectNameAsRemote(fe) + "-commitList.log", refspec, null);
+
     if (!bare) {
       git.checkout().setStartPoint(refspec).setCreateBranch(anew)
           .setName(getProjectNameAsRemote(fe)).call(); // .getResult() for a dry-run
