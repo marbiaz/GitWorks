@@ -212,15 +212,15 @@ void printCommits(String outFile, String from_ref, String to_ref)
 
   printCommits(outFile, walk);
   walk.dispose();
-  // PrintWriter pout = new PrintWriter(new FileWriter(outFile), true);
-  // Iterator<RevCommit> itc = git.log().add(from).call().iterator();
-  // RevCommit c;
-  // while (itc.hasNext()) {
-  // c = itc.next();
-  // pout.println("===========\n" + printCommit(c));
-  // if (to != null && c.equals(to)) break;
-  // }
-  // pout.close();
+//  PrintWriter pout = new PrintWriter(new FileWriter(outFile), true);
+//  Iterator<RevCommit> itc = git.log().add(from).call().iterator();
+//  RevCommit c;
+//  while (itc.hasNext()) {
+//    c = itc.next();
+//    pout.println("===========\n" + printCommit(c));
+//    if (to != null && c.equals(to)) break;
+//  }
+//  pout.close();
 }
 
 
@@ -330,7 +330,7 @@ void buildBranchesMap() throws GitAPIException {
   // Iterator<ArrayList<Ref>> rit = map.values().iterator();
   // Iterator<String> sit = map.keySet().iterator();
   // while (rit.hasNext()) {
-  // System.out.println("\t" + sit.next() + ":\n" + printArray(rit.next().toArray()));
+  //   System.out.println("\t" + sit.next() + ":\n" + printArray(rit.next().toArray()));
   // }
 }
 
@@ -579,12 +579,12 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     /************** print commits & checkout ****************/
 
 //    printCommits(GitWorks.trees_out_dir + GitWorks.prefix + GitWorks.getProjectNameAsRemote(fe) + "-commitList.log", refspec, null);
-    String refspec = "refs/remotes/" + GitWorks.getProjectNameAsRemote(fe) + "/master";
-    if (!GitWorks.bare) {
-      git.checkout().setStartPoint(refspec).setCreateBranch(GitWorks.anew)
-          .setName(GitWorks.getProjectNameAsRemote(fe)).call(); // .getResult() for a dry-run
-      // createTree(fe, makeTree(walk, from));
-    }
+//    String refspec = "refs/remotes/" + GitWorks.getProjectNameAsRemote(fe) + "/master";
+//    if (!GitWorks.bare) {
+//      git.checkout().setStartPoint(refspec).setCreateBranch(GitWorks.anew)
+//          .setName(GitWorks.getProjectNameAsRemote(fe)).call(); // .getResult() for a dry-run
+//      // createTree(fe, makeTree(walk, from));
+//    }
 
     /************** find interesting commits ***************/
 
