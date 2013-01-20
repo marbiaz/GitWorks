@@ -406,8 +406,8 @@ void getCommitsInR(RevWalk walk, boolean only)
       }
     }
     comm = findCommits(walk, included, excluded, !only);
+    ids = comm != null ? getIds(comm) : null;
     if (only) {
-      ids = comm != null ? getIds(comm.toArray(new RevObject[0])) : null;
       comms.put(r, ids);
     } else {
       // TODO add to a global ArrayList with all Commits (call findAllBranches)
@@ -508,10 +508,10 @@ void getCommitsInB(RevWalk walk) throws MissingObjectException,
   excluded.add(walk.parseCommit(brIt.next().getObjectId()));
   }
   comm = findCommits(walk, included, excluded, false);
-  ids = comm != null ? getIds(comm.toArray(new RevObject[0])) : null;
   commits.put(allBranches.get(i).getName(), ids);
   included.clear();
   excluded.clear();
+    ids = comm != null ? getIds(comm) : null;
     walk.reset();
   }
   included.trimToSize();
@@ -521,12 +521,18 @@ void getCommitsInB(RevWalk walk) throws MissingObjectException,
 
   commitsInB = commits;
 }
-ArrayList<ObjectId> getIds(RevObject[] a) {
+
+
+@SuppressWarnings({ "unchecked", "rawtypes" })
+ArrayList<ObjectId> getIds(ArrayList<? extends RevObject> a) {
   if (a == null) return null;
   ArrayList<ObjectId> res = new ArrayList<ObjectId>();
-  res.ensureCapacity(a.length);
-  for (RevObject i : a) {
-    res.add(i.copy());
+  res.ensureCapacity(a.size());
+  Iterator<?> it = a.iterator();
+  RevObject i;
+  while (it.hasNext()) {
+    i = (RevObject)it.next();
+    res.add(i.getId());
   }
   return res;
 }
