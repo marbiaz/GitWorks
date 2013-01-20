@@ -599,6 +599,7 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     getCommitsInR(walk, true); // XXX
     getCommitsNotInR(walk);
     getCommitsInB(walk, false);
+    printMap(commitsInB, walk);
 
   }
   catch (Exception e) {
@@ -611,7 +612,29 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
 }
 
 
+private static void printMap(HashMap<String, ArrayList<ObjectId>> commits, RevWalk walk)
+    throws MissingObjectException, IncorrectObjectTypeException, IOException {
 
+  Entry<String, ArrayList<ObjectId>> ec = null;
+  Iterator<ObjectId> cit = null; RevCommit c; int k; String b;
+  Iterator<Entry<String, ArrayList<ObjectId>>> ecit = commits.entrySet().iterator();
+  while (ecit.hasNext()) {
+    ec = ecit.next();
+    b = ec.getKey();
+    if (ec.getValue() != null) {
+      cit = ec.getValue().iterator();
+      k = 0;
+      while (cit.hasNext()) {
+        c = walk.parseCommit(cit.next());
+        walk.parseBody(c);
+        System.out.print(ec.getKey() + " 's commit # " + (++k) + ":\n"
+            + org.eclipse.jgit.util.RawParseUtils.decode(c.getRawBuffer()));
+      }
+    } else {
+      System.out.println(ec.getKey() + " : NO COMMIT");
+    }
+    System.out.println("------------------------------");
+  }
 }
 
 
