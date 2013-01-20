@@ -277,11 +277,13 @@ Repository createRepo(String repoDir, String gitDir) throws IOException {
 }
 
 
-// depending on getBody, the runtime type of the results will be either RevCommit or Commit
+// the RevWalk must be reset by the caller upon return!
 ArrayList<RevCommit> findCommits(RevWalk walk, ArrayList<RevCommit> included,
     ArrayList<RevCommit> excluded, boolean getBody) throws MissingObjectException,
     IncorrectObjectTypeException, IOException {
   ArrayList<RevCommit> commits = new ArrayList<RevCommit>();
+  commits.ensureCapacity(bSize * 100); // XXX heuristic workaround
+  walk.setRetainBody(getBody);
   walk.markStart(included);
   RevCommit c;
   Iterator<RevCommit> it = excluded.iterator();
@@ -293,9 +295,8 @@ ArrayList<RevCommit> findCommits(RevWalk walk, ArrayList<RevCommit> included,
     c = it.next();
     if (getBody) walk.parseBody(c);
     // addUnique(commits, c); // commits are naturally ordered by SHA-1
-    commits.add(getBody == false ? c : Commit.parse(c.getRawBuffer()));
+    commits.add(c);
   }
-  walk.reset();
   return commits.size() > 0 ? commits : null;
 }
 
@@ -413,6 +414,7 @@ void getCommitsInR(RevWalk walk, boolean only)
     }
     included.clear();
     excluded.clear();
+    walk.reset();
   }
   included.trimToSize();
   included.ensureCapacity(50);
@@ -458,10 +460,11 @@ void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
       }
     }
     comm = findCommits(walk, included, excluded, false);
-    ids = comm != null ? getIds(comm.toArray(new RevObject[0])) : null;
+    ids = comm != null ? getIds(comm) : null;
     commits.put(r, ids);
     included.clear();
     excluded.clear();
+    walk.reset();
   }
   included.trimToSize();
   included.ensureCapacity(50);
@@ -509,6 +512,7 @@ void getCommitsInB(RevWalk walk) throws MissingObjectException,
   commits.put(allBranches.get(i).getName(), ids);
   included.clear();
   excluded.clear();
+    walk.reset();
   }
   included.trimToSize();
   included.ensureCapacity(50);
