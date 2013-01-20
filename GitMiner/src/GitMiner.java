@@ -44,6 +44,7 @@ HashMap<String, ArrayList<Ref>> branches;
 HashMap<String, ArrayList<ObjectId>> commitsNotInR;
 HashMap<String, ArrayList<ObjectId>> commitsOnlyInR;
 HashMap<String, ArrayList<ObjectId>> commitsInB;
+HashMap<String, ArrayList<ObjectId>> commitsOnlyInB;
 int bSize;
 Git git;
 
@@ -475,43 +476,55 @@ void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
 }
 
 
-// find commits that are unique to a given branch
-void getCommitsInB(RevWalk walk) throws MissingObjectException,
+// fast but resource-demanding
+// find commits that are (uniquely?) in a branch
+void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectException,
     IncorrectObjectTypeException, IOException {
 
+  Ref b;
   Iterator<Ref> brIt;
-  HashMap<String, ArrayList<ObjectId>> commits = new HashMap<String, ArrayList<ObjectId>>();
+  HashMap<String, ArrayList<ObjectId>> commits;
   ArrayList<RevCommit> comm;
   ArrayList<ObjectId> ids;
+  Iterator<ArrayList<Ref>> cit;
   ArrayList<RevCommit> included = new ArrayList<RevCommit>();
   ArrayList<RevCommit> excluded = new ArrayList<RevCommit>();
-  // excluded.add(walk.parseCommit(git.getRepository().resolve("ajaxorg--ace/anchor"))); // refspec
-  // included.add(walk.parseCommit(git.getRepository().resolve("ajaxorg--ace/issue-42"))); // ui/optimize-experimental
-  // included.add(walk.parseCommit(git.getRepository().resolve("ajaxorg--ace/concorde"))); // fix/search_ui
+  // excluded.add(walk.parseCommit(git.getRepository().resolve("ajaxorg--ace/anchor")));
+  // included.add(walk.parseCommit(git.getRepository().resolve("ajaxorg--ace/issue-42")));
+  // included.add(walk.parseCommit(git.getRepository().resolve("ajaxorg--ace/concorde")));
 
   ArrayList<Ref> allBranches = new ArrayList<Ref>();
   ArrayList<Ref> temp = new ArrayList<Ref>();
-  Iterator<ArrayList<Ref>> cit = branches.values().iterator();
+  if (only) {
+    temp.ensureCapacity(bSize - 1);
+    excluded.ensureCapacity(bSize - 1);
+  } else if (allCommits.size() > 0) {
+    System.err.println("GitMiner : ERROR : The allCommits array must be filled only once!");
+    return;
+  }
+  commits = new HashMap<String, ArrayList<ObjectId>>();
+  cit = branches.values().iterator();
   allBranches.ensureCapacity(bSize);
   while (cit.hasNext()) {
-  allBranches.addAll(cit.next());
+    allBranches.addAll(cit.next());
   }
-  temp.ensureCapacity(bSize - 1);
-  excluded.ensureCapacity(bSize - 1);
   for (int i = 0; i < allBranches.size(); i++) {
-  temp.clear();
-  if (i > 0) temp.addAll(allBranches.subList(0, i));
-  temp.addAll(allBranches.subList(i + 1, allBranches.size()));
-  included.add(walk.parseCommit(allBranches.get(i).getObjectId()));
-  brIt = temp.iterator();
-  while (brIt.hasNext()) {
-  excluded.add(walk.parseCommit(brIt.next().getObjectId()));
-  }
-  comm = findCommits(walk, included, excluded, false);
-  commits.put(allBranches.get(i).getName(), ids);
-  included.clear();
-  excluded.clear();
+    b = allBranches.get(i);
+    if (only) {
+      temp.clear();
+      if (i > 0) temp.addAll(allBranches.subList(0, i));
+      temp.addAll(allBranches.subList(i + 1, allBranches.size()));
+      brIt = temp.iterator();
+      while (brIt.hasNext()) {
+        excluded.add(walk.parseCommit(brIt.next().getObjectId()));
+      }
+    }
+    included.add(walk.parseCommit(b.getObjectId()));
+    comm = findCommits(walk, included, excluded, !only);
     ids = comm != null ? getIds(comm) : null;
+    commits.put(b.getName(), ids);
+    included.clear();
+    excluded.clear();
     walk.reset();
   }
   included.trimToSize();
@@ -519,7 +532,10 @@ void getCommitsInB(RevWalk walk) throws MissingObjectException,
   excluded.trimToSize();
   excluded.ensureCapacity(50);
 
-  commitsInB = commits;
+  if (only)
+    commitsOnlyInB = commits;
+  else
+    commitsInB = commits;
 }
 
 
@@ -582,7 +598,7 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
 
     getCommitsInR(walk, true); // XXX
     getCommitsNotInR(walk);
-    getCommitsInB(walk);
+    getCommitsInB(walk, false);
 
   }
   catch (Exception e) {
