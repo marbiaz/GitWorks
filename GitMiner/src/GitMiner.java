@@ -609,10 +609,10 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
 //    getCommitsInR(walk, false);
 //    getCommitsNotInR(walk);
     getCommitsInB(walk, false);
-    printMap(commitsInB, walk);
     allCommits.trimToSize();
 
     System.out.println("This big repo has " + allCommits.size() + " regular commits.");
+    printCommitMap(commitsInB, walk);
     printAny(allCommits, System.out);
 
   }
@@ -626,7 +626,7 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
 }
 
 
-private static void printMap(HashMap<String, ArrayList<ObjectId>> commits, RevWalk walk)
+private static void printCommitMap(HashMap<String, ArrayList<ObjectId>> commits, RevWalk walk)
     throws MissingObjectException, IncorrectObjectTypeException, IOException {
 
   Entry<String, ArrayList<ObjectId>> ec = null;
@@ -641,11 +641,11 @@ private static void printMap(HashMap<String, ArrayList<ObjectId>> commits, RevWa
       while (cit.hasNext()) {
         c = walk.parseCommit(cit.next());
         walk.parseBody(c);
-        System.out.print(ec.getKey() + " 's commit # " + (++k) + ":\n"
+        System.out.print(b + " 's commit # " + (++k) + ":\n"
             + org.eclipse.jgit.util.RawParseUtils.decode(c.getRawBuffer()));
       }
     } else {
-      System.out.println(ec.getKey() + " : NO COMMIT");
+      System.out.println(b + " : NO COMMIT");
     }
     System.out.println("------------------------------");
   }
