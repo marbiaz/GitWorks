@@ -41,12 +41,12 @@ import org.eclipse.jgit.treewalk.TreeWalk;
 
 public class GitMiner {
 
-HashMap<String, ArrayList<ObjectId>> commitsInR;
+HashMap<String, ArrayList<Commit>> commitsInR;
 HashMap<String, ArrayList<BranchRef>> branches;
-HashMap<String, ArrayList<ObjectId>> commitsNotInR;
-HashMap<String, ArrayList<ObjectId>> commitsOnlyInR;
-HashMap<BranchRef, ArrayList<ObjectId>> commitsInB;
-HashMap<BranchRef, ArrayList<ObjectId>> commitsOnlyInB;
+HashMap<String, ArrayList<Commit>> commitsNotInR;
+HashMap<String, ArrayList<Commit>> commitsOnlyInR;
+HashMap<BranchRef, ArrayList<Commit>> commitsInB;
+HashMap<BranchRef, ArrayList<Commit>> commitsOnlyInB;
 ArrayList<Commit> allCommits;
 ArrayList<BranchRef> allBranches;
 Git git;
@@ -389,14 +389,15 @@ void getCommitsInR(RevWalk walk, boolean only)
     throws MissingObjectException, IncorrectObjectTypeException, IOException {
 
   Iterator<BranchRef> brIt;
-  HashMap<String, ArrayList<ObjectId>> comms = new HashMap<String, ArrayList<ObjectId>>();
+  HashMap<String, ArrayList<Commit>> comms = new HashMap<String, ArrayList<Commit>>();
   ArrayList<RevCommit> comm;
-  ArrayList<ObjectId> ids;
   ArrayList<RevCommit> included = new ArrayList<RevCommit>();
   ArrayList<RevCommit> excluded = new ArrayList<RevCommit>();
   Entry<String, ArrayList<BranchRef>> er;
   String r;
   int c;
+  Commit newco;
+  ArrayList<Commit> newcos;
   ArrayList<BranchRef> b;
   Iterator<Entry<String, ArrayList<BranchRef>>> erit;
   Iterator<String> sit = branches.keySet().iterator();
@@ -423,15 +424,21 @@ void getCommitsInR(RevWalk walk, boolean only)
       }
     }
     comm = findCommits(walk, included, excluded, !only);
-    ids = comm != null ? getIds(comm) : null;
-    comms.put(r, ids);
-    if (!only) {
+    if (comm != null) { // if only == false this is always true
+      newcos = new ArrayList<Commit>(comm.size());
       for (int i = 0; i < comm.size(); i++) {
-        b = findAllBranches(comm.get(i).getId(), r);
-        c = addUnique(allCommits, new Commit(comm.get(i))); // Commit.parse(comm.get(i).getRawBuffer()));
-        allCommits.get(c).addBranches(b);
+        newco = new Commit(comm.get(i).getId());
+        c = addUnique(allCommits, newco);
+        if (!only) {
+          b = findAllBranches(newco.id, r);
+          allCommits.get(c).addBranches(b);
+        }
+        newcos.add(allCommits.get(c));
       }
+    } else {
+      newcos = null;
     }
+    comms.put(r, newcos);
     included.clear();
     excluded.clear();
     walk.reset();
@@ -452,14 +459,15 @@ void getCommitsInR(RevWalk walk, boolean only)
 void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
     IncorrectObjectTypeException, IOException {
   Iterator<BranchRef> brIt;
-  HashMap<String, ArrayList<ObjectId>> commits = new HashMap<String, ArrayList<ObjectId>>();
+  HashMap<String, ArrayList<Commit>> commits = new HashMap<String, ArrayList<Commit>>();
   ArrayList<RevCommit> comm;
-  ArrayList<ObjectId> ids;
   ArrayList<RevCommit> included = new ArrayList<RevCommit>();
   ArrayList<RevCommit> excluded = new ArrayList<RevCommit>();
 
   Entry<String, ArrayList<BranchRef>> er;
   String r;
+  Commit newco;
+  ArrayList<Commit> newcos;
   Iterator<Entry<String, ArrayList<BranchRef>>> erit;
   Iterator<String> sit = branches.keySet().iterator();
   included.ensureCapacity(allBranches.size() - 1);
@@ -480,8 +488,16 @@ void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
       }
     }
     comm = findCommits(walk, included, excluded, false);
-    ids = comm != null ? getIds(comm) : null;
-    commits.put(r, ids);
+    if (comm != null) {
+      newcos = new ArrayList<Commit>(comm.size());
+      for (int i = 0; i < comm.size(); i++) {
+        newco = new Commit(comm.get(i).getId());
+        newcos.add(allCommits.get(addUnique(allCommits, newco)));
+      }
+    } else {
+      newcos = null;
+    }
+    commits.put(r, newcos);
     included.clear();
     excluded.clear();
     walk.reset();
@@ -503,9 +519,11 @@ void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectException,
   int c;
   BranchRef b;
   Iterator<BranchRef> brIt;
-  HashMap<BranchRef, ArrayList<ObjectId>> commits;
+  HashMap<BranchRef, ArrayList<Commit>> commits;
+  Commit newco;
+  ArrayList<Commit> newcos;
   ArrayList<RevCommit> comm;
-  ArrayList<ObjectId> ids;
+
   ArrayList<RevCommit> included = new ArrayList<RevCommit>();
   ArrayList<RevCommit> excluded = new ArrayList<RevCommit>();
   // excluded.add(walk.parseCommit(git.getRepository().resolve("ajaxorg--ace/anchor")));
@@ -520,7 +538,7 @@ void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectException,
     System.err.println("GitMiner : ERROR : The allCommits array must be filled only once!");
     return;
   }
-  commits = new HashMap<BranchRef, ArrayList<ObjectId>>();
+  commits = new HashMap<BranchRef, ArrayList<Commit>>();
   for (int i = 0; i < allBranches.size(); i++) {
     b = allBranches.get(i);
     if (only) {
@@ -534,14 +552,23 @@ void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectException,
     }
     included.add(walk.parseCommit(b.id));
     comm = findCommits(walk, included, excluded, !only);
-    ids = comm != null ? getIds(comm) : null;
-    commits.put(b, ids);
-    if (!only) {
+    if (comm != null) { // if only == false this is always true
+      newcos = new ArrayList<Commit>(comm.size());
       for (int j = 0; j < comm.size(); j++) {
-        c = addUnique(allCommits, new Commit(comm.get(j))); // Commit.parse(comm.get(i).getRawBuffer()));
-        allCommits.get(c).addBranch(b);
+        if (!only) {
+          newco = new Commit(comm.get(j)); // this RevCommit has a buffer
+          c = addUnique(allCommits, newco);
+          allCommits.get(c).addBranch(b);
+        } else {
+          newco = new Commit(comm.get(j).getId()); // this RevCommit has no buffer
+          c = addUnique(allCommits, newco);
+        }
+        newcos.add(allCommits.get(c));
       }
+    } else {
+      newcos = null;
     }
+    commits.put(b, newcos);
     included.clear();
     excluded.clear();
     walk.reset();
@@ -558,7 +585,6 @@ void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectException,
 }
 
 
-@SuppressWarnings({ "unchecked", "rawtypes" })
 ArrayList<ObjectId> getIds(ArrayList<? extends RevObject> a) {
   if (a == null) return null;
   ArrayList<ObjectId> res = new ArrayList<ObjectId>();
@@ -615,16 +641,17 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     // walk.sort(RevSort.TOPO);
     // walk.sort(RevSort.NONE);
 
-//    getCommitsInR(walk, true);
     allCommits = new ArrayList<Commit>();
     allCommits.ensureCapacity(allBranches.size() * 100); // XXX heuristic workaround
 //    getCommitsInR(walk, false); // very slow (it uses findAllBranches)
-//    getCommitsNotInR(walk);
     getCommitsInB(walk, false);
     allCommits.trimToSize();
 
+    getCommitsInR(walk, true);
+    getCommitsNotInR(walk);
+
     System.out.println("This big repo has " + allCommits.size() + " regular commits.");
-    printCommitMap(commitsInB, walk);
+    printCommitMap(commitsInB);
     printAny(allCommits, System.out);
 
   }

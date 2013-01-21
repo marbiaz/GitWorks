@@ -19,6 +19,11 @@ ArrayList<BranchRef> branches;
 public Commit() {}
 
 
+Commit(ObjectId id) {
+  this.id = id;
+}
+
+
 Commit(RevCommit c) {
   data = new byte[c.getRawBuffer().length];
   System.arraycopy(c.getRawBuffer(), 0, data, 0, data.length);
@@ -44,7 +49,7 @@ public String toString() {
   out += "id " + id.getName() + "\n";
   out += RawParseUtils.decode(data);
   if (branches != null) {
-    out += "branches";
+    out += "\nbranches";
     for (BranchRef r : branches) {
       out += " " + r.toString();
     }
