@@ -4,6 +4,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -612,7 +613,7 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     allCommits.trimToSize();
 
     System.out.println("This big repo has " + allCommits.size() + " regular commits.");
-    printArray(allCommits, System.out);
+    printAny(allCommits, System.out);
 
   }
   catch (Exception e) {
@@ -677,32 +678,44 @@ static private int addUnique(List set, Comparable item) {
 
 
 /**
- * It provides the printout of all the objects in the given array, one per line, each line starting
- * with the array index of the object.
+ * It provides the printout of the given data in the given output stream.
+ * If the argument is an array, print one element per line, each line starting
+ * with the array index of the element.
+ * It does not handle Maps, Interfaces, Enums, arrays of arrays or lists of lists.
  * 
- * @param a
- *          array of objects to be printed
- * @return A String containing the objects printout.
+ * @param data
+ *          Data to be printed
+ * @param out
+ *          Stream in which the data printout must be written
  */
 @SuppressWarnings("unchecked")
-static public void printArray(Object o, PrintStream out) {
+static public void printAny(Object data, PrintStream out) {
   int size;
-  if (o == null) {
+  if (data == null) {
     out.println("\nNULL!\n");
-  } else if (o instanceof ArrayList) {
-    ArrayList<Object> a = (ArrayList<Object>)o;
+  } else if (data instanceof List) {
+    List<Object> a = (List<Object>)data;
     size = a.size();
     for (int i = 0; i < 1; i++) { // size FIXME
       out.println("[" + i + "] " + (a.get(i).getClass().cast(a.get(i))).toString());
     }
-  } else if (o.getClass().isArray()) {
-    Object[] a = (Object[])o;
-    size = a.length;
+  } else if (data.getClass().isArray()) {
+    Object e;
+    size = Array.getLength(data);
     for (int i = 0; i < size; i++) {
-      out.println("[" + i + "] " + (a[i].getClass().cast(a[i])).toString());
+      e = Array.get(data, i);
+      if (e.getClass().getGenericSuperclass() != null) {
+        out.println("[" + i + "] " + (e.getClass().cast(e)).toString());
+      } else {
+        out.println("[" + i + "] " + e.getClass().cast(e));
+      }
     }
+  } else if (data.getClass().isPrimitive()) {
+    out.println(data);
+  } else if (!(data instanceof java.util.Map || data.getClass().isEnum() || data.getClass().isInterface())) {
+    out.println((data.getClass().cast(data)).toString());
   } else {
-    out.println("ERROR : object to be printed is not an array type!");
+    out.println("ERROR : cannot print " + data.getClass().toString() + " !");
   }
   out.flush();
 }
