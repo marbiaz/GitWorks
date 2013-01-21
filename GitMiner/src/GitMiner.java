@@ -668,16 +668,27 @@ static private void addUnique(List set, Comparable item) {
  *          array of objects to be printed
  * @return A String containing the objects printout.
  */
-static public String printArray(Object[] a) {
-  String res = "";
-  if (a == null) {
-    res = "\nNULL!\n";
-  } else {
-    for (int i = 0; i < a.length; i++) {
-      res += "[" + i + "] " + a[i].toString() + "\n";
+@SuppressWarnings("unchecked")
+static public void printArray(Object o, PrintStream out) {
+  int size;
+  if (o == null) {
+    out.println("\nNULL!\n");
+  } else if (o instanceof ArrayList) {
+    ArrayList<Object> a = (ArrayList<Object>)o;
+    size = a.size();
+    for (int i = 0; i < 1; i++) { // size FIXME
+      out.println("[" + i + "] " + (a.get(i).getClass().cast(a.get(i))).toString());
     }
+  } else if (o.getClass().isArray()) {
+    Object[] a = (Object[])o;
+    size = a.length;
+    for (int i = 0; i < size; i++) {
+      out.println("[" + i + "] " + (a[i].getClass().cast(a[i])).toString());
+    }
+  } else {
+    out.println("ERROR : object to be printed is not an array type!");
   }
-  return res;
+  out.flush();
 }
 
 }
