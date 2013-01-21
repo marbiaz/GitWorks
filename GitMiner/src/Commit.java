@@ -79,11 +79,7 @@ public int compareTo(Object o) {
 
 @Override
 public boolean equals(Object o) {
-  if (o instanceof Commit)
-    return this.compareTo((Commit)o) == 0;
-  else if (o instanceof RevCommit)
-    return this.id.compareTo(((RevCommit)o).getId()) == 0; // this.compareTo((RevCommit)o) == 0;
-  return false;
+  return this.compareTo(o) == 0;
 }
 
 }

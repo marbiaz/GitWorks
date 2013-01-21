@@ -51,6 +51,8 @@ public int compareTo (Object o) {
     return this.name.compareTo(((BranchRef)o).name);
   } else if (o instanceof Ref) {
     return this.name.compareTo(((Ref)o).getName());
+  } else if (o instanceof String) {
+    return this.name.compareTo((String)o);
   }
   return -1;
 }
@@ -58,12 +60,7 @@ public int compareTo (Object o) {
 
 @Override
 public boolean equals(Object o) {
-  if (o instanceof BranchRef) {
-    return this.name.equals(((BranchRef)o).name);
-  } else if (o instanceof Ref) {
-    return this.name.equals(((Ref)o).getName());
-  }
-  return false;
+  return this.compareTo(o) == 0;
 }
 
 }
