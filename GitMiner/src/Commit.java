@@ -60,15 +60,35 @@ public String toString() {
 
 @Override
 public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-  // TODO
-
+  int i, size = in.readInt();
+  data = new byte[size];
+  for (i = 0; i < size; i++) {
+    data[i] = in.readByte();
+  }
+  id  = (ObjectId)in.readObject();
+  size = in.readInt();
+  branches = new ArrayList<BranchRef>(size);
+  BranchRef bb;
+  for (i = 0; i < size; i++) {
+    bb = new BranchRef();
+    bb.index = in.readInt();
+    branches.add(bb); // the complete instance must be set by GitMiner
+  }
 }
 
 
 @Override
 public void writeExternal(ObjectOutput out) throws IOException {
-  // TODO
-
+  out.writeInt(data.length);
+  for (byte b : data) {
+    out.write(b);
+  }
+  out.writeObject(id);
+  out.writeInt(branches.size());
+  for (BranchRef br : branches) {
+    out.writeInt(br.index); // (see readExternal)
+  }
+  out.flush();
 }
 
 
@@ -78,6 +98,8 @@ public int compareTo(Object o) {
     return this.id.compareTo(((Commit)o).id);
   else if (o instanceof RevCommit)
     return this.id.compareTo(((RevCommit)o).getId());
+  else if (o instanceof ObjectId)
+    return this.id.compareTo((ObjectId)o);
   return -1;
 }
 

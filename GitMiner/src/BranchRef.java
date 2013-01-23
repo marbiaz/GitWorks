@@ -12,14 +12,14 @@ public class BranchRef implements Comparable<Object>, Externalizable {
 
 String name;
 ObjectId id;
-
+int index;
 
 public BranchRef() {}
 
 
 BranchRef(Ref r) {
   name = r.getName();
-  id = r.getLeaf().getObjectId();
+  id = r.getLeaf().getObjectId().copy();
 }
 
 
@@ -32,16 +32,19 @@ public String toString() {
 
 
 @Override
-public void readExternal(ObjectInput arg0) throws IOException, ClassNotFoundException {
-  // TODO Auto-generated method stub
-
+public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+  // index is set by GitMIner
+  id = (ObjectId)in.readObject();
+  name = in.readUTF();
 }
 
 
 @Override
-public void writeExternal(ObjectOutput arg0) throws IOException {
-  // TODO Auto-generated method stub
-
+public void writeExternal(ObjectOutput out) throws IOException {
+  // index is not serialized
+  out.writeObject(id);
+  out.writeUTF(name);
+  out.flush();
 }
 
 
