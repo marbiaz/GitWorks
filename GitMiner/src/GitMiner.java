@@ -411,18 +411,18 @@ void getCommitsInR(RevWalk walk, boolean only)
   Entry<String, ArrayList<BranchRef>> er;
   String r;
   int c;
-  Commit newco;
+//  Commit newco;
   ArrayList<Commit> newcos;
-  ArrayList<BranchRef> b;
+//  ArrayList<BranchRef> b;
   Iterator<Entry<String, ArrayList<BranchRef>>> erit;
   Iterator<String> sit = branches.keySet().iterator();
   comms = new LinkedHashMap<String, ArrayList<Commit>>(branches.size(), 1);
   if (only)
     excluded.ensureCapacity(allBranches.size() - 1);
-  else if (allCommits.size() > 0) {
-    System.err.println("GitMiner : ERROR : The allCommits array must be filled only once!");
-    return;
-  }
+//  else if (allCommits.size() > 0) {
+//    System.err.println("GitMiner : ERROR : The allCommits array must be filled only once!");
+//    return;
+//  }
   while (sit.hasNext()) {
     r = sit.next();
     erit = branches.entrySet().iterator();
@@ -439,18 +439,18 @@ void getCommitsInR(RevWalk walk, boolean only)
         }
       }
     }
-    comm = findCommits(walk, included, excluded, !only);
+    comm = findCommits(walk, included, excluded, false); // !only
     if (comm != null) { // if only == false this is always true
       newcos = new ArrayList<Commit>(comm.size());
       for (int i = 0; i < comm.size(); i++) {
-        if (!only) { // XXX it may be used to populate allCommits...
-          newco = new Commit(comm.get(i));
-          c = addUnique(allCommits, newco);
-          b = findAllBranches(newco.id, r);
-          allCommits.get(c).addBranches(b);
-        } else {
+//        if (!only) { // XXX it may be used to populate allCommits, but it is slow and inefficient
+//          newco = new Commit(comm.get(i));
+//          c = addUnique(allCommits, newco);
+//          b = findAllBranches(newco.id, r);
+//          allCommits.get(c).addBranches(b);
+//        } else {
           c = Collections.binarySearch(allCommits, comm.get(i));
-        }
+//        }
         newcos.add(allCommits.get(c));
       }
     } else {
@@ -574,7 +574,7 @@ void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectException,
       newcos = new ArrayList<Commit>(comm.size());
       for (int j = 0; j < comm.size(); j++) {
         if (!only) {
-          newco = new Commit(comm.get(j)); // this RevCommit has a buffer
+          newco = new Commit(comm.get(j)); // this RevCommit has a buffer -> populate allCommits
           c = addUnique(allCommits, newco);
           allCommits.get(c).addBranch(b);
         } else {  // this RevCommit has no buffer
@@ -665,7 +665,7 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
 
     /************** find interesting commits ***************/
 
-    buildBranchesMap(fe.howManyForks()); // build allBranches and branches
+    if (allBranches == null) buildBranchesMap(fe.howManyForks()); // build allBranches and branches
 
     walk = new RevWalk(git.getRepository());
     // walk.setRetainBody(false); // this walk is for multiple usage
@@ -673,14 +673,15 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     // walk.sort(RevSort.TOPO);
     // walk.sort(RevSort.NONE);
 
-    init();
-//    getCommitsInR(walk, false); // very slow (it uses findAllBranches)
-    getCommitsInB(walk, false);
-    tailor();
-//    getCommitsInB(walk, true);
-//    getCommitsInR(walk, true); /**/ System.err.println("###### getCommitsInB is done");
-//    getCommitsNotInR(walk);
-
+    if (allCommits == null) {
+      init();
+      getCommitsInB(walk, false);
+      tailor();
+    }
+    getCommitsInB(walk, true);
+    getCommitsInR(walk, false);
+    getCommitsInR(walk, true);
+    getCommitsNotInR(walk);
     System.out.println("This big repo has " + allCommits.size() + " regular commits.");
 //    printCommitMap(commitsInB);
 //    printAny(allCommits, System.out);
