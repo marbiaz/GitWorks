@@ -798,24 +798,45 @@ static public void printAny(Object data, PrintStream out) {
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 private void externalizeMap(Map map, ObjectOutput out) throws IOException {
-  int type = 0, size = map.keySet().size();
+  int keyType = 0, valueType = 0, size;
   Iterator<Map.Entry> it;
-  Iterator<Commit> cit;
+  Iterator cit;
   Entry e;
+  Object value;
+  if (map == null) {
+    out.writeInt(0);
+    out.flush();
+    return;
+  }
+  size = map.keySet().size();
   if (map.keySet().iterator().next().getClass().equals(String.class)) {
-    type = 1;
+    keyType = 1;
+  }
+  cit = map.values().iterator();
+  do {
+    value = cit.next();
+  } while (value == null);
+  if (((ArrayList)value).get(0).getClass().equals(BranchRef.class)) {
+    valueType = 1;
   }
   out.writeInt(size);
-  out.writeInt(type);
+  out.writeInt(keyType);
+  out.writeInt(valueType);
   it = map.entrySet().iterator();
   while (it.hasNext()) {
     e = it.next();
-    out.writeInt(((ArrayList<Commit>)e.getValue()).size());
-    cit = ((ArrayList<Commit>)e.getValue()).iterator();
-    while (cit.hasNext()) {
-      out.writeInt(Collections.binarySearch(allCommits, cit.next()));
+    if (e.getValue() == null) {
+      out.writeInt(0);
+    } else {
+      out.writeInt(((ArrayList)e.getValue()).size());
+      cit = ((ArrayList)e.getValue()).iterator();
+      while (cit.hasNext()) {
+        value = cit.next();
+        out.writeInt(Collections.binarySearch(
+            valueType == 0 ? allCommits : allBranches, value.getClass().cast(value)));
+      }
     }
-    switch (type) {
+    switch (keyType) {
     case 0:
       out.writeInt(((BranchRef)e.getKey()).index);
     break;
@@ -828,22 +849,27 @@ private void externalizeMap(Map map, ObjectOutput out) throws IOException {
 
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
-private LinkedHashMap<?, ArrayList<Commit>> importMap(ObjectInput in) throws IOException {
-  int j, i, size, vsize, type;
+private Map importMap(ObjectInput in) throws IOException {
+  int j, i, size, vsize, keyType, valueType;
   size = in.readInt();
   if (size == 0) {
     return null;
   }
-  type = in.readInt();
+  keyType = in.readInt();
+  valueType = in.readInt();
   LinkedHashMap res = new LinkedHashMap(size);
-  ArrayList<Commit> values;
+  ArrayList values;
   for (i = 0; i < size; i++) {
     vsize = in.readInt();
-    values = new ArrayList<Commit>(vsize);
-    for (j = 0; j < vsize; j++) {
-      values.add(allCommits.get(in.readInt()));
+    if (vsize == 0) {
+      values = null;
+    } else {
+      values = new ArrayList(vsize);
+      for (j = 0; j < vsize; j++) {
+        values.add(valueType == 0 ? allCommits.get(in.readInt()) : allBranches.get(in.readInt()));
+      }
     }
-    switch (type) {
+    switch (keyType) {
     case 0:
       res.put(allBranches.get(in.readInt()), values);
     break;
@@ -881,11 +907,13 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
     }
     allCommits.add(c);
   }
+  branches = (LinkedHashMap<String, ArrayList<BranchRef>>)importMap(in);
   commitsInB = (LinkedHashMap<BranchRef, ArrayList<Commit>>)importMap(in);
+
   commitsOnlyInB = (LinkedHashMap<BranchRef, ArrayList<Commit>>)importMap(in);
-//  commitsInR = (LinkedHashMap<String, ArrayList<Commit>>)importMap(in);
-//  commitsOnlyInR = (LinkedHashMap<String, ArrayList<Commit>>)importMap(in);
-//  commitsNotInR = (LinkedHashMap<String, ArrayList<Commit>>)importMap(in);
+  commitsInR = (LinkedHashMap<String, ArrayList<Commit>>)importMap(in);
+  commitsOnlyInR = (LinkedHashMap<String, ArrayList<Commit>>)importMap(in);
+  commitsNotInR = (LinkedHashMap<String, ArrayList<Commit>>)importMap(in);
 }
 
 
@@ -903,11 +931,13 @@ public void writeExternal(ObjectOutput out) throws IOException {
   while (itc.hasNext()) {
     itc.next().writeExternal(out);
   }
-  if (commitsInB != null) externalizeMap(commitsInB, out); else out.writeInt(0);
-  if (commitsOnlyInB != null) externalizeMap(commitsOnlyInB, out); else out.writeInt(0);
-//  if (commitsInR != null) externalizeMap(commitsInR, out); else out.writeInt(0);
-//  if (commitsOnlyInR != null) externalizeMap(commitsOnlyInR, out); else out.writeInt(0);
-//  if (commitsNotInR != null) externalizeMap(commitsNotInR, out); else out.writeInt(0);
+  externalizeMap(branches, out);
+  externalizeMap(commitsInB, out);
+
+  externalizeMap(commitsOnlyInB, out);
+  externalizeMap(commitsInR, out);
+  externalizeMap(commitsOnlyInR, out);
+  externalizeMap(commitsNotInR, out);
   out.flush();
 }
 

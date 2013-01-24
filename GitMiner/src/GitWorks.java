@@ -259,20 +259,19 @@ public static void main(String[] args) throws FileNotFoundException, IOException
 
     r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
 
-    gitMiners = new GitMiner[3];
+    gitMiners = new GitMiner[1];
 
     for (int i = 0; i < gitMiners.length; i++) {
+//    gitMiners[i] = importGitMiner(trees_out_dir + getProjectNameAsRemote(fe) + ".dump" + i);
       gitMiners[i] = new GitMiner(getProjectNameAsRemote(fe));
-//      gitMiners[i] = importGitMiner(trees_out_dir + "gitWorksDump" + i);
       gitMiners[i].analyzeForkTree(fe); System.gc(); Thread.sleep(1000);
-//      GitMiner.printAny(gitMiners[i].allCommits, System.out);
 
       r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
     }
 
     for (int i = 0; i < gitMiners.length; i++) {
 //      gitMiners[i].commitsInB = null; System.gc(); Thread.sleep(1000);
-      exportGitMiner(gitMiners[i], trees_out_dir + "gitWorksDump" + i);
+      exportGitMiner(gitMiners[i], trees_out_dir + gitMiners[i].name + ".dump" + i);
 
       r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
     }
