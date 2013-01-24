@@ -341,8 +341,8 @@ void buildBranchesMap(int size) throws GitAPIException {
   ArrayList<Ref> all = (ArrayList<Ref>)git.branchList().setListMode(ListMode.REMOTE).call();
   Iterator<Ref> allBs = all.iterator();
   String bName = "";
-  allBranches.ensureCapacity(all.size());
-  while (allBs.hasNext()) {
+  allBranches.ensureCapacity(all.size()); int j = 0;
+  while (allBs.hasNext()) {/**/ System.err.println("###### Iteration " + (++j));
     r = allBs.next();
     if (!("refs/remotes/" + r.getName().split("/")[2]).equals(bName)) {
       bName = "refs/remotes/" + r.getName().split("/")[2]; // getName() format is
@@ -423,7 +423,7 @@ void getCommitsInR(RevWalk walk, boolean only)
 //    System.err.println("GitMiner : ERROR : The allCommits array must be filled only once!");
 //    return;
 //  }
-  while (sit.hasNext()) {
+  int j = 0; while (sit.hasNext()) {/**/ System.err.println("###### Iteration " + (++j));
     r = sit.next();
     erit = branches.entrySet().iterator();
     while (erit.hasNext()) {
@@ -489,8 +489,8 @@ void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
   Iterator<String> sit = branches.keySet().iterator();
   included.ensureCapacity(allBranches.size() - 1);
   commits = new LinkedHashMap<String, ArrayList<Commit>>(branches.size(), 1);
-  walk.setRetainBody(false);
-  while (sit.hasNext()) {
+  walk.setRetainBody(false); int j = 0;
+  while (sit.hasNext()) {/**/ System.err.println("###### Iteration " + (++j));
     r = sit.next();
     erit = branches.entrySet().iterator();
     while (erit.hasNext()) {
