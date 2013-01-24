@@ -683,7 +683,7 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     getCommitsInR(walk, true);
     getCommitsNotInR(walk);
     System.out.println("This big repo has " + allCommits.size() + " regular commits.");
-//    printCommitMap(commitsInB);
+    printAny(commitsNotInR, System.out);
 //    printAny(allCommits, System.out);
 
   }
@@ -699,29 +699,26 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
 }
 
 
-@SuppressWarnings({ "rawtypes", "unchecked" })
-static void printCommitMap(LinkedHashMap<? extends Object, ArrayList<Commit>> commits)
-    throws MissingObjectException, IncorrectObjectTypeException, IOException {
-
+@SuppressWarnings({ "rawtypes" })
+static void printMap(Map m, PrintStream out) {
   Entry ec = null;
-  Iterator<Commit> cit = null; int k; Object b;
-  Iterator ecit = commits.entrySet().iterator();
-  while (ecit.hasNext()) {
+  Iterator cit = null; int c; Object k,v;
+  Iterator ecit = m.entrySet().iterator();
+  for (int i = 0; i < 3 && ecit.hasNext(); i++) {//  while (ecit.hasNext()) {
     ec = (Map.Entry)ecit.next();
-    b = ec.getKey();
+    k = ec.getKey();
     if (ec.getValue() != null) {
       cit = ((ArrayList)ec.getValue()).iterator();
-      k = 0;
-      while (cit.hasNext()) {
-        c = walk.parseCommit(((RevCommit)cit.next()));
-        walk.parseBody(c);
-        System.out.print((b.getClass().cast(b)).toString() + " 's commit # " + (++k) + ":\n"
-            + org.eclipse.jgit.util.RawParseUtils.decode(c.getRawBuffer()));
-      }
+      c = 0;
+//      while (cit.hasNext()) {
+        v = cit.next();
+        out.print((k.getClass().cast(k)).toString() + " 's element # " + (++c) + ":\n"
+            + (v.getClass().cast(v)).toString());
+//      }
     } else {
-      System.out.println((b.getClass().cast(b)).toString() + " : NO COMMIT");
+      i--; //System.out.print((k.getClass().cast(k)).toString() + " : NO ENTRY");
     }
-    System.out.println("------------------------------");
+    out.println("\n------------------------------");
   }
 }
 
@@ -755,18 +752,22 @@ static private int addUnique(List set, Comparable item) {
  * It provides the printout of the given data in the given output stream.
  * If the argument is an array, print one element per line, each line starting
  * with the array index of the element.
- * It does not handle Maps, Interfaces, Enums, arrays of arrays or lists of lists.
+ * It does not handle Interfaces, Enums, arrays of arrays or lists of lists.
+ * It only handles Maps declared in GitMiner.
  * 
  * @param data
  *          Data to be printed
  * @param out
  *          Stream in which the data printout must be written
  */
-@SuppressWarnings("unchecked")
+@SuppressWarnings({ "unchecked", "rawtypes" })
 static public void printAny(Object data, PrintStream out) {
   int size;
   if (data == null) {
     out.println("\nNULL!\n");
+  } else if (data instanceof Map
+      && (new LinkedHashMap<Object, ArrayList>()).getClass().isAssignableFrom(data.getClass())) {
+    printMap((Map)data, out);
   } else if (data instanceof List) {
     List<Object> a = (List<Object>)data;
     size = a.size();
