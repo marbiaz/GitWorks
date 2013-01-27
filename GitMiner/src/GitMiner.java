@@ -652,7 +652,7 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     /************** create big tree ****************/
 
     if (GitWorks.anew) {
-      addRemotes(git, fe, 0); // with a large param value the complete fork tree will be built
+      addRemotes(git, fe, 100); // with a large param value the complete fork tree will be built
     }
 
     /************** print commits & checkout ****************/
