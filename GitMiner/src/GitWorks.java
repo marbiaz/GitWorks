@@ -174,7 +174,8 @@ while ((line = listFile.readLine()) != null) {
  c++;
  tokens = line.split(GitWorks.field_sep);
  if (ForkEntry.isValidId(tokens[1] + GitWorks.id_sep + tokens[0])) {
-   cc = l.add(new ForkEntry(tokens[1], tokens[0], Integer.valueOf(tokens[3])));
+   cc = l.add(new ForkEntry(tokens[1], tokens[0],
+       tokens[3].equalsIgnoreCase("nan") ? -1 : Integer.valueOf(tokens[3])));
    if (cc < 0) {
      children.add(-cc - 1, tokens.length == 5 ? tokens[4] : "");
    } else {
