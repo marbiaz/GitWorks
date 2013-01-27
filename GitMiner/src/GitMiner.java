@@ -697,6 +697,7 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
       walk.dispose(); walk.release();
     }
     if (git != null) git.getRepository().close();
+    System.gc();
   }
 }
 
