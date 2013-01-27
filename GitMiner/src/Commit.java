@@ -28,17 +28,16 @@ Commit(RevCommit c) {
   data = new byte[c.getRawBuffer().length];
   System.arraycopy(c.getRawBuffer(), 0, data, 0, data.length);
   id = c.copy();
+  branches = new ArrayList<BranchRef>();
 }
 
 
 void addBranches(ArrayList<BranchRef> b) {
-  if (branches == null) branches = new ArrayList<BranchRef>();
   branches.addAll(b);
 }
 
 
 void addBranch(BranchRef b) {
-  if (branches == null) branches = new ArrayList<BranchRef>();
   branches.add(b);
 }
 
