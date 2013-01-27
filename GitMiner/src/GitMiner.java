@@ -277,11 +277,13 @@ Repository createRepo(String repoDir, String gitDir) throws IOException {
   File rd = new File(repoDir);
   if (GitWorks.anew) {
     if (rd.exists()) FileUtils.delete(rd, FileUtils.RECURSIVE);
-    rd.mkdirs();
+    if (!GitWorks.bare) rd.mkdirs();
     if (gd.exists()) FileUtils.delete(gd, FileUtils.RECURSIVE);
     gd.mkdirs();
   }
-  Repository repository = new FileRepositoryBuilder().setWorkTree(rd).setGitDir(gd)
+  FileRepositoryBuilder frb = new FileRepositoryBuilder();
+  if (!GitWorks.bare) frb.setWorkTree(rd);
+  Repository repository = frb.setGitDir(gd)
       .readEnvironment() // scan environment GIT_* variables
       .findGitDir() // scan up the file system tree
       .setMustExist(!GitWorks.anew).build();
