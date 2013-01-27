@@ -98,38 +98,9 @@ GitMiner(String n) {
 }
 
 
-// TODO: factorize dfsVists
-static void dfsVisit(int depth, ForkEntry f, DfsOperator t, Git git) throws Exception {
-  if (t == null) {
-    System.err.println("WARNING: dfsVisit called with null operator.");
-    return;
-  }
-  if (f == null) {
-    System.err.println("WARNING: DfsOperator " + t.getID() + " called on a null instance.");
-    return;
-  }
-  if (git == null) {
-    System.err.println("WARNING: DfsOperator " + t.getID() + " called with a null argument.");
-    return;
-  }
-  if (depth > 0 && f.hasForks()) {
-    t.initialize(f);
-    Iterator<ForkEntry> it = f.getForks();
-    while (it.hasNext()) {
-      dfsVisit(depth - 1, it.next(), t, git);
-      if (!t.runOnce()) t.run(f, git);
-    }
-    if (t.runOnce()) t.run(f, git);
-  } else {
-    t.run(f, git);
-  }
-  t.finalize(f);
-}
-
-
 //add remotes to a jgit repo, using a given ForkEntry data structure
 void addRemotes(Git git, ForkEntry project, int depth) throws Exception {
-  dfsVisit(depth, project, GitMiner.addAsRemote, git);
+  GitWorks.dfsVisit(depth, project, GitMiner.addAsRemote, git);
   git.getRepository().scanForRepoChanges();
 }
 

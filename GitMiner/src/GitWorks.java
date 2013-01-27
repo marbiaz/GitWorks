@@ -40,7 +40,7 @@ static ForkList projects;
 static GitMiner[] gitMiners;
 
 
-static void dfsVisit(int depth, ForkEntry f, DfsOperator t, ForkList l) throws Exception {
+static void dfsVisit(int depth, ForkEntry f, DfsOperator t, Object o) throws Exception {
   if (t == null) {
     System.err.println("WARNING: dfsVisit called with null operator.");
     return;
@@ -49,7 +49,7 @@ static void dfsVisit(int depth, ForkEntry f, DfsOperator t, ForkList l) throws E
     System.err.println("WARNING: DfsOperator " + t.getID() + " called on a null instance.");
     return;
   }
-  if (l == null) {
+  if (o == null) {
     System.err.println("WARNING: DfsOperator " + t.getID() + " called with a null argument.");
     return;
   }
@@ -57,12 +57,12 @@ static void dfsVisit(int depth, ForkEntry f, DfsOperator t, ForkList l) throws E
     t.initialize(f);
     Iterator<ForkEntry> it = f.getForks();
     while (it.hasNext()) {
-      dfsVisit(depth - 1, it.next(), t, l);
-      if (!t.runOnce()) t.run(f, l);
+      dfsVisit(depth - 1, it.next(), t, o);
+      if (!t.runOnce()) t.run(f, o);
     }
-    if (t.runOnce()) t.run(f, l);
+    if (t.runOnce()) t.run(f, o);
   } else {
-    t.run(f, l);
+    t.run(f, o);
   }
   t.finalize(f);
 }
