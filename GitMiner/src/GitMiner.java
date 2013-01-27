@@ -343,8 +343,8 @@ void buildBranchesMap(int size) throws GitAPIException {
   ArrayList<Ref> all = (ArrayList<Ref>)git.branchList().setListMode(ListMode.REMOTE).call();
   Iterator<Ref> allBs = all.iterator();
   String bName = "";
-  allBranches.ensureCapacity(all.size()); int j = 0;
-  while (allBs.hasNext()) {/**/ System.err.println("###### Iteration " + (++j));
+  allBranches.ensureCapacity(all.size()); //int j = 0;
+  while (allBs.hasNext()) {/**/// System.err.println("###### Iteration " + (++j));
     r = allBs.next();
     if (!("refs/remotes/" + r.getName().split("/")[2]).equals(bName)) {
       bName = "refs/remotes/" + r.getName().split("/")[2]; // getName() format is
@@ -425,7 +425,8 @@ void getCommitsInR(RevWalk walk, boolean only)
 //    System.err.println("GitMiner : ERROR : The allCommits array must be filled only once!");
 //    return;
 //  }
-  int j = 0; while (sit.hasNext()) {/**/ System.err.println("###### Iteration " + (++j));
+//  int j = 0;
+  while (sit.hasNext()) {/**/// System.err.println("###### Iteration " + (++j));
     r = sit.next();
     erit = branches.entrySet().iterator();
     while (erit.hasNext()) {
@@ -491,8 +492,8 @@ void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
   Iterator<String> sit = branches.keySet().iterator();
   included.ensureCapacity(allBranches.size() - 1);
   commits = new LinkedHashMap<String, ArrayList<Commit>>(branches.size(), 1);
-  walk.setRetainBody(false); int j = 0;
-  while (sit.hasNext()) {/**/ System.err.println("###### Iteration " + (++j));
+  walk.setRetainBody(false);// int j = 0;
+  while (sit.hasNext()) {/**/// System.err.println("###### Iteration " + (++j));
     r = sit.next();
     erit = branches.entrySet().iterator();
     while (erit.hasNext()) {
@@ -560,7 +561,7 @@ void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectException,
   }
   commits = new LinkedHashMap<BranchRef, ArrayList<Commit>>(allBranches.size(), 1);
   for (int i = 0; i < allBranches.size(); i++) {
-    b = allBranches.get(i);/**/ System.err.println("###### Iteration " + (i+1));
+    b = allBranches.get(i);/**/// System.err.println("###### Iteration " + (i+1));
     if (only) {
       temp.clear();
       if (i > 0) temp.addAll(allBranches.subList(0, i));
@@ -685,7 +686,7 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     getCommitsInR(walk, true);
     getCommitsNotInR(walk);
     System.out.println("This big repo has " + allCommits.size() + " regular commits.");
-    printAny(commitsNotInR, System.out);
+//    printAny(commitsNotInR, System.out);
 //    printAny(allCommits, System.out);
 
   }
