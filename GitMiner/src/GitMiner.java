@@ -802,7 +802,7 @@ static public void printAny(Object data, PrintStream out) {
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 private void externalizeMap(Map map, ObjectOutput out) throws IOException {
-  int keyType = 0, valueType = 0, size;
+  int keyType = 0, valueType = 1, size;
   Iterator<Map.Entry> it;
   Iterator cit;
   Entry e;
@@ -819,9 +819,9 @@ private void externalizeMap(Map map, ObjectOutput out) throws IOException {
   cit = map.values().iterator();
   do {
     value = cit.next();
-  } while (value == null);
-  if (((ArrayList)value).get(0).getClass().equals(BranchRef.class)) {
-    valueType = 1;
+  } while (value == null && cit.hasNext());
+  if (value == null || ((ArrayList)value).get(0).getClass().equals(Commit.class)) {
+    valueType = 0;
   }
   out.writeInt(size);
   out.writeInt(keyType);
