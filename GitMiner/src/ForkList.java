@@ -2,6 +2,7 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.io.PrintStream;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.ArrayList;
@@ -99,6 +100,17 @@ int getPos(ForkEntry f) {
 }
 
 
+public void printForkTrees(PrintStream out) throws Exception {
+  for (int i = 0; i < size(); i++) {
+    if (repos.get(i).isRoot()) {
+      GitWorks.dfsVisit(100, repos.get(i), ForkEntry.printAllForks, out);
+      out.print("\n");
+    }
+  }
+  out.flush();
+}
+
+
 public String toString() {
   String out = "";
   for (ForkEntry f : repos) {
@@ -109,7 +121,7 @@ public String toString() {
 
 
 // it is meant to be used only once, i.e. if NO metaEntry has been added to this object yet.
-void addMetaEntries() throws Exception {
+void addMetaEntries() throws Exception { //TODO: add some trimming to save space
   ForkEntry roots[] = repos.toArray(new ForkEntry[0]);
   for (int i = 0; i < roots.length; i++) {
     GitWorks.dfsVisit(Integer.MAX_VALUE, roots[i], ForkEntry.addTreeToList, this);

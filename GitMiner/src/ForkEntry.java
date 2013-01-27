@@ -2,6 +2,7 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.io.PrintStream;
 import java.util.Iterator;
 
 
@@ -22,6 +23,27 @@ private ForkList forks = null;
 private ForkEntry parent = null;
 private boolean dfsOk = true;
 
+// this operator requires a PrintStream as parameter
+static DfsOperator printAllForks  = new DfsOperator() {
+
+  public int getID() {
+    return 4;
+  }
+
+  public boolean runOnce() {
+    return true;
+  }
+
+  public void initialize(ForkEntry f) {}
+
+  public void run(ForkEntry fe, Object arg) {
+    PrintStream out = ((PrintStream)arg);
+    out.print(fe.getId() + " ");
+  }
+
+  public void finalize(ForkEntry f) {}
+};
+
 //this operator requires a ForkList as a r/w parameter
 static DfsOperator addTreeToList  = new DfsOperator() {
 
@@ -32,7 +54,7 @@ static DfsOperator addTreeToList  = new DfsOperator() {
   public boolean runOnce() { // TODO: equivalent to putting everything in finalize() or initialize() ???
     return true;
   }
-  
+
   public void initialize(ForkEntry f) {}
 
   public void run(ForkEntry fe, Object arg) {
@@ -40,7 +62,7 @@ static DfsOperator addTreeToList  = new DfsOperator() {
     l.add(fe);
   }
 
-  public void finalize(ForkEntry f) {}
+  public void finalize(ForkEntry f) {} //TODO: add some trimming to save space
 };
 // TODO: rewrite operators with apply_pre() apply_in() apply_post()
 // this operator requires an int[4] as r/w parameter
