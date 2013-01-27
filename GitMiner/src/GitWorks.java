@@ -20,8 +20,8 @@ import java.util.zip.GZIPOutputStream;
 
 public class GitWorks {
 
-public static boolean anew = false; // flag to differentiate tests
-public static boolean bare = false; // flag to differentiate tests
+public static boolean anew = true; // (re-)create a forktree anew
+public static boolean bare = true; // the forktree is a bare git repo
 
 public static String prefix = "JGIT_"; // to be prepended to any jgit-generated output file name
 public static String field_sep = "    "; // field separator in input datafile's lines
@@ -108,7 +108,7 @@ return f.getId().replace("/", "--");
 //It gives the absolute path (internal URI) of the repo corresponding to the given ForkEntry.
 static String getProjectPath(ForkEntry f) {
 String t[] = f.getId().split(GitWorks.id_sep);
-return GitWorks.repo_dir + t[1] + "/" + t[0] + "/" + t[1] + ".git";
+return GitWorks.repo_dir + t[0] + "/" + t[1] + ".git"; //t[1] + "/" + t[0] + "/" + t[1] + ".git";
 }
 
 
@@ -222,7 +222,7 @@ public static void main(String[] args) throws FileNotFoundException, IOException
 
   if (args.length < 5) {
     System.err
-        .println("Usage: java GitMiner <repo list file path> <repo dir path> <jgit gits out dir> <jgit trees out dir> <comma-separated no-space list of fork ids>");
+        .println("Usage: java GitWorks <repo list file path> <repo dir path> <jgit gits out dir> <jgit trees out dir> <comma-separated no-space list of fork ids>");
     System.exit(2);
   }
   repo_dir = args[1].trim() + (args[1].trim().endsWith("/") ? "" : "/");
@@ -239,50 +239,66 @@ public static void main(String[] args) throws FileNotFoundException, IOException
 
     /************** create fork list ****************/
 
+//    BufferedReader in = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));
+//    String r = "";
+  System.out.println("# Computation started at " + (new java.util.Date()).toString());
+
   try {
-
-    BufferedReader in = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));
-    String r = "";
-
     importForkList(trees_out_dir + "forkListDump");
 //    projects = populateForkList(args[0].trim());
-//    computeAggregates(ids, projects, 100); // with a large param value the complete fork trees will be visited
+//    computeAggregates(null, projects, 100); // with a large param value the complete fork trees will be visited
 //    exportForkList(trees_out_dir + "forkListDump");
-    // computeAggregates(null, projects, 1); // reset all projects aggregates
-    // System.out.println(projects.toString());
+//    projects.printForkTrees(System.out); ///home/mbiazzin/workspace/gitMiner/ /home/marco/1to/gitWorks/
+//    //Runtime.getRuntime().exec("/home/marco/1to/gitWorks/makeForkTreeLists.sh").waitFor();
+//    //computeAggregates(null, projects, 1); // reset all projects aggregates
 
     /************** build and analyze fork trees ****************/
 
-    fe = projects.get(ids[0]);
-
-    if (anew) {
-      purgeMissingForks(projects, fe); // IRREVERSIBLE!!!
-    }
-
-    r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
-
     gitMiners = new GitMiner[1];
 
-    for (int i = 0; i < gitMiners.length; i++) {
-//    gitMiners[i] = importGitMiner(trees_out_dir + getProjectNameAsRemote(fe) + ".dump" + i);
-      gitMiners[i] = new GitMiner(getProjectNameAsRemote(fe));
-      gitMiners[i].analyzeForkTree(fe); System.gc(); Thread.sleep(1000);
+    for (int j = 0; j < projects.size(); j++) {
+      fe = projects.get(j); // (ids[0]) (j);
+      if (!fe.isRoot()) continue;
 
-      r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
+      try {
+        Runtime.getRuntime().exec("/home/marco/1to/gitWorks/loadRepos.sh " // /home/mbiazzin/workspace/gitMiner/
+            + getProjectNameAsRemote(fe)).waitFor(); // /home/marco/1to/gitWorks/"
+        if (anew) {
+          purgeMissingForks(projects, fe); // IRREVERSIBLE!!!
+        }
+
+//        r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
+
+//        for (int i = 0; i < 20; i++) { // gitMiners.length
+//          gitMiners[0] = importGitMiner(trees_out_dir + getProjectNameAsRemote(fe) + ".dump"); // + i
+//          GitMiner.printAny(gitMiners[0].allCommits, System.out);
+          gitMiners[0] = new GitMiner(getProjectNameAsRemote(fe));
+          gitMiners[0].analyzeForkTree(fe);
+          exportGitMiner(gitMiners[0], trees_out_dir + gitMiners[0].name + "_"  + gitMiners[0].id + ".dump");
+          gitMiners[0] = null; System.gc(); Thread.sleep(1000);
+
+//          r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
+//        }
+        Runtime.getRuntime().exec("/home/marco/1to/gitWorks/cleanAndBackup.sh " // /home/mbiazzin/workspace/gitMiner/
+            + getProjectNameAsRemote(fe)).waitFor(); // /home/marco/1to/gitWorks/
+      }
+      catch (InterruptedException ie) {
+        System.err.println("ERROR : computation of " + getProjectNameAsRemote(fe) + " was interrupted before completion!");
+      }
+      catch (Exception e) {
+        System.err.println("ERROR : computation of " + getProjectNameAsRemote(fe) + " was interrupted before completion!");
+        e.printStackTrace();
+      }
     }
-
-    for (int i = 0; i < gitMiners.length; i++) {
-//      gitMiners[i].commitsInB = null; System.gc(); Thread.sleep(1000);
-      exportGitMiner(gitMiners[i], trees_out_dir + gitMiners[i].name + ".dump" + i);
-
-      r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
-    }
-
   }
   catch (Exception e) {
     // TODO Auto-generated catch block
     e.printStackTrace();
   }
+  finally {
+    System.out.println("# Computation ended at " + (new java.util.Date()).toString());
+  }
+
 }
 
 // TODO factorize import/export methods
