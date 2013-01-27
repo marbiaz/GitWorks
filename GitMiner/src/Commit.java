@@ -16,7 +16,7 @@ byte[] data;
 ArrayList<BranchRef> branches;
 
 
-public Commit() {}
+Commit() {}
 
 
 Commit(ObjectId id) {
