@@ -141,6 +141,7 @@ for (String id : ids) {
 //cannot be found in the local FS.
 static void purgeMissingForks(ForkList globalList, ForkEntry f) throws Exception {
 File fi;
+if (!f.hasForks()) return;
 int c = 0; // String out = "";
 Iterator<ForkEntry> it = f.getForks();
 ForkEntry fe, fks[] = new ForkEntry[f.howManyForks()];
