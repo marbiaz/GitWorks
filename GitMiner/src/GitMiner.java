@@ -656,7 +656,9 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     getCommitsInR(walk, false);
     getCommitsInR(walk, true);
     getCommitsNotInR(walk);
-    System.out.println("This big repo has " + allCommits.size() + " regular commits.");
+
+    System.out.println(name + " ( " + id + " ) has " + allCommits.size() + " commits, "
+        + branches.size() + " forks and " + allBranches.size() + " branches.");
 //    printAny(commitsNotInR, System.out);
 //    printAny(allCommits, System.out);
 
