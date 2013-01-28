@@ -100,114 +100,115 @@ static void dfsVisit(int depth, ForkEntry f, DfsOperator t, int[] t_arg) throws 
 }
 
 
-//Returns the project ID formatted in a convenient way to serve as a remote name...
+// Returns the project ID formatted in a convenient way to serve as a remote name...
 static String getProjectNameAsRemote(ForkEntry f) {
-return f.getId().replace("/", "--");
+  return f.getId().replace("/", "--");
 }
 
 
-//It gives the absolute path (internal URI) of the repo corresponding to the given ForkEntry.
+// It gives the absolute path (internal URI) of the repo corresponding to the given ForkEntry.
 static String getProjectPath(ForkEntry f) {
-String t[] = f.getId().split(GitWorks.id_sep);
-return GitWorks.repo_dir + t[0] + "/" + t[1] + ".git"; //t[1] + "/" + t[0] + "/" + t[1] + ".git";
+  String t[] = f.getId().split(GitWorks.id_sep);
+  return GitWorks.repo_dir + t[0] + "/" + t[1] + ".git"; // t[1] + "/" + t[0] + "/" + t[1] + ".git";
 }
 
 
-//as of now, it is meant to compute things in the big fork tree of each project, so that for forks
-//at different layers the computed aggregation depth is parent's one - 1.
+// as of now, it is meant to compute things in the big fork tree of each project, so that for forks
+// at different layers the computed aggregation depth is parent's one - 1.
 static void computeAggregates(String ids[], ForkList fl, int depth) throws Exception {
-if (fl.size() == 0 || depth < 1) {
- System.err.println("computeAggregates : input ERROR.");
- return;
-}
-int[] r = new int[4];
-if (ids == null || ids.length == 0) {
- ids = new String[fl.size()];
- for (int i = 0; i < fl.size(); i++) {
-   ids[i] = fl.get(i).getId();
- }
-}
-for (String id : ids) {
- if (!ForkEntry.isValidId(id)) {
-   System.err.println("computeAggregates : input ERROR (invalid id: " + id + ").");
-   continue;
- }
- Arrays.fill(r, 0);
- dfsVisit(depth, fl.get(id), ForkEntry.computeAggregates, r);
-}
+  if (fl.size() == 0 || depth < 1) {
+    System.err.println("computeAggregates : input ERROR.");
+    return;
+  }
+  int[] r = new int[4];
+  if (ids == null || ids.length == 0) {
+    ids = new String[fl.size()];
+    for (int i = 0; i < fl.size(); i++) {
+      ids[i] = fl.get(i).getId();
+    }
+  }
+  for (String id : ids) {
+    if (!ForkEntry.isValidId(id)) {
+      System.err.println("computeAggregates : input ERROR (invalid id: " + id + ").");
+      continue;
+    }
+    Arrays.fill(r, 0);
+    dfsVisit(depth, fl.get(id), ForkEntry.computeAggregates, r);
+  }
 }
 
 
-//delete from the children ForkList of the argument all the entries whose repo
-//cannot be found in the local FS.
+// delete from the children ForkList of the argument all the entries whose repo
+// cannot be found in the local FS.
 static void purgeMissingForks(ForkList globalList, ForkEntry f) throws Exception {
-File fi;
-if (!f.hasForks()) return;
-int c = 0; // String out = "";
-Iterator<ForkEntry> it = f.getForks();
-ForkEntry fe, fks[] = new ForkEntry[f.howManyForks()];
-while (it.hasNext()) {
- fe = it.next();
- fi = new File(getProjectPath(fe));
- if (!fi.canRead()) {
-   fks[c++] = fe;
-   // out += " " + fe.getId();
-   globalList.remove(fe); // remove fe from the main projects list (no dangling entries)!
- }
-}
-// System.out.print("Deleting missing repos entries from the lists (" + out + " ) ... ");
-f.removeForks(Arrays.copyOf(fks, c));
-// System.out.println("done!");
+  File fi;
+  if (!f.hasForks()) return;
+  int c = 0;
+//  String out = "";
+  Iterator<ForkEntry> it = f.getForks();
+  ForkEntry fe, fks[] = new ForkEntry[f.howManyForks()];
+  while (it.hasNext()) {
+    fe = it.next();
+    fi = new File(getProjectPath(fe));
+    if (!fi.canRead()) {
+      fks[c++] = fe;
+//      out += " " + fe.getId();
+      globalList.remove(fe); // remove fe from the main projects list (no dangling entries)!
+    }
+  }
+//  System.out.print("Deleting missing repos entries from the lists (" + out + " ) ... ");
+  f.removeForks(Arrays.copyOf(fks, c));
+//  System.out.println("done!");
 }
 
 
 static ForkList populateForkList(String inputFile) throws Exception {
 
-ForkEntry fe, fc;
-String line, tokens[];
-int c = 0, cc = 0;
-ArrayList<String> children = new ArrayList<String>();
-BufferedReader listFile = new BufferedReader(
-   new InputStreamReader(new FileInputStream(inputFile)));
-ForkList l = new ForkList();
+  ForkEntry fe, fc;
+  String line, tokens[];
+  int c = 0, cc = 0;
+  ArrayList<String> children = new ArrayList<String>();
+  BufferedReader listFile = new BufferedReader(
+      new InputStreamReader(new FileInputStream(inputFile)));
+  ForkList l = new ForkList();
 
-while ((line = listFile.readLine()) != null) {
- c++;
- tokens = line.split(GitWorks.field_sep);
- if (ForkEntry.isValidId(tokens[1] + GitWorks.id_sep + tokens[0])) {
-   cc = l.add(new ForkEntry(tokens[1], tokens[0],
-       tokens[3].equalsIgnoreCase("nan") ? -1 : Integer.valueOf(tokens[3])));
-   if (cc < 0) {
-     children.add(-cc - 1, tokens.length == 5 ? tokens[4] : "");
-   } else {
-     System.err.println("WARNING: duplicate entry in input file (" + tokens[1] + GitWorks.id_sep
-         + tokens[0] + ").");
-   }
- } else {
-   System.err.println("Error while reading fork data from file, at line " + c + ".");
- }
-}
-listFile.close();
-Iterator<ForkEntry> it = l.getAll();
-for (int i = 0; it.hasNext(); i++) {
- fe = it.next();
- if (!"".equals(children.get(i))) {
-   cc = 0;
-   tokens = children.get(i).split(GitWorks.list_sep);
-   for (String f : tokens) {
-     cc++;
-     fc = l.get(f);
-     if (fc != null) {
-       fe.addFork(fc);
-     } else {
-       System.err.println("Error while reading fork data from file, for project " + fe.getId()
-           + " about fork # " + cc + " (" + f + ").");
-     }
-   }
- }
-}
-l.setTreeCounter();
-return l;
+  while ((line = listFile.readLine()) != null) {
+    c++;
+    tokens = line.split(GitWorks.field_sep);
+    if (ForkEntry.isValidId(tokens[1] + GitWorks.id_sep + tokens[0])) {
+      cc = l.add(new ForkEntry(tokens[1], tokens[0], tokens[3].equalsIgnoreCase("nan") ? -1
+          : Integer.valueOf(tokens[3])));
+      if (cc < 0) {
+        children.add(-cc - 1, tokens.length == 5 ? tokens[4] : "");
+      } else {
+        System.err.println("WARNING: duplicate entry in input file (" + tokens[1] + GitWorks.id_sep
+            + tokens[0] + ").");
+      }
+    } else {
+      System.err.println("Error while reading fork data from file, at line " + c + ".");
+    }
+  }
+  listFile.close();
+  Iterator<ForkEntry> it = l.getAll();
+  for (int i = 0; it.hasNext(); i++) {
+    fe = it.next();
+    if (!"".equals(children.get(i))) {
+      cc = 0;
+      tokens = children.get(i).split(GitWorks.list_sep);
+      for (String f : tokens) {
+        cc++;
+        fc = l.get(f);
+        if (fc != null) {
+          fe.addFork(fc);
+        } else {
+          System.err.println("Error while reading fork data from file, for project " + fe.getId()
+              + " about fork # " + cc + " (" + f + ").");
+        }
+      }
+    }
+  }
+  l.setTreeCounter();
+  return l;
 }
 
 
