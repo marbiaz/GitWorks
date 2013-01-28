@@ -34,6 +34,7 @@ public static String gits_out_dir; // the relative path to the dir which will co
                                     // jgit-generated git repos to analyse
 public static String trees_out_dir; // the relative path to the dir which will contain the
                                      // jgit-generated trees of the repos
+public static String pwd; // set according to the current pwd
 
 static String[] ids = null; // list of root repos to be considered to build the fork trees and perform analysis.
 static ForkList projects;
@@ -225,6 +226,7 @@ public static void main(String[] args) throws FileNotFoundException, IOException
         .println("Usage: java GitWorks <repo list file path> <repo dir path> <jgit gits out dir> <jgit trees out dir> <comma-separated no-space list of fork ids>");
     System.exit(2);
   }
+  pwd = System.getenv("PWD");
   repo_dir = args[1].trim() + (args[1].trim().endsWith("/") ? "" : "/");
   ids = args[4].trim().split(",");
   gits_out_dir = args[2].trim() + (args[2].trim().endsWith("/") ? "" : "/");
@@ -248,8 +250,8 @@ public static void main(String[] args) throws FileNotFoundException, IOException
 //    projects = populateForkList(args[0].trim());
 //    computeAggregates(null, projects, 100); // with a large param value the complete fork trees will be visited
 //    exportForkList(trees_out_dir + "forkListDump");
-//    projects.printForkTrees(System.out); ///home/mbiazzin/workspace/gitMiner/ /home/marco/1to/gitWorks/
-//    //Runtime.getRuntime().exec("/home/marco/1to/gitWorks/makeForkTreeLists.sh").waitFor();
+//    projects.printForkTrees(System.out);
+//    //Runtime.getRuntime().exec(pwd + "/makeForkTreeLists.sh").waitFor();
 //    //computeAggregates(null, projects, 1); // reset all projects aggregates
 
     /************** build and analyze fork trees ****************/
@@ -261,8 +263,7 @@ public static void main(String[] args) throws FileNotFoundException, IOException
       if (!fe.isRoot()) continue;
 
       try {
-        Runtime.getRuntime().exec("/home/marco/1to/gitWorks/loadRepos.sh " // /home/mbiazzin/workspace/gitMiner/
-            + getProjectNameAsRemote(fe)).waitFor(); // /home/marco/1to/gitWorks/"
+        Runtime.getRuntime().exec(pwd + "/loadRepos.sh " + getProjectNameAsRemote(fe)).waitFor();
         if (anew) {
           purgeMissingForks(projects, fe); // IRREVERSIBLE!!!
         }
@@ -279,8 +280,7 @@ public static void main(String[] args) throws FileNotFoundException, IOException
 
 //          r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
 //        }
-        Runtime.getRuntime().exec("/home/marco/1to/gitWorks/cleanAndBackup.sh " // /home/mbiazzin/workspace/gitMiner/
-            + getProjectNameAsRemote(fe)).waitFor(); // /home/marco/1to/gitWorks/
+        Runtime.getRuntime().exec(pwd + "/cleanAndBackup.sh " + getProjectNameAsRemote(fe)).waitFor();
       }
       catch (InterruptedException ie) {
         System.err.println("ERROR : computation of " + getProjectNameAsRemote(fe) + " was interrupted before completion!");
