@@ -677,23 +677,26 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
 
 
 @SuppressWarnings({ "rawtypes" })
-static void printMap(Map m, PrintStream out) {
+private static void printMap(Map m, PrintStream out) {
   Entry ec = null;
   Iterator cit = null; int c; Object k,v;
   Iterator ecit = m.entrySet().iterator();
-  for (int i = 0; i < 3 && ecit.hasNext(); i++) {//  while (ecit.hasNext()) {
+//  int j, i = 0;
+  while (ecit.hasNext()) { // && i++ < 3
     ec = (Map.Entry)ecit.next();
     k = ec.getKey();
     if (ec.getValue() != null) {
       cit = ((ArrayList)ec.getValue()).iterator();
       c = 0;
-//      while (cit.hasNext()) {
+//      j = 0;
+      while (cit.hasNext()) { // && j++ < 3
         v = cit.next();
         out.print((k.getClass().cast(k)).toString() + " 's element # " + (++c) + ":\n"
             + (v.getClass().cast(v)).toString());
-//      }
+      }
     } else {
-      i--; //System.out.print((k.getClass().cast(k)).toString() + " : NO ENTRY");
+//      i--;
+      System.out.print((k.getClass().cast(k)).toString() + " : NO ENTRY");
     }
     out.println("\n------------------------------");
   }
@@ -748,7 +751,7 @@ static public void printAny(Object data, PrintStream out) {
   } else if (data instanceof List) {
     List<Object> a = (List<Object>)data;
     size = a.size();
-    for (int i = 0; i < 3; i++) { // size FIXME
+    for (int i = 0; i < size; i++) {
       out.println("[" + i + "] " + (a.get(i).getClass().cast(a.get(i))).toString());
     }
   } else if (data.getClass().isArray()) {
