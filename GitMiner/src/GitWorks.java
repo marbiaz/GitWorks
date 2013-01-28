@@ -271,16 +271,18 @@ public static void main(String[] args) throws FileNotFoundException, IOException
 
 //        r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
 
-//        for (int i = 0; i < 20; i++) { // gitMiners.length
-//          gitMiners[0] = importGitMiner(trees_out_dir + getProjectNameAsRemote(fe) + ".dump"); // + i
-//          GitMiner.printAny(gitMiners[0].allCommits, System.out);
-          gitMiners[0] = new GitMiner(getProjectNameAsRemote(fe));
-          gitMiners[0].analyzeForkTree(fe);
-          exportGitMiner(gitMiners[0], trees_out_dir + gitMiners[0].name + "_"  + gitMiners[0].id + ".dump");
-          gitMiners[0] = null; System.gc(); Thread.sleep(1000);
+        for (int i = 0; i < gitMiners.length; i++) {
+//          gitMiners[i] = importGitMiner(trees_out_dir + getProjectNameAsRemote(fe) + ".dump"); // + i
+//          GitMiner.printAny(gitMiners[i].allCommits, System.out);
+          gitMiners[i] = new GitMiner(getProjectNameAsRemote(fe));
+          gitMiners[i].analyzeForkTree(fe);
+          exportGitMiner(gitMiners[i], trees_out_dir + gitMiners[i].name + "_"  + gitMiners[i].id + ".dump");
+          gitMiners[i] = null;
+          System.gc();
+          Thread.sleep(1000);
 
 //          r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
-//        }
+        }
         Runtime.getRuntime().exec(pwd + "/cleanAndBackup.sh " + getProjectNameAsRemote(fe)).waitFor();
       }
       catch (InterruptedException ie) {
@@ -290,7 +292,7 @@ public static void main(String[] args) throws FileNotFoundException, IOException
         System.err.println("ERROR : computation of " + getProjectNameAsRemote(fe) + " was interrupted before completion!");
         e.printStackTrace();
       }
-    }
+//    }
   }
   catch (Exception e) {
     // TODO Auto-generated catch block
