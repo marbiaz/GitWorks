@@ -1,4 +1,4 @@
-To run the code java -Xmx512M -cp <bin-dir>:<lib-dir> GitWorks <arg-list>
+To run the code java -Xmx512M -cp <bin-dir>:<lib-dir> gitworks.GitWorks <arg-list>
 
 Needed libraries in <lib-dir> : org.eclipse.jgit-2.1.0.201209190230-r.jar jsch-0.1.49.jar
 
