@@ -141,11 +141,11 @@ GitMiner(String n) {
 
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
-Map computePersonStats(Map map) {
+private LinkedHashMap computePersonStats(LinkedHashMap map) {
   if (map == null) return null;
   ArrayList<PersOccurEntry> values;
   ArrayList ev;
-  Map res = new LinkedHashMap<Object, ArrayList<PersOccurEntry>>();
+  LinkedHashMap res = new LinkedHashMap<Object, ArrayList<PersOccurEntry>>(map.size(), 1);
   Map.Entry e;
   Set<Map.Entry> es = map.entrySet();
   Iterator<Map.Entry> esit = es.iterator();
@@ -719,12 +719,11 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     getCommitsInR(walk, true);
     getCommitsNotInR(walk);
 
-    System.out.println(name + " ( " + id + " ) has " + allCommits.size() + " commits, "
-    authorsInB = (LinkedHashMap<BranchRef, ArrayList<PersOccurEntry>>)computePersonStats(commitsInB);
-    authorsOnlyInB = (LinkedHashMap<BranchRef, ArrayList<PersOccurEntry>>)computePersonStats(commitsOnlyInB);
-    authorsInR = (LinkedHashMap<String, ArrayList<PersOccurEntry>>)computePersonStats(commitsInR);
-    authorsOnlyInR = (LinkedHashMap<String, ArrayList<PersOccurEntry>>)computePersonStats(commitsOnlyInR);
-    authorsNotInR = (LinkedHashMap<String, ArrayList<PersOccurEntry>>)computePersonStats(commitsNotInR);
+    authorsInB = computePersonStats(commitsInB);
+    authorsOnlyInB = computePersonStats(commitsOnlyInB);
+    authorsInR = computePersonStats(commitsInR);
+    authorsOnlyInR = computePersonStats(commitsOnlyInR);
+    authorsNotInR = computePersonStats(commitsNotInR);
 
     System.out.println("GitMiner : " + name + " ( " + id + " ) has " + allCommits.size()
         + " commits, " + allAuthors.size() + " authors, "
@@ -847,7 +846,7 @@ static public void printAny(Object data, PrintStream out) {
 
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
-private void externalizeMap(Map map, ObjectOutput out) throws IOException {
+private void externalizeMap(LinkedHashMap map, ObjectOutput out) throws IOException {
   int keyType = 0, valueType = 1, size;
   Iterator<Map.Entry> it;
   Iterator cit;
@@ -904,7 +903,7 @@ private void externalizeMap(Map map, ObjectOutput out) throws IOException {
 
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
-private Map importMap(ObjectInput in) throws IOException {
+private LinkedHashMap importMap(ObjectInput in) throws IOException {
   int j, i, size, vsize, keyType, valueType;
   PersOccurEntry p;
   size = in.readInt();
@@ -982,13 +981,18 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
     p.readExternal(in);
     allAuthors.add(p);
   }
-  branches = (LinkedHashMap<String, ArrayList<BranchRef>>)importMap(in);
-  commitsInB = (LinkedHashMap<BranchRef, ArrayList<Commit>>)importMap(in);
+  branches = importMap(in);
+  commitsInB = importMap(in);
 
-  commitsOnlyInB = (LinkedHashMap<BranchRef, ArrayList<Commit>>)importMap(in);
-  commitsInR = (LinkedHashMap<String, ArrayList<Commit>>)importMap(in);
-  commitsOnlyInR = (LinkedHashMap<String, ArrayList<Commit>>)importMap(in);
-  commitsNotInR = (LinkedHashMap<String, ArrayList<Commit>>)importMap(in);
+  commitsOnlyInB = importMap(in);
+  commitsInR = importMap(in);
+  commitsOnlyInR = importMap(in);
+  commitsNotInR = importMap(in);
+  authorsInB = importMap(in);
+  authorsOnlyInB = importMap(in);
+  authorsInR = importMap(in);
+  authorsOnlyInR = importMap(in);
+  authorsNotInR = importMap(in);
 }
 
 
@@ -1018,6 +1022,11 @@ public void writeExternal(ObjectOutput out) throws IOException {
   externalizeMap(commitsInR, out);
   externalizeMap(commitsOnlyInR, out);
   externalizeMap(commitsNotInR, out);
+  externalizeMap(authorsInB, out);
+  externalizeMap(authorsOnlyInB, out);
+  externalizeMap(authorsInR, out);
+  externalizeMap(authorsOnlyInR, out);
+  externalizeMap(authorsNotInR, out);
   out.flush();
 }
 
