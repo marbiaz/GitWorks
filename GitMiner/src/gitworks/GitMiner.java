@@ -24,22 +24,16 @@ import org.eclipse.jgit.api.errors.NoHeadException;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.lib.AnyObjectId;
-import org.eclipse.jgit.lib.Constants;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.ObjectLoader;
-import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.StoredConfig;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevFlag;
-import org.eclipse.jgit.revwalk.RevObject;
 import org.eclipse.jgit.revwalk.RevSort;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.RefSpec;
-import org.eclipse.jgit.treewalk.TreeWalk;
 
 
 public class GitMiner implements Externalizable {
@@ -172,65 +166,6 @@ private LinkedHashMap computePersonStats(LinkedHashMap map) {
 void addRemotes(Git git, ForkEntry project, int depth) throws Exception {
   GitWorks.dfsVisit(depth, project, GitMiner.addAsRemote, git);
   git.getRepository().scanForRepoChanges();
-}
-
-
-TreeWalk makeTree(RevWalk walk, AnyObjectId ref) throws Exception {
-  TreeWalk treeWalk = new TreeWalk(walk.getObjectReader());
-  // treeWalk.setRecursive(true);
-  treeWalk.addTree(walk.parseTree(walk.parseAny(ref)));
-  walk.reset();
-  return treeWalk;
-}
-
-
-// checkout from a given jgit tree pointer
-void createTree(ForkEntry fe, TreeWalk treeWalk) throws Exception {
-  String path;
-  ObjectReader reader = treeWalk.getObjectReader();
-  ObjectLoader loader = null;
-  PrintStream pout = null;
-  ObjectId objId;
-  PrintWriter perr = null;
-
-  // System.out.println("Getting into a new tree of depth " + treeWalk.getDepth());
-  while (treeWalk.next()) {
-    // for (int k = 0; k < treeWalk.getTreeCount(); k++) {
-    objId = treeWalk.getObjectId(0); // k 0
-    path = treeWalk.isRecursive() ? treeWalk.getNameString() : treeWalk.getPathString();
-    try {
-      loader = reader.open(objId);
-    }
-    catch (Exception e) {
-      if (perr == null)
-        perr = new PrintWriter(new FileWriter(GitWorks.trees_out_dir + "/" + GitWorks.getProjectNameAsRemote(fe)
-            + "/" + GitWorks.prefix + "errors.log"), true);
-      // e.printStackTrace(perr);
-      if (objId.equals(ObjectId.zeroId()))
-        perr.println("Object " + objId.getName() + " (" + path + ") is all-null!");
-      else
-        perr.println("Object " + objId.getName() + " (" + path + ") does not exist!");
-      continue;
-    }
-    if (loader.getType() == Constants.OBJ_BLOB) {
-      pout = new PrintStream(new FileOutputStream(new File(GitWorks.trees_out_dir + "/"
-          + GitWorks.getProjectNameAsRemote(fe) + "/" + path), false), true);
-      loader.copyTo(pout);
-      pout.close();
-    } else if (treeWalk.isSubtree()) { // loader.getType() == Constants.OBJ_TREE
-      if ((new File(GitWorks.trees_out_dir + "/" + GitWorks.getProjectNameAsRemote(fe) + "/" + path)).mkdirs()) {
-        treeWalk.enterSubtree();
-        // System.out.println("Getting into a new tree of depth " + treeWalk.getDepth());
-      } else {
-        if (perr == null)
-          perr = new PrintWriter(new FileWriter(GitWorks.trees_out_dir + "/" + GitWorks.getProjectNameAsRemote(fe)
-              + "/" + GitWorks.prefix + "errors.log"), true);
-        perr.println("Dir " + path + "(Object " + objId.getName() + ") could not be created!");
-      }
-    }
-    // }
-  }
-  treeWalk.reset();
 }
 
 
@@ -414,32 +349,6 @@ void buildBranchesMap(int size) throws GitAPIException {
 //    printAny(e.getValue(), System.out);
 //  }
 //  printArray(allBranches, System.out);
-}
-
-
-// awfully time-consuming
-ArrayList<BranchRef> findAllBranches(ObjectId c, String remote)
-    throws MissingObjectException, IncorrectObjectTypeException, IOException {
-  ArrayList<BranchRef> res;
-  Iterator<BranchRef> brIt;
-  BranchRef r;
-  RevWalk walk = new RevWalk(git.getRepository());
-  walk.setRetainBody(false);
-  walk.sort(RevSort.NONE);
-  res = new ArrayList<BranchRef>(allBranches.size());
-  brIt = branches.get(remote).iterator();
-  while (brIt.hasNext()) {
-    r = brIt.next();
-    if (walk.isMergedInto(walk.parseCommit(c), walk.parseCommit(r.id))) {
-      res.add(r);
-    }
-  }
-  res.trimToSize();
-  walk.dispose();
-//  System.out.print(c.getName() + " is found in\n");
-//  printAny(res, System.out);
-//  System.out.println("\n");
-  return res;
 }
 
 
@@ -634,18 +543,6 @@ void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectException,
 }
 
 
-ArrayList<ObjectId> getIds(ArrayList<? extends RevObject> a) {
-  if (a == null) return null;
-  ArrayList<ObjectId> res = new ArrayList<ObjectId>();
-  res.ensureCapacity(a.size());
-  Iterator<?> it = a.iterator();
-  RevObject i;
-  while (it.hasNext()) {
-    i = (RevObject)it.next();
-    res.add(i.getId());
-  }
-  return res;
-}
 
 
 private void init() {
@@ -671,8 +568,6 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
 
   RevWalk walk = null;
 
-  /************** create/load git repo ****************/
-
   String gitDirPath = GitWorks.gits_out_dir + GitWorks.getProjectNameAsRemote(fe)
       + ((GitWorks.bare == true) ? ".git" : "/.git");
   String treeDirPath = GitWorks.trees_out_dir + GitWorks.getProjectNameAsRemote(fe);
@@ -683,23 +578,9 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     git = Git.wrap(createRepo(treeDirPath, gitDirPath));
 //    System.out.println(printRepoInfo());
 
-    /************** create big tree ****************/
-
     if (GitWorks.anew) {
       addRemotes(git, fe, 100); // with a large param value the complete fork tree will be built
     }
-
-    /************** print commits & checkout ****************/
-
-//    printCommits(GitWorks.trees_out_dir + GitWorks.prefix + GitWorks.getProjectNameAsRemote(fe) + "-commitList.log", refspec, null);
-//    String refspec = "refs/remotes/" + GitWorks.getProjectNameAsRemote(fe) + "/master";
-//    if (!GitWorks.bare) {
-//      git.checkout().setStartPoint(refspec).setCreateBranch(GitWorks.anew)
-//          .setName(GitWorks.getProjectNameAsRemote(fe)).call(); // .getResult() for a dry-run
-//      // createTree(fe, makeTree(walk, from));
-//    }
-
-    /************** find interesting commits ***************/
 
     if (allBranches == null) buildBranchesMap(fe.howManyForks()); // build allBranches and branches
 
