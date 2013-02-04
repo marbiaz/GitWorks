@@ -163,14 +163,15 @@ private LinkedHashMap computePersonStats(LinkedHashMap map) {
 
 
 //add remotes to a jgit repo, using a given ForkEntry data structure
-void addRemotes(Git git, ForkEntry project, int depth) throws Exception {
+//with a large depth param value the complete fork tree will be built
+private void addRemotes(Git git, ForkEntry project, int depth) throws Exception {
   GitWorks.dfsVisit(depth, project, GitMiner.addAsRemote, git);
   git.getRepository().scanForRepoChanges();
 }
 
 
 // printout all commit messages in a given range -> use and reset an existing RevWalk
-void printCommits(String outFile, RevWalk walk)
+private void printCommits(String outFile, RevWalk walk)
     throws IOException, NoHeadException, GitAPIException {
 
   PrintWriter pout = new PrintWriter(new FileWriter(outFile), true);
@@ -212,7 +213,7 @@ void printCommits(String outFile, String from_ref, String to_ref)
 
 
 // format the output like in --pretty="%H<#>%aN<#>%at<#>%cN<#>%ct<#>%s
-String printCommit(RevCommit c) {
+private String printCommit(RevCommit c) {
   String out = "";
   PersonIdent author = c.getAuthorIdent();
   PersonIdent committer = c.getCommitterIdent();
@@ -244,7 +245,7 @@ String printRepoInfo() {
 
 
 // import a git repo in jgit data structures or create a new one
-Repository createRepo(String repoDir, String gitDir) throws IOException {
+private Repository createRepo(String repoDir, String gitDir) throws IOException {
 
   File gd = new File(gitDir);
   File rd = new File(repoDir);
@@ -267,7 +268,7 @@ Repository createRepo(String repoDir, String gitDir) throws IOException {
 
 
 // the RevWalk must be reset by the caller upon return!
-ArrayList<RevCommit> findCommits(RevWalk walk, ArrayList<RevCommit> included,
+private ArrayList<RevCommit> findCommits(RevWalk walk, ArrayList<RevCommit> included,
     ArrayList<RevCommit> excluded, boolean getBody) throws MissingObjectException,
     IncorrectObjectTypeException, IOException {
   ArrayList<RevCommit> commits = new ArrayList<RevCommit>();
@@ -303,7 +304,7 @@ BranchRef getBranchRef(String branch) {
 
 
 // build both the allBranches sorted arrayList and the branches map
-void buildBranchesMap(int size) throws GitAPIException {
+private void buildBranchesMap(int size) throws GitAPIException {
 
   if (branches != null) {
     System.err.println("GitMIner ( " + name + " -- " + id
@@ -353,7 +354,7 @@ void buildBranchesMap(int size) throws GitAPIException {
 
 
 // find commits that are (only?) in each remote
-void getCommitsInR(RevWalk walk, boolean only)
+private void getCommitsInR(RevWalk walk, boolean only)
     throws MissingObjectException, IncorrectObjectTypeException, IOException {
 
   Iterator<BranchRef> brIt;
@@ -413,7 +414,7 @@ void getCommitsInR(RevWalk walk, boolean only)
 
 
 // find commits that are not in a given remote
-void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
+private void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
     IncorrectObjectTypeException, IOException {
   Iterator<BranchRef> brIt;
   LinkedHashMap<String, ArrayList<Commit>> commits;
@@ -468,7 +469,7 @@ void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
 
 // fast but resource-demanding
 // find commits that are (uniquely?) in a branch
-void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectException,
+private void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectException,
     IncorrectObjectTypeException, IOException {
 
   int c;
