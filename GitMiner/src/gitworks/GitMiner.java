@@ -83,7 +83,7 @@ static DfsOperator addAsRemote = new DfsOperator() {
 //    System.out.print("Adding " + fork + " ...");
 //    System.out.flush();
     StoredConfig config = git.getRepository().getConfig();
-    config.setString("remote", fork, "url", "file:///" + GitWorks.getProjectPath(fe));
+    config.setString("remote", fork, "url", GitWorks.getProjectPath(fe));
     config.setString("remote", fork, "fetch", "+refs/heads/*:refs/remotes/" + fork + "/*");
     config.save();
     all = new RefSpec(config.getString("remote", fork, "fetch"));
