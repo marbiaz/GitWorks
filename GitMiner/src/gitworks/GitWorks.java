@@ -123,11 +123,11 @@ static void computeAggregates(String ids[], ForkList fl, int depth) throws Excep
     System.err.println("computeAggregates : input ERROR.");
     return;
   }
-  int[] r = new int[4];
+  int i = 0, r[] = new int[5];
   if (ids == null || ids.length == 0) {
-    ids = new String[fl.size()];
-    for (int i = 0; i < fl.size(); i++) {
-      ids[i] = fl.get(i).getId();
+    ids = new String[fl.howManyTrees()];
+    for (ForkEntry f : fl) {
+      if (f.isRoot()) ids[i++] = f.getId();
     }
   }
   for (String id : ids) {
