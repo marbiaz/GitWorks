@@ -39,6 +39,7 @@ import org.eclipse.jgit.lib.StoredConfig;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevFlag;
 import org.eclipse.jgit.revwalk.RevObject;
+import org.eclipse.jgit.revwalk.RevSort;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.RefSpec;
@@ -273,6 +274,8 @@ ArrayList<RevCommit> findCommits(RevWalk walk, ArrayList<RevCommit> included,
     IncorrectObjectTypeException, IOException {
   ArrayList<RevCommit> commits = new ArrayList<RevCommit>();
   commits.ensureCapacity(allBranches.size()); // XXX heuristic workaround
+  walk.sort(RevSort.COMMIT_TIME_DESC, true);
+  walk.sort(RevSort.TOPO, true);
   walk.setRetainBody(getBody);
   walk.markStart(included);
   RevCommit c;
@@ -357,7 +360,8 @@ ArrayList<BranchRef> findAllBranches(ObjectId c, String remote)
   Iterator<BranchRef> brIt;
   BranchRef r;
   RevWalk walk = new RevWalk(git.getRepository());
-  walk.setRetainBody(false); // this walk is for multiple usage
+  walk.setRetainBody(false);
+  walk.sort(RevSort.NONE);
   res = new ArrayList<BranchRef>(allBranches.size());
   brIt = branches.get(remote).iterator();
   while (brIt.hasNext()) {
@@ -466,7 +470,7 @@ void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
   Iterator<String> sit = branches.keySet().iterator();
   included.ensureCapacity(allBranches.size() - 1);
   commits = new LinkedHashMap<String, ArrayList<Commit>>(branches.size(), 1);
-  walk.setRetainBody(false);// int j = 0;
+//  int j = 0;
   while (sit.hasNext()) {/**/// System.err.println("###### Iteration " + (++j));
     r = sit.next();
     erit = branches.entrySet().iterator();
