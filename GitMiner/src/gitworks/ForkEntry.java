@@ -22,6 +22,7 @@ private int dfsMaxWatchers = 0;
 private int dfsNumForks = 0;
 private int dfsChildrenWatchers = 0;
 private int dfsAggregateDepth = 0;
+private int dfsMaxChildren = 0;
 private ForkList forks = null;
 private ForkEntry parent = null;
 private boolean dfsOk = true;
@@ -68,7 +69,7 @@ static DfsOperator addTreeToList  = new DfsOperator() {
   public void finalize(ForkEntry f) {} //TODO: add some trimming to save space
 };
 // TODO: rewrite operators with apply_pre() apply_in() apply_post()
-// this operator requires an int[4] as r/w parameter
+// this operator requires an int[5] as r/w parameter
 public static DfsOperator computeAggregates = new DfsOperator() {
 
   public int getID() {
@@ -82,6 +83,7 @@ public static DfsOperator computeAggregates = new DfsOperator() {
   public void initialize(ForkEntry f) {
     f.dfsChildrenWatchers = 0;
     f.dfsNumForks = 0;
+    f.dfsMaxChildren = 0;
     f.dfsMaxWatchers = 0;
     f.dfsAggregateDepth = 0;
   }
@@ -97,11 +99,14 @@ public static DfsOperator computeAggregates = new DfsOperator() {
       res[2] = fe.dfsNumForks;
       fe.dfsAggregateDepth = (fe.dfsAggregateDepth < res[3]) ? res[3] : fe.dfsAggregateDepth;
       res[3] = fe.dfsAggregateDepth;
+      fe.dfsMaxChildren = (fe.dfsMaxChildren < res[4]) ? res[4] : fe.dfsMaxChildren;
+      res[4] = fe.dfsMaxChildren;
     }
     if (fe.watchers > res[0]) res[0] = fe.watchers;
     res[1] += fe.watchers;
     res[2]++;
     res[3]++;
+    if (fe.howManyForks() > res[4]) res[4] = fe.howManyForks();
   }
 
   public void finalize(ForkEntry f) {
@@ -161,9 +166,8 @@ private void setAncestorsDfsKo() {
 }
 
 
-// Pay attention to add only COMPLETE ForkEntries (watchers)
-// after an addition, dfs aggregates are reset to depth 1 on the current entry and flagged invalid
-// upwards.
+// after an addition, if dfs aggregates were valid for this entry, the are reset to depth 1
+// and flagged as invalid upwards.
 boolean addFork(ForkEntry f) throws Exception {
   int res;
   if (!f.equals(this) && f.parent == null) {
@@ -171,16 +175,18 @@ boolean addFork(ForkEntry f) throws Exception {
     f.parent = this;
     res = forks.add(f);
     if (res < 0) {
-      if (dfsAggregateDepth <= 1) {
-        f.parent = this;
-        dfsMaxWatchers = (f.watchers > dfsMaxWatchers) ? f.watchers : dfsMaxWatchers;
-        dfsChildrenWatchers += f.watchers;
-        dfsAggregateDepth = 1;
-        dfsNumForks = forks.size();
-      } else {
-        GitWorks.dfsVisit(1, this, ForkEntry.computeAggregates, new int[4]);
+      if (dfsOk) {
+        if (dfsAggregateDepth <= 1) {
+          dfsMaxWatchers = (f.watchers > dfsMaxWatchers) ? f.watchers : dfsMaxWatchers;
+          dfsMaxChildren = (forks.size() > dfsMaxChildren) ? forks.size() : dfsMaxChildren;
+          dfsChildrenWatchers += f.watchers;
+          dfsAggregateDepth = 1;
+          dfsNumForks = forks.size();
+        } else {
+          GitWorks.dfsVisit(1, this, ForkEntry.computeAggregates, new int[5]);
+        }
+        setAncestorsDfsKo();
       }
-      setAncestorsDfsKo();
       return true;
     }
   }
