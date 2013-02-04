@@ -166,8 +166,9 @@ private void setAncestorsDfsKo() {
 // upwards.
 boolean addFork(ForkEntry f) throws Exception {
   int res;
-  if (!f.equals(this)) {
+  if (!f.equals(this) && f.parent == null) {
     if (forks == null) forks = new ForkList();
+    f.parent = this;
     res = forks.add(f);
     if (res < 0) {
       if (dfsAggregateDepth <= 1) {
