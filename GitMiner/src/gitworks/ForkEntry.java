@@ -253,7 +253,7 @@ Iterator<ForkEntry> getForks() {
 }
 
 
-String getForksIds() {
+private String getForksIds() {
   String out = "";
   Iterator<ForkEntry> it = getForks();
   out += it.next().getId();

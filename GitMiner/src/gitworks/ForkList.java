@@ -106,7 +106,7 @@ int getPos(ForkEntry f) {
 public void printForkTrees(PrintStream out) throws Exception {
   for (int i = 0; i < size(); i++) {
     if (repos.get(i).isRoot()) {
-      GitWorks.dfsVisit(100, repos.get(i), ForkEntry.printAllForks, out);
+      GitWorks.dfsVisit(Integer.MAX_VALUE, repos.get(i), ForkEntry.printAllForks, out);
       out.print("\n");
     }
   }
