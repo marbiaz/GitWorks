@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.ArrayList;
+import java.util.Collections;
 
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -37,11 +38,12 @@ Commit(RevCommit c) {
 
 void addBranches(ArrayList<BranchRef> b) {
   branches.addAll(b);
+  Collections.sort(branches);
 }
 
 
 void addBranch(BranchRef b) {
-  branches.add(b);
+  GitMiner.addUnique(branches, b);
 }
 
 
