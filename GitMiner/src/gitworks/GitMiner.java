@@ -368,7 +368,7 @@ private void getCommitsInR(RevWalk walk, boolean only)
   ArrayList<Commit> newcos;
   Iterator<Entry<String, ArrayList<BranchRef>>> erit;
   Iterator<String> sit = branches.keySet().iterator();
-  commits = new LinkedHashMap<String, ArrayList<Commit>>(branches.size(), 1);
+  commits = new LinkedHashMap<String, ArrayList<Commit>>(branches.size() / 2, 1);
   if (only)
     excluded.ensureCapacity(allBranches.size() - 1);
 //  int j = 0;
@@ -428,7 +428,7 @@ private void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
   Iterator<Entry<String, ArrayList<BranchRef>>> erit;
   Iterator<String> sit = branches.keySet().iterator();
   included.ensureCapacity(allBranches.size() - 1);
-  commits = new LinkedHashMap<String, ArrayList<Commit>>(branches.size(), 1);
+  commits = new LinkedHashMap<String, ArrayList<Commit>>(branches.size() / 2, 1);
 //  int j = 0;
   while (sit.hasNext()) {/**/// System.err.println("###### Iteration " + (++j));
     r = sit.next();
@@ -496,7 +496,8 @@ private void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectExcep
         + " ) ERROR : the allCommits array has already been built!");
     return;
   }
-  commits = new LinkedHashMap<BranchRef, ArrayList<Commit>>(allBranches.size(), 1);
+  commits = only ? new LinkedHashMap<BranchRef, ArrayList<Commit>>()
+      : new LinkedHashMap<BranchRef, ArrayList<Commit>>(allBranches.size(), 1);
   for (int i = 0; i < allBranches.size(); i++) {
     b = allBranches.get(i);/**/// System.err.println("###### Iteration " + (i+1));
     if (only) {
@@ -690,7 +691,7 @@ private LinkedHashMap importMap(ObjectInput in) throws IOException {
   }
   keyType = in.readInt();
   valueType = in.readInt();
-  LinkedHashMap res = new LinkedHashMap(size);
+  LinkedHashMap res = new LinkedHashMap(size, 1);
   ArrayList values;
   for (i = 0; i < size; i++) {
     vsize = in.readInt();
