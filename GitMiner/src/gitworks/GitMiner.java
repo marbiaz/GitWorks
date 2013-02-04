@@ -465,10 +465,6 @@ void getCommitsInR(RevWalk walk, boolean only)
   commits = new LinkedHashMap<String, ArrayList<Commit>>(branches.size(), 1);
   if (only)
     excluded.ensureCapacity(allBranches.size() - 1);
-//  else if (allCommits.size() > 0) {
-//    System.err.println("GitMiner : ERROR : The allCommits array must be filled only once!");
-//    return;
-//  }
 //  int j = 0;
   while (sit.hasNext()) {/**/// System.err.println("###### Iteration " + (++j));
     r = sit.next();
@@ -486,18 +482,11 @@ void getCommitsInR(RevWalk walk, boolean only)
         }
       }
     }
-    comm = findCommits(walk, included, excluded, false); // !only
-    if (comm != null) { // if only == false this is always true
+    comm = findCommits(walk, included, excluded, false);
+    if (comm != null) {
       newcos = new ArrayList<Commit>(comm.size());
       for (int i = 0; i < comm.size(); i++) {
-//        if (!only) { // XXX it may be used to populate allCommits, but it is slow and inefficient
-//          newco = new Commit(comm.get(i));
-//          c = addUnique(allCommits, newco);
-//          b = findAllBranches(newco.id, r);
-//          allCommits.get(c).addBranches(b);
-//        } else {
-          c = Collections.binarySearch(allCommits, comm.get(i));
-//        }
+        c = Collections.binarySearch(allCommits, comm.get(i));
         newcos.add(allCommits.get(c));
       }
       commits.put(r, newcos);
@@ -719,10 +708,6 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     if (allBranches == null) buildBranchesMap(fe.howManyForks()); // build allBranches and branches
 
     walk = new RevWalk(git.getRepository());
-    // walk.setRetainBody(false); // this walk is for multiple usage
-    // walk.sort(RevSort.COMMIT_TIME_DESC);
-    // walk.sort(RevSort.TOPO);
-    // walk.sort(RevSort.NONE);
 
     if (allCommits == null) {
       init();
