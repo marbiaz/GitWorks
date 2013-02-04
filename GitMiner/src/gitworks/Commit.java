@@ -44,7 +44,7 @@ void addBranches(ArrayList<BranchRef> b) {
 
 
 void addBranch(BranchRef b) {
-  GitMiner.addUnique(branches, b);
+  GitWorks.addUnique(branches, b);
 }
 
 

@@ -3,19 +3,15 @@ package gitworks;
 
 import java.io.Externalizable;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -162,7 +158,7 @@ private LinkedHashMap computePersonStats(LinkedHashMap map) {
       c = evit.next();
       i = Collections.binarySearch(allAuthors, c.getAuthoringInfo());
       p = new PersOccurEntry(i);
-      i = addUnique(values, p);
+      i = GitWorks.addUnique(values, p);
       values.get(i).freq++;
     }
     values.trimToSize();
@@ -609,11 +605,11 @@ void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectException,
       for (int j = 0; j < comm.size(); j++) {
         if (!only) {
           newco = new Commit(comm.get(j)); // this RevCommit has a buffer -> populate allCommits
-          c = addUnique(allCommits, newco);
+          c = GitWorks.addUnique(allCommits, newco);
           co = allCommits.get(c);
           co.addBranch(b);
           newpe = new Person(co.getAuthoringInfo());
-          addUnique(allAuthors, newpe);
+          GitWorks.addUnique(allAuthors, newpe);
         } else {  // this RevCommit has no buffer
           c = Collections.binarySearch(allCommits, comm.get(j));
           co = allCommits.get(c);
@@ -728,8 +724,6 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     System.out.println("GitMiner : " + name + " ( " + id + " ) has " + allCommits.size()
         + " commits, " + allAuthors.size() + " authors, "
         + branches.size() + " forks and " + allBranches.size() + " branches.");
-//    printAny(commitsNotInR, System.out);
-//    printAny(allCommits, System.out);
 
   }
   catch (Exception e) {
@@ -741,107 +735,9 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     }
     if (git != null) git.getRepository().close();
     System.gc();
-  }
-}
-
-
-@SuppressWarnings({ "rawtypes" })
-private static void printMap(Map m, PrintStream out) {
-  Entry ec = null;
-  Iterator cit = null; int c; Object k,v;
-  Iterator ecit = m.entrySet().iterator();
-//  int j, i = 0;
-  while (ecit.hasNext()) { // && i++ < 3
-    ec = (Map.Entry)ecit.next();
-    k = ec.getKey();
-    if (ec.getValue() != null) {
-      cit = ((ArrayList)ec.getValue()).iterator();
-      c = 0;
-//      j = 0;
-      while (cit.hasNext()) { // && j++ < 3
-        v = cit.next();
-        out.print((k.getClass().cast(k)).toString() + " 's element # " + (++c) + ":\n"
-            + (v.getClass().cast(v)).toString());
-      }
-    } else {
-//      i--;
-      System.out.print((k.getClass().cast(k)).toString() + " : NO ENTRY");
     }
-    out.println("\n------------------------------");
+
   }
-}
-
-
-
-/**
- * It adds {@link java.lang.Comparable} objects (of any type) to the given list. The list will be
- * always ordered according to the natural ordering of the items. No duplicates are allowed in the
- * list, thus no addition occurs if an item is already in the list.<br>
- * No type checking on the objects being added is performed. Thus the caller must be sure that the
- * items being added are consistent with respect to their mutual comparison.
- * 
- * @param set
- *          The list that hosts the items
- * @param item
- *          The object to be added
- * @return The [0, set.size()) index of the item in the List.
- */
-@SuppressWarnings({ "unchecked", "rawtypes" })
-static int addUnique(List set, Comparable item) {
-  int i = Collections.binarySearch(set, item);
-  if (i < 0) {
-    i = -i - 1;
-    set.add(i, item);
-  }
-  return i;
-}
-
-
-/**
- * It provides the printout of the given data in the given output stream.
- * If the argument is an array, print one element per line, each line starting
- * with the array index of the element.
- * It does not handle Interfaces, Enums, arrays of arrays or lists of lists.
- * It only handles Maps declared in GitMiner.
- * 
- * @param data
- *          Data to be printed
- * @param out
- *          Stream in which the data printout must be written
- */
-@SuppressWarnings({ "unchecked", "rawtypes" })
-static public void printAny(Object data, PrintStream out) {
-  int size;
-  if (data == null) {
-    out.println("\nNULL!\n");
-  } else if (data instanceof Map
-      && (new LinkedHashMap<Object, ArrayList>()).getClass().isAssignableFrom(data.getClass())) {
-    printMap((Map)data, out);
-  } else if (data instanceof List) {
-    List<Object> a = (List<Object>)data;
-    size = a.size();
-    for (int i = 0; i < size; i++) {
-      out.println("[" + i + "] " + (a.get(i).getClass().cast(a.get(i))).toString());
-    }
-  } else if (data.getClass().isArray()) {
-    Object e;
-    size = Array.getLength(data);
-    for (int i = 0; i < size; i++) {
-      e = Array.get(data, i);
-      if (e.getClass().getGenericSuperclass() != null) {
-        out.println("[" + i + "] " + (e.getClass().cast(e)).toString());
-      } else {
-        out.println("[" + i + "] " + e.getClass().cast(e));
-      }
-    }
-  } else if (data.getClass().isPrimitive()) {
-    out.println(data);
-  } else if (!(data instanceof java.util.Map || data.getClass().isEnum() || data.getClass().isInterface())) {
-    out.println((data.getClass().cast(data)).toString());
-  } else {
-    out.println("ERROR : cannot print " + data.getClass().toString() + " !");
-  }
-  out.flush();
 }
 
 

@@ -14,9 +14,15 @@ import java.io.ObjectInput;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
+import java.io.PrintStream;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -276,10 +282,10 @@ public static void main(String[] args) throws FileNotFoundException, IOException
 
         for (int i = 0; i < gitMiners.length; i++) {
 //          gitMiners[i] = importGitMiner(trees_out_dir + getProjectNameAsRemote(fe) + ".dump"); // + i
-//          GitMiner.printAny(gitMiners[i].allCommits, System.out);
           gitMiners[i] = new GitMiner(getProjectNameAsRemote(fe));
           gitMiners[i].analyzeForkTree(fe);
           exportGitMiner(gitMiners[i], trees_out_dir + gitMiners[i].name + "_"  + gitMiners[i].id + ".dump");
+          printAny(gitMiners[i].commitsInB, System.out); System.out.println("\n");
           gitMiners[i] = null;
           System.gc();
           Thread.sleep(1000);
@@ -353,6 +359,84 @@ static GitMiner importGitMiner(String filePath) throws IOException, ClassNotFoun
   gm.readExternal(in);
   in.close();
   return gm;
+}
+
+
+/**
+ * It adds {@link java.lang.Comparable} objects (of any type) to the given list. The list will be
+ * always ordered according to the natural ordering of the items. No duplicates are allowed in the
+ * list, thus no addition occurs if an item is already in the list.<br>
+ * No type checking on the objects being added is performed. Thus the caller must be sure that the
+ * items being added are consistent with respect to their mutual comparison.
+ *
+ * @param set
+ *          The list that hosts the items
+ * @param item
+ *          The object to be added
+ * @return The [0, set.size()) index of the item in the List.
+ */
+@SuppressWarnings({ "unchecked", "rawtypes" })
+static int addUnique(List set, Comparable item) {
+  int i = Collections.binarySearch(set, item);
+  if (i < 0) {
+    i = -i - 1;
+    set.add(i, item);
+  }
+  return i;
+}
+
+
+/**
+ * It provides the printout of the given data in the given output stream.
+ * If the argument is an array, print one element per line, each line starting
+ * with the array index of the element.
+ * It does not handle Interfaces and Enums.
+ *
+ * @param data
+ *          Data to be printed
+ * @param out
+ *          Stream in which the data printout must be written
+ */
+@SuppressWarnings({ "unchecked", "rawtypes" })
+static public void printAny(Object data, PrintStream out) {
+  int size, i = 0;
+  if (data == null) {
+    out.print("NULL");
+  } else if (data instanceof Map) {
+    Entry ec = null;
+    Iterator ecit = ((Map)data).entrySet().iterator();
+    while (ecit.hasNext() && i++ < 3) { // && i++ < 3 XXX
+      ec = (Map.Entry)ecit.next();
+      printAny(ec.getKey(), out);
+      out.println(" :");
+      printAny(ec.getValue(), out);
+      out.println("\n------------------------------");
+    }
+  } else if (data instanceof List) {
+    List<Object> a = (List<Object>)data;
+    size = a.size();
+    for (i = 0; i < size && i < 5; i++) { // && i < 5 XXX
+      out.print(" entry # " + i + " : ");
+      printAny(a.get(i), out);
+      out.println();
+    }
+  } else if (data.getClass().isArray()) {
+    Object e;
+    size = Array.getLength(data);
+    for (i = 0; i < size && i < 5; i++) { // && i < 5 XXX
+      e = Array.get(data, i);
+      out.print(" [" + i + "] ");
+      printAny(e, out);
+      out.println();
+    }
+  } else if (data.getClass().isPrimitive()) {
+    out.print(data);
+  } else if (!(data.getClass().isEnum() || data.getClass().isInterface())) {
+    out.print((data.getClass().cast(data)).toString());
+  } else {
+    out.println("\nERROR : cannot print " + data.getClass().toString() + " !");
+  }
+  out.flush();
 }
 
 }
