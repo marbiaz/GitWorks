@@ -200,12 +200,12 @@ boolean removeFork(String fid) throws Exception {
 }
 
 
-// It updates the aggregates only from the parent downward, according to the current
-// dfs_aggregate_depth; it flags invalid dfs upwards
+// It updates valid aggregates only from the parent downward, according to the current
+// dfs_aggregate_depth; it flags dfs as invalid upwards
 boolean removeFork(ForkEntry f) throws Exception {
   if (forks != null) {
-    if (forks.remove(f) != null) {
-      GitWorks.dfsVisit(dfsAggregateDepth, this, ForkEntry.computeAggregates, new int[4]);
+    if (forks.remove(f) != null && dfsOk) {
+      GitWorks.dfsVisit(dfsAggregateDepth, this, ForkEntry.computeAggregates, new int[5]);
       setAncestorsDfsKo();
       return true;
     }
@@ -215,7 +215,7 @@ boolean removeFork(ForkEntry f) throws Exception {
 
 
 // It updates the aggregates only from the parent downward, according to the current
-// dfs_aggregate_depth; it flags invalid dfs upwards
+// dfs_aggregate_depth; it flags dfs as invalid upwards
 boolean removeForks(ForkEntry[] fks) throws Exception {
   boolean res = false;
   if (forks != null) {
@@ -224,8 +224,8 @@ boolean removeForks(ForkEntry[] fks) throws Exception {
         res = true;
       }
     }
-    if (res) {
-      GitWorks.dfsVisit(dfsAggregateDepth, this, ForkEntry.computeAggregates, new int[4]);
+    if (res && dfsOk) {
+      GitWorks.dfsVisit(dfsAggregateDepth, this, ForkEntry.computeAggregates, new int[5]);
       setAncestorsDfsKo();
     }
   }
