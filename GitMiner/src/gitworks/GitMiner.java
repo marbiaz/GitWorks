@@ -48,14 +48,52 @@ import org.eclipse.jgit.treewalk.TreeWalk;
 
 public class GitMiner implements Externalizable {
 
+private class PersOccurEntry implements Comparable<PersOccurEntry> {
+
+  int index;
+  int freq;
+
+  PersOccurEntry(int i) {
+    index = i;
+    freq = 0;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o instanceof PersOccurEntry)
+      return this.compareTo((PersOccurEntry)o) == 0;
+    return false;
+  }
+
+  @Override
+  public int compareTo(PersOccurEntry p) {
+    return index - p.index;
+  }
+
+  @Override
+  public String toString() {
+    String out = "";
+    out += allAuthors.get(index).toString() + " => " + freq;
+    return out;
+  }
+
+}
+
+
 LinkedHashMap<String, ArrayList<Commit>> commitsInR = null;
 LinkedHashMap<String, ArrayList<BranchRef>> branches = null;
 LinkedHashMap<String, ArrayList<Commit>> commitsNotInR = null;
 LinkedHashMap<String, ArrayList<Commit>> commitsOnlyInR = null;
 LinkedHashMap<BranchRef, ArrayList<Commit>> commitsInB = null;
 LinkedHashMap<BranchRef, ArrayList<Commit>> commitsOnlyInB = null;
+LinkedHashMap<String, ArrayList<PersOccurEntry>> authorsInR = null;
+LinkedHashMap<String, ArrayList<PersOccurEntry>> authorsNotInR = null;
+LinkedHashMap<String, ArrayList<PersOccurEntry>> authorsOnlyInR = null;
+LinkedHashMap<BranchRef, ArrayList<PersOccurEntry>> authorsInB = null;
+LinkedHashMap<BranchRef, ArrayList<PersOccurEntry>> authorsOnlyInB = null;
 ArrayList<Commit> allCommits = null;
 ArrayList<BranchRef> allBranches = null;
+ArrayList<Person> allAuthors = null;
 Git git;
 int id = 0;
 String name;
@@ -99,6 +137,38 @@ static DfsOperator addAsRemote = new DfsOperator() {
 
 GitMiner(String n) {
   name = n;
+}
+
+
+@SuppressWarnings({ "rawtypes", "unchecked" })
+Map computePersonStats(Map map) {
+  if (map == null) return null;
+  ArrayList<PersOccurEntry> values;
+  ArrayList ev;
+  Map res = new LinkedHashMap<Object, ArrayList<PersOccurEntry>>();
+  Map.Entry e;
+  Set<Map.Entry> es = map.entrySet();
+  Iterator<Map.Entry> esit = es.iterator();
+  Iterator<Commit> evit;
+  PersOccurEntry p;
+  Commit c;
+  int i;
+  while (esit.hasNext()) {
+    e = esit.next();
+    ev = (ArrayList)e.getValue();
+    evit = ev.iterator();
+    values = new ArrayList<PersOccurEntry>(ev.size());
+    while (evit.hasNext()) {
+      c = evit.next();
+      i = Collections.binarySearch(allAuthors, c.getAuthoringInfo());
+      p = new PersOccurEntry(i);
+      i = addUnique(values, p);
+      values.get(i).freq++;
+    }
+    values.trimToSize();
+    res.put(e.getKey(), values);
+  }
+  return res;
 }
 
 
@@ -511,7 +581,8 @@ void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectException,
   BranchRef b;
   Iterator<BranchRef> brIt;
   LinkedHashMap<BranchRef, ArrayList<Commit>> commits;
-  Commit newco;
+  Commit newco, co;
+  Person newpe;
   ArrayList<Commit> newcos;
   ArrayList<RevCommit> comm;
 
@@ -550,11 +621,15 @@ void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectException,
         if (!only) {
           newco = new Commit(comm.get(j)); // this RevCommit has a buffer -> populate allCommits
           c = addUnique(allCommits, newco);
-          allCommits.get(c).addBranch(b);
+          co = allCommits.get(c);
+          co.addBranch(b);
+          newpe = new Person(co.getAuthoringInfo());
+          addUnique(allAuthors, newpe);
         } else {  // this RevCommit has no buffer
           c = Collections.binarySearch(allCommits, comm.get(j));
+          co = allCommits.get(c);
         }
-        newcos.add(allCommits.get(c));
+        newcos.add(co);
       }
       commits.put(b, newcos);
     }
@@ -591,6 +666,8 @@ ArrayList<ObjectId> getIds(ArrayList<? extends RevObject> a) {
 private void init() {
   allCommits = new ArrayList<Commit>();
   allCommits.ensureCapacity(allBranches.size()); // XXX heuristic workaround
+  allAuthors = new ArrayList<Person>();
+  allAuthors.ensureCapacity(allBranches.size()); // XXX heuristic workaround
 }
 
 
@@ -600,9 +677,11 @@ private void tailor() {
   while (it.hasNext()) {
     it.next().branches.trimToSize();
   }
+  allAuthors.trimToSize();
 }
 
 
+@SuppressWarnings("unchecked")
 void analyzeForkTree(ForkEntry fe) throws Exception {
 
   RevWalk walk = null;
@@ -656,6 +735,14 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     getCommitsNotInR(walk);
 
     System.out.println(name + " ( " + id + " ) has " + allCommits.size() + " commits, "
+    authorsInB = (LinkedHashMap<BranchRef, ArrayList<PersOccurEntry>>)computePersonStats(commitsInB);
+    authorsOnlyInB = (LinkedHashMap<BranchRef, ArrayList<PersOccurEntry>>)computePersonStats(commitsOnlyInB);
+    authorsInR = (LinkedHashMap<String, ArrayList<PersOccurEntry>>)computePersonStats(commitsInR);
+    authorsOnlyInR = (LinkedHashMap<String, ArrayList<PersOccurEntry>>)computePersonStats(commitsOnlyInR);
+    authorsNotInR = (LinkedHashMap<String, ArrayList<PersOccurEntry>>)computePersonStats(commitsNotInR);
+
+    System.out.println("GitMiner : " + name + " ( " + id + " ) has " + allCommits.size()
+        + " commits, " + allAuthors.size() + " authors, "
         + branches.size() + " forks and " + allBranches.size() + " branches.");
 //    printAny(commitsNotInR, System.out);
 //    printAny(allCommits, System.out);
@@ -794,6 +881,8 @@ private void externalizeMap(Map map, ObjectOutput out) throws IOException {
   value = cit.next();
   if (((ArrayList)value).get(0).getClass().equals(Commit.class)) {
     valueType = 0;
+  } else if (((ArrayList)value).get(0).getClass().equals(PersOccurEntry.class)) {
+    valueType = 2;
   }
   out.writeInt(size);
   out.writeInt(keyType);
@@ -805,8 +894,16 @@ private void externalizeMap(Map map, ObjectOutput out) throws IOException {
     cit = ((ArrayList)e.getValue()).iterator();
     while (cit.hasNext()) {
       value = cit.next();
-        out.writeInt(Collections.binarySearch(
-            valueType == 0 ? allCommits : allBranches, value.getClass().cast(value)));
+      switch (valueType) {
+      case 0:
+        out.writeInt(Collections.binarySearch(allCommits, ((Commit)value)));
+        break;
+      case 1:
+        out.writeInt(Collections.binarySearch(allBranches, ((BranchRef)value)));
+        break;
+      default:
+        out.writeInt(((PersOccurEntry)value).index);
+        out.writeInt(((PersOccurEntry)value).freq);
       }
     }
     switch (keyType) {
@@ -824,6 +921,7 @@ private void externalizeMap(Map map, ObjectOutput out) throws IOException {
 @SuppressWarnings({ "rawtypes", "unchecked" })
 private Map importMap(ObjectInput in) throws IOException {
   int j, i, size, vsize, keyType, valueType;
+  PersOccurEntry p;
   size = in.readInt();
   if (size == 0) {
     return null;
@@ -835,8 +933,22 @@ private Map importMap(ObjectInput in) throws IOException {
   for (i = 0; i < size; i++) {
     vsize = in.readInt();
     values = new ArrayList(vsize);
+    switch (valueType) {
+    case 0:
       for (j = 0; j < vsize; j++) {
-        values.add(valueType == 0 ? allCommits.get(in.readInt()) : allBranches.get(in.readInt()));
+        values.add(allCommits.get(in.readInt()));
+      }
+    break;
+    case 1:
+      for (j = 0; j < vsize; j++) {
+        values.add(allBranches.get(in.readInt()));
+      }
+    break;
+    default:
+      for (j = 0; j < vsize; j++) {
+        p = new PersOccurEntry(in.readInt());
+        p.freq = in.readInt();
+        values.add(p);
       }
     }
     switch (keyType) {
@@ -877,6 +989,14 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
     }
     allCommits.add(c);
   }
+  Person p;
+  size = in.readInt();
+  allAuthors = new ArrayList<Person>(size);
+  for (i = 0; i < size; i++) {
+    p = new Person();
+    p.readExternal(in);
+    allAuthors.add(p);
+  }
   branches = (LinkedHashMap<String, ArrayList<BranchRef>>)importMap(in);
   commitsInB = (LinkedHashMap<BranchRef, ArrayList<Commit>>)importMap(in);
 
@@ -900,6 +1020,11 @@ public void writeExternal(ObjectOutput out) throws IOException {
   Iterator<Commit> itc = allCommits.iterator();
   while (itc.hasNext()) {
     itc.next().writeExternal(out);
+  }
+  out.writeInt(allAuthors.size());
+  Iterator<Person> itp = allAuthors.iterator();
+  while (itp.hasNext()) {
+    itp.next().writeExternal(out);
   }
   externalizeMap(branches, out);
   externalizeMap(commitsInB, out);
