@@ -110,7 +110,6 @@ void addRemotes(Git git, ForkEntry project, int depth) throws Exception {
 
 
 TreeWalk makeTree(RevWalk walk, AnyObjectId ref) throws Exception {
-
   TreeWalk treeWalk = new TreeWalk(walk.getObjectReader());
   // treeWalk.setRecursive(true);
   treeWalk.addTree(walk.parseTree(walk.parseAny(ref)));
@@ -121,7 +120,6 @@ TreeWalk makeTree(RevWalk walk, AnyObjectId ref) throws Exception {
 
 // checkout from a given jgit tree pointer
 void createTree(ForkEntry fe, TreeWalk treeWalk) throws Exception {
-
   String path;
   ObjectReader reader = treeWalk.getObjectReader();
   ObjectLoader loader = null;
@@ -228,7 +226,6 @@ String printCommit(RevCommit c) {
 
 // print some structural info about the git repo
 String printRepoInfo() {
-
   String out = "Current GIT_DIR : " + git.getRepository().getDirectory().getAbsolutePath() + "\n";
   StoredConfig config = git.getRepository().getConfig();
   Set<String> sections = config.getSections();
@@ -299,7 +296,7 @@ private BranchRef getBranchRef(int index) {
 }
 
 
-private BranchRef getBranchRef(String branch) {
+BranchRef getBranchRef(String branch) {
   return getBranchRef(Collections.binarySearch(allBranches, branch));
 }
 
@@ -308,7 +305,8 @@ private BranchRef getBranchRef(String branch) {
 void buildBranchesMap(int size) throws GitAPIException {
 
   if (branches != null) {
-    System.err.println("The map of the branches has already been built!!!");
+    System.err.println("GitMIner ( " + name + " -- " + id
+        + " ) ERROR : the map of the branches has already been built!");
     return;
   }
   branches = new LinkedHashMap<String, ArrayList<BranchRef>>(size, 1);
@@ -341,7 +339,7 @@ void buildBranchesMap(int size) throws GitAPIException {
     allBranches.get(i).index = i;
     bhashes += allBranches.get(i).id.name();
   }
-  id = bhashes.hashCode();
+  id = bhashes.hashCode(); // TODO: avoid overflows with something better
 //  Entry<String, ArrayList<BranchRef>> e;
 //  Iterator<Entry<String, ArrayList<BranchRef>>> eit = branches.entrySet().iterator();
 //  while (eit.hasNext()) {
@@ -384,19 +382,17 @@ void getCommitsInR(RevWalk walk, boolean only)
     throws MissingObjectException, IncorrectObjectTypeException, IOException {
 
   Iterator<BranchRef> brIt;
-  LinkedHashMap<String, ArrayList<Commit>> comms;
+  LinkedHashMap<String, ArrayList<Commit>> commits;
   ArrayList<RevCommit> comm;
   ArrayList<RevCommit> included = new ArrayList<RevCommit>();
   ArrayList<RevCommit> excluded = new ArrayList<RevCommit>();
   Entry<String, ArrayList<BranchRef>> er;
   String r;
   int c;
-//  Commit newco;
   ArrayList<Commit> newcos;
-//  ArrayList<BranchRef> b;
   Iterator<Entry<String, ArrayList<BranchRef>>> erit;
   Iterator<String> sit = branches.keySet().iterator();
-  comms = new LinkedHashMap<String, ArrayList<Commit>>(branches.size(), 1);
+  commits = new LinkedHashMap<String, ArrayList<Commit>>(branches.size(), 1);
   if (only)
     excluded.ensureCapacity(allBranches.size() - 1);
 //  else if (allCommits.size() > 0) {
@@ -534,7 +530,8 @@ void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectException,
     temp.ensureCapacity(allBranches.size() - 1);
     excluded.ensureCapacity(allBranches.size() - 1);
   } else if (allCommits.size() > 0) {
-    System.err.println("GitMiner : ERROR : The allCommits array must be filled only once!");
+    System.err.println("GitMIner ( " + name + " -- " + id
+        + " ) ERROR : the allCommits array has already been built!");
     return;
   }
   commits = new LinkedHashMap<BranchRef, ArrayList<Commit>>(allBranches.size(), 1);
