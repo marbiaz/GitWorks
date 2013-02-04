@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.util.RawParseUtils;
 
@@ -16,7 +17,7 @@ import org.eclipse.jgit.util.RawParseUtils;
 public class Commit implements Comparable<Object>, Externalizable {
 
 ObjectId id;
-byte[] data;
+private byte[] data;
 ArrayList<BranchRef> branches;
 
 
@@ -44,6 +45,39 @@ void addBranches(ArrayList<BranchRef> b) {
 
 void addBranch(BranchRef b) {
   GitMiner.addUnique(branches, b);
+}
+
+
+PersonIdent getAuthoringInfo() {
+  return RawParseUtils.parsePersonIdent(data, RawParseUtils.author(data, 0));
+}
+
+
+PersonIdent getCommittingInfo() {
+  return RawParseUtils.parsePersonIdent(data, RawParseUtils.committer(data, 0));
+}
+
+
+String getMessage() {
+  return RawParseUtils.decode(RawParseUtils.parseEncoding(data), data,
+      RawParseUtils.commitMessage(data, 0), data.length);
+}
+
+
+ObjectId getTreeId() {
+  return RevCommit.parse(data).getTree().getId();
+}
+
+
+ObjectId[] getParents() {
+  ObjectId[] res;
+  int i = 0;
+  RevCommit[] ps = RevCommit.parse(data).getParents();
+  res = new ObjectId[ps.length];
+  for (RevCommit p : ps) {
+    res[i++] = p.getId();
+  }
+  return res;
 }
 
 
