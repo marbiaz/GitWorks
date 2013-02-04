@@ -193,8 +193,8 @@ void printCommits(String outFile, String from_ref, String to_ref)
   AnyObjectId to = (to_ref == null || to_ref.equals("")) ? null : git.getRepository().resolve(
       to_ref);
   RevWalk walk = new RevWalk(git.getRepository());
-  // walk.sort(RevSort.COMMIT_TIME_DESC);
-  // walk.sort(RevSort.REVERSE);
+  walk.sort(RevSort.COMMIT_TIME_DESC, true);
+  walk.sort(RevSort.TOPO, true);
   walk.markStart(walk.parseCommit(from));
   if (to != null) walk.markUninteresting(walk.parseCommit(to));
 
