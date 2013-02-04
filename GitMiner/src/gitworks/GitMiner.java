@@ -320,9 +320,9 @@ void buildBranchesMap(int size) throws GitAPIException {
   allBranches.ensureCapacity(all.size()); //int j = 0;
   while (allBs.hasNext()) {/**/// System.err.println("###### Iteration " + (++j));
     r = allBs.next();
-    if (!("refs/remotes/" + r.getName().split("/")[2]).equals(bName)) {
-      bName = "refs/remotes/" + r.getName().split("/")[2]; // getName() format is
-                                                           // refs/remotes/<remote-name>/<branch-name>
+    if (!(r.getName().split("/")[2]).equals(bName)) {
+      bName = r.getName().split("/")[2]; // getName() format:
+                                         // refs/remotes/<remote-name>/<branch-name>
       if (temp != null) temp.trimToSize();
       temp = new ArrayList<BranchRef>();
       branches.put(bName, temp);

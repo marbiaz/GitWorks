@@ -20,8 +20,8 @@ public BranchRef() {}
 
 
 BranchRef(Ref r) {
-  name = r.getName();
-  id = r.getLeaf().getObjectId().copy();
+  name = r.getName().substring(13); // strip "refs/remotes/"
+  id = r.getLeaf().getObjectId().copy(); // get the commit id r points at
 }
 
 
