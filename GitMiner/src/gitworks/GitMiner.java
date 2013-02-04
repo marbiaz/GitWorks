@@ -716,7 +716,7 @@ private static void printMap(Map m, PrintStream out) {
  * @return The [0, set.size()) index of the item in the List.
  */
 @SuppressWarnings({ "unchecked", "rawtypes" })
-static private int addUnique(List set, Comparable item) {
+static int addUnique(List set, Comparable item) {
   int i = Collections.binarySearch(set, item);
   if (i < 0) {
     i = -i - 1;
