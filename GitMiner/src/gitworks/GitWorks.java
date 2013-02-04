@@ -251,8 +251,8 @@ public static void main(String[] args) throws FileNotFoundException, IOException
 
     /************** create fork list ****************/
 
-//    BufferedReader in = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));
-//    String r = "";
+//  BufferedReader in = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));
+//  String r = "";
   System.out.println("# Computation started at " + (new java.util.Date()).toString());
 
   try {
@@ -260,8 +260,7 @@ public static void main(String[] args) throws FileNotFoundException, IOException
 //    projects = populateForkList(args[0].trim());
 //    computeAggregates(null, projects, 100); // with a large param value the complete fork trees will be visited
 //    exportForkList(trees_out_dir + "forkListDump");
-//    projects.printForkTrees(System.out);
-//    //Runtime.getRuntime().exec(pwd + "/makeForkTreeLists.sh").waitFor();
+//    projects.printForkTrees(System.out); // from this printout, lists of repos to retrieve can be made
 //    //computeAggregates(null, projects, 1); // reset all projects aggregates
 
     /************** build and analyze fork trees ****************/
@@ -304,7 +303,6 @@ public static void main(String[] args) throws FileNotFoundException, IOException
 //    }
   }
   catch (Exception e) {
-    // TODO Auto-generated catch block
     e.printStackTrace();
   }
   finally {
@@ -313,7 +311,7 @@ public static void main(String[] args) throws FileNotFoundException, IOException
 
 }
 
-// TODO factorize import/export methods
+
 static void exportForkList(String filePath) throws IOException {
   File dump = new File(filePath);
   if (dump.exists()) dump.delete();

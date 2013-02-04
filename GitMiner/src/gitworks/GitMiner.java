@@ -190,8 +190,8 @@ void printCommits(String outFile, String from_ref, String to_ref)
     throws IOException, NoHeadException, GitAPIException {
 
   AnyObjectId from = git.getRepository().resolve(from_ref);
-  AnyObjectId to = (to_ref == null || to_ref.equals("")) ? null : git.getRepository().resolve(
-      to_ref);
+  AnyObjectId to = (to_ref == null || to_ref.equals("")) ? null
+      : git.getRepository().resolve(to_ref);
   RevWalk walk = new RevWalk(git.getRepository());
   walk.sort(RevSort.COMMIT_TIME_DESC, true);
   walk.sort(RevSort.TOPO, true);
@@ -483,9 +483,6 @@ private void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectExcep
 
   ArrayList<RevCommit> included = new ArrayList<RevCommit>();
   ArrayList<RevCommit> excluded = new ArrayList<RevCommit>();
-  // excluded.add(walk.parseCommit(git.getRepository().resolve("ajaxorg--ace/anchor")));
-  // included.add(walk.parseCommit(git.getRepository().resolve("ajaxorg--ace/issue-42")));
-  // included.add(walk.parseCommit(git.getRepository().resolve("ajaxorg--ace/concorde")));
 
   ArrayList<BranchRef> temp = new ArrayList<BranchRef>();
   if (only) {
@@ -581,10 +578,10 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
 //    System.out.println(printRepoInfo());
 
     if (GitWorks.anew) {
-      addRemotes(git, fe, 100); // with a large param value the complete fork tree will be built
+      addRemotes(git, fe, Integer.MAX_VALUE);
     }
 
-    if (allBranches == null) buildBranchesMap(fe.howManyForks()); // build allBranches and branches
+    if (allBranches == null) buildBranchesMap(fe.howManyForks());
 
     walk = new RevWalk(git.getRepository());
 
@@ -614,12 +611,15 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
   }
   finally {
     if (walk != null) {
-      walk.dispose(); walk.release();
+      walk.dispose();
+      walk.release();
+      walk = null;
     }
-    if (git != null) git.getRepository().close();
+    if (git != null) {
+      git.getRepository().close();
+      git = null;
+    }
     System.gc();
-    }
-
   }
 }
 
