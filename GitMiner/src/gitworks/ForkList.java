@@ -11,7 +11,7 @@ import java.util.Iterator;
 import java.util.ArrayList;
 
 
-public class ForkList implements Externalizable {
+public class ForkList implements Iterable<ForkEntry>, Externalizable {
 
 private ArrayList<ForkEntry> repos;
 private int trees = 0; // how many distinct fork trees are in this list
@@ -91,7 +91,7 @@ ForkEntry get(int i) {
 }
 
 
-Iterator<ForkEntry> getAll() {
+public Iterator<ForkEntry> iterator() {
   Iterator<ForkEntry> i = repos.iterator();
   return i;
 }

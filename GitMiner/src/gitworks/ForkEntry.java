@@ -249,7 +249,7 @@ ForkEntry getFork(String id) {
 
 
 Iterator<ForkEntry> getForks() {
-  return forks.getAll();
+  return forks.iterator();
 }
 
 

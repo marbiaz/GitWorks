@@ -192,7 +192,7 @@ static ForkList populateForkList(String inputFile) throws Exception {
     }
   }
   listFile.close();
-  Iterator<ForkEntry> it = l.getAll();
+  Iterator<ForkEntry> it = l.iterator();
   for (int i = 0; it.hasNext(); i++) {
     fe = it.next();
     if (!"".equals(children.get(i))) {
