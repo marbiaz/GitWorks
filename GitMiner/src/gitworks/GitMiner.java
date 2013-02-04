@@ -430,10 +430,8 @@ void getCommitsInR(RevWalk walk, boolean only)
 //        }
         newcos.add(allCommits.get(c));
       }
-    } else {
-      newcos = null;
+      commits.put(r, newcos);
     }
-    comms.put(r, newcos);
     included.clear();
     excluded.clear();
     walk.reset();
@@ -444,9 +442,9 @@ void getCommitsInR(RevWalk walk, boolean only)
   excluded.ensureCapacity(50);
 
   if (only)
-    commitsOnlyInR = comms;
+    commitsOnlyInR = commits.isEmpty() ? null : commits;
   else
-    commitsInR = comms;
+    commitsInR = commits.isEmpty() ? null : commits;
 }
 
 
@@ -489,10 +487,8 @@ void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
       for (int i = 0; i < comm.size(); i++) {
         newcos.add(allCommits.get(Collections.binarySearch(allCommits, comm.get(i))));
       }
-    } else {
-      newcos = null;
+      commits.put(r, newcos);
     }
-    commits.put(r, newcos);
     included.clear();
     excluded.clear();
     walk.reset();
@@ -502,7 +498,7 @@ void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
   excluded.trimToSize();
   excluded.ensureCapacity(50);
 
-  commitsNotInR = commits;
+  commitsNotInR = commits.isEmpty() ? null : commits;
 }
 
 
@@ -560,10 +556,8 @@ void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectException,
         }
         newcos.add(allCommits.get(c));
       }
-    } else {
-      newcos = null;
+      commits.put(b, newcos);
     }
-    commits.put(b, newcos);
     included.clear();
     excluded.clear();
     walk.reset();
@@ -797,10 +791,8 @@ private void externalizeMap(Map map, ObjectOutput out) throws IOException {
     keyType = 1;
   }
   cit = map.values().iterator();
-  do {
-    value = cit.next();
-  } while (value == null && cit.hasNext());
-  if (value == null || ((ArrayList)value).get(0).getClass().equals(Commit.class)) {
+  value = cit.next();
+  if (((ArrayList)value).get(0).getClass().equals(Commit.class)) {
     valueType = 0;
   }
   out.writeInt(size);
@@ -809,13 +801,10 @@ private void externalizeMap(Map map, ObjectOutput out) throws IOException {
   it = map.entrySet().iterator();
   while (it.hasNext()) {
     e = it.next();
-    if (e.getValue() == null) {
-      out.writeInt(0);
-    } else {
-      out.writeInt(((ArrayList)e.getValue()).size());
-      cit = ((ArrayList)e.getValue()).iterator();
-      while (cit.hasNext()) {
-        value = cit.next();
+    out.writeInt(((ArrayList)e.getValue()).size());
+    cit = ((ArrayList)e.getValue()).iterator();
+    while (cit.hasNext()) {
+      value = cit.next();
         out.writeInt(Collections.binarySearch(
             valueType == 0 ? allCommits : allBranches, value.getClass().cast(value)));
       }
@@ -845,10 +834,7 @@ private Map importMap(ObjectInput in) throws IOException {
   ArrayList values;
   for (i = 0; i < size; i++) {
     vsize = in.readInt();
-    if (vsize == 0) {
-      values = null;
-    } else {
-      values = new ArrayList(vsize);
+    values = new ArrayList(vsize);
       for (j = 0; j < vsize; j++) {
         values.add(valueType == 0 ? allCommits.get(in.readInt()) : allBranches.get(in.readInt()));
       }
