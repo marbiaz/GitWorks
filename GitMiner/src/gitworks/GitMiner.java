@@ -568,7 +568,7 @@ void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectException,
   excluded.ensureCapacity(50);
 
   if (only)
-    commitsOnlyInB = commits;
+    commitsOnlyInB = commits.isEmpty() ? null : commits;
   else
     commitsInB = commits;
 }
