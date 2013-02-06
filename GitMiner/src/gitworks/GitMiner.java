@@ -69,17 +69,17 @@ class PersonFrequency implements Comparable<PersonFrequency> {
 }
 
 
-LinkedHashMap<String, ArrayList<Commit>> commitsInR = null;
+LinkedHashMap<String, ArrayList<Commit>> comInF = null;
 LinkedHashMap<String, ArrayList<BranchRef>> branches = null;
-LinkedHashMap<String, ArrayList<Commit>> commitsNotInR = null;
-LinkedHashMap<String, ArrayList<Commit>> commitsOnlyInR = null;
-LinkedHashMap<BranchRef, ArrayList<Commit>> commitsInB = null;
-LinkedHashMap<BranchRef, ArrayList<Commit>> commitsOnlyInB = null;
-LinkedHashMap<String, ArrayList<PersonFrequency>> authorsInR = null;
-LinkedHashMap<String, ArrayList<PersonFrequency>> authorsNotInR = null;
-LinkedHashMap<String, ArrayList<PersonFrequency>> authorsOnlyInR = null;
-LinkedHashMap<BranchRef, ArrayList<PersonFrequency>> authorsInB = null;
-LinkedHashMap<BranchRef, ArrayList<PersonFrequency>> authorsOnlyInB = null;
+LinkedHashMap<String, ArrayList<Commit>> comNotInF = null;
+LinkedHashMap<String, ArrayList<Commit>> comOnlyInF = null;
+LinkedHashMap<BranchRef, ArrayList<Commit>> comInB = null;
+LinkedHashMap<BranchRef, ArrayList<Commit>> comOnlyInB = null;
+LinkedHashMap<String, ArrayList<PersonFrequency>> authOfComInF = null;
+LinkedHashMap<String, ArrayList<PersonFrequency>> authOfComNotInF = null;
+LinkedHashMap<String, ArrayList<PersonFrequency>> authOfComOnlyInF = null;
+LinkedHashMap<BranchRef, ArrayList<PersonFrequency>> authOfComInB = null;
+LinkedHashMap<BranchRef, ArrayList<PersonFrequency>> authOfComOnlyInB = null;
 ArrayList<Commit> allCommits = null;
 ArrayList<BranchRef> allBranches = null;
 ArrayList<Person> allAuthors = null;
@@ -106,7 +106,7 @@ static DfsOperator addAsRemote = new DfsOperator() {
   public void run(ForkEntry fe, Object arg) throws Exception {
     Git git = (Git)arg;
     RefSpec all;
-    String fork = GitWorks.getProjectNameAsRemote(fe);
+    String fork = GitWorks.getSafeName(fe);
 //    System.out.print("Adding " + fork + " ...");
 //    System.out.flush();
     StoredConfig config = git.getRepository().getConfig();
@@ -406,9 +406,9 @@ private void getCommitsInR(RevWalk walk, boolean only)
   excluded.ensureCapacity(50);
 
   if (only)
-    commitsOnlyInR = commits.isEmpty() ? null : commits;
+    comOnlyInF = commits.isEmpty() ? null : commits;
   else
-    commitsInR = commits.isEmpty() ? null : commits;
+    comInF = commits.isEmpty() ? null : commits;
 }
 
 
@@ -462,7 +462,7 @@ private void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
   excluded.trimToSize();
   excluded.ensureCapacity(50);
 
-  commitsNotInR = commits.isEmpty() ? null : commits;
+  comNotInF = commits.isEmpty() ? null : commits;
 }
 
 
@@ -536,9 +536,9 @@ private void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectExcep
   excluded.ensureCapacity(50);
 
   if (only)
-    commitsOnlyInB = commits.isEmpty() ? null : commits;
+    comOnlyInB = commits.isEmpty() ? null : commits;
   else
-    commitsInB = commits;
+    comInB = commits;
 }
 
 
@@ -575,9 +575,9 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
 
   RevWalk walk = null;
 
-  String gitDirPath = GitWorks.gits_out_dir + GitWorks.getProjectNameAsRemote(fe)
+  String gitDirPath = GitWorks.gits_out_dir + GitWorks.getSafeName(fe)
       + ((GitWorks.bare == true) ? ".git" : "/.git");
-  String treeDirPath = GitWorks.trees_out_dir + GitWorks.getProjectNameAsRemote(fe);
+  String treeDirPath = GitWorks.trees_out_dir + GitWorks.getSafeName(fe);
 
   try {
     // with git.init() it is not possible to specify a different tree path!!
@@ -603,11 +603,11 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     getCommitsInR(walk, true);
     getCommitsNotInR(walk);
 
-    authorsInB = computePersonFreq(commitsInB);
-    authorsOnlyInB = computePersonFreq(commitsOnlyInB);
-    authorsInR = computePersonFreq(commitsInR);
-    authorsOnlyInR = computePersonFreq(commitsOnlyInR);
-    authorsNotInR = computePersonFreq(commitsNotInR);
+    authOfComInB = computePersonFreq(comInB);
+    authOfComOnlyInB = computePersonFreq(comOnlyInB);
+    authOfComInF = computePersonFreq(comInF);
+    authOfComOnlyInF = computePersonFreq(comOnlyInF);
+    authOfComNotInF = computePersonFreq(comNotInF);
 
   }
   catch (Exception e) {
@@ -765,17 +765,17 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
     allAuthors.add(p);
   }
   branches = importMap(in);
-  commitsInB = importMap(in);
+  comInB = importMap(in);
 
-  commitsOnlyInB = importMap(in);
-  commitsInR = importMap(in);
-  commitsOnlyInR = importMap(in);
-  commitsNotInR = importMap(in);
-  authorsInB = importMap(in);
-  authorsOnlyInB = importMap(in);
-  authorsInR = importMap(in);
-  authorsOnlyInR = importMap(in);
-  authorsNotInR = importMap(in);
+  comOnlyInB = importMap(in);
+  comInF = importMap(in);
+  comOnlyInF = importMap(in);
+  comNotInF = importMap(in);
+  authOfComInB = importMap(in);
+  authOfComOnlyInB = importMap(in);
+  authOfComInF = importMap(in);
+  authOfComOnlyInF = importMap(in);
+  authOfComNotInF = importMap(in);
 }
 
 
@@ -799,17 +799,17 @@ public void writeExternal(ObjectOutput out) throws IOException {
     itp.next().writeExternal(out);
   }
   externalizeMap(branches, out);
-  externalizeMap(commitsInB, out);
+  externalizeMap(comInB, out);
 
-  externalizeMap(commitsOnlyInB, out);
-  externalizeMap(commitsInR, out);
-  externalizeMap(commitsOnlyInR, out);
-  externalizeMap(commitsNotInR, out);
-  externalizeMap(authorsInB, out);
-  externalizeMap(authorsOnlyInB, out);
-  externalizeMap(authorsInR, out);
-  externalizeMap(authorsOnlyInR, out);
-  externalizeMap(authorsNotInR, out);
+  externalizeMap(comOnlyInB, out);
+  externalizeMap(comInF, out);
+  externalizeMap(comOnlyInF, out);
+  externalizeMap(comNotInF, out);
+  externalizeMap(authOfComInB, out);
+  externalizeMap(authOfComOnlyInB, out);
+  externalizeMap(authOfComInF, out);
+  externalizeMap(authOfComOnlyInF, out);
+  externalizeMap(authOfComNotInF, out);
   out.flush();
 }
 

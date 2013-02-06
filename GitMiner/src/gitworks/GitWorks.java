@@ -110,7 +110,7 @@ static void dfsVisit(int depth, ForkEntry f, DfsOperator t, int[] t_arg) throws 
 
 
 // Returns the project ID formatted in a convenient way to serve as a remote name...
-static String getProjectNameAsRemote(ForkEntry f) {
+static String getSafeName(ForkEntry f) {
   return f.getId().replace("/", "--");
 }
 
@@ -273,7 +273,7 @@ public static void main(String[] args) throws FileNotFoundException, IOException
       if (!fe.isRoot()) continue;
 
       try {
-        Runtime.getRuntime().exec(pwd + "/loadRepos.sh " + getProjectNameAsRemote(fe)).waitFor();
+//        Runtime.getRuntime().exec(pwd + "/loadRepos.sh " + getSafeName(fe)).waitFor();
         if (anew) {
           purgeMissingForks(projects, fe);
         }
@@ -281,8 +281,8 @@ public static void main(String[] args) throws FileNotFoundException, IOException
 //        r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
 
         for (int i = 0; i < gitMiners.length; i++) {
-//          gitMiners[i] = importGitMiner(trees_out_dir + getProjectNameAsRemote(fe) + ".dump"); // + i
-          gitMiners[i] = new GitMiner(getProjectNameAsRemote(fe));
+          gitMiners[i] = importGitMiner(trees_out_dir + getSafeName(fe) + ".dump"); // + i
+//          gitMiners[i] = new GitMiner(getSafeName(fe));
           gitMiners[i].analyzeForkTree(fe);
           exportGitMiner(gitMiners[i], trees_out_dir + gitMiners[i].name + "_"  + gitMiners[i].id + ".dump");
           gitMiners[i] = null;
@@ -291,13 +291,13 @@ public static void main(String[] args) throws FileNotFoundException, IOException
 
 //          r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
         }
-        Runtime.getRuntime().exec(pwd + "/cleanAndBackup.sh " + getProjectNameAsRemote(fe)).waitFor();
+//        Runtime.getRuntime().exec(pwd + "/cleanAndBackup.sh " + getSafeName(fe)).waitFor();
       }
       catch (InterruptedException ie) {
-        System.err.println("ERROR : computation of " + getProjectNameAsRemote(fe) + " was interrupted before completion!");
+        System.err.println("ERROR : computation of " + getSafeName(fe) + " was interrupted before completion!");
       }
       catch (Exception e) {
-        System.err.println("ERROR : computation of " + getProjectNameAsRemote(fe) + " was interrupted before completion!");
+        System.err.println("ERROR : computation of " + getSafeName(fe) + " was interrupted before completion!");
         e.printStackTrace();
       }
 //    }
