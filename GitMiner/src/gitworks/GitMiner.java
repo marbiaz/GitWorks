@@ -562,6 +562,14 @@ private void tailor() {
 }
 
 
+String getInfo() {
+  if (allCommits == null) return "GitMiner : uninitialized.";
+  return "GitMiner : " + name + " ( " + id + " ) has " + allCommits.size()
+      + " commits, " + allAuthors.size() + " authors, "
+      + branches.size() + " forks and " + allBranches.size() + " branches.";
+}
+
+
 @SuppressWarnings("unchecked")
 void analyzeForkTree(ForkEntry fe) throws Exception {
 
@@ -600,10 +608,6 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     authorsInR = computePersonFreq(commitsInR);
     authorsOnlyInR = computePersonFreq(commitsOnlyInR);
     authorsNotInR = computePersonFreq(commitsNotInR);
-
-    System.out.println("GitMiner : " + name + " ( " + id + " ) has " + allCommits.size()
-        + " commits, " + allAuthors.size() + " authors, "
-        + branches.size() + " forks and " + allBranches.size() + " branches.");
 
   }
   catch (Exception e) {
