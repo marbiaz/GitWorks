@@ -403,7 +403,7 @@ static public void printAny(Object data, PrintStream out) {
   } else if (data instanceof Map) {
     Entry ec = null;
     Iterator ecit = ((Map)data).entrySet().iterator();
-    while (ecit.hasNext() && i++ < 3) { // && i++ < 3 XXX
+    while (ecit.hasNext()) { // && i++ < 3
       ec = (Map.Entry)ecit.next();
       printAny(ec.getKey(), out);
       out.println(" :");
@@ -413,7 +413,7 @@ static public void printAny(Object data, PrintStream out) {
   } else if (data instanceof List) {
     List<Object> a = (List<Object>)data;
     size = a.size();
-    for (i = 0; i < size && i < 5; i++) { // && i < 5 XXX
+    for (i = 0; i < size; i++) { // && i < 5
       out.print(" entry # " + i + " : ");
       printAny(a.get(i), out);
       out.println();
@@ -421,7 +421,7 @@ static public void printAny(Object data, PrintStream out) {
   } else if (data.getClass().isArray()) {
     Object e;
     size = Array.getLength(data);
-    for (i = 0; i < size && i < 5; i++) { // && i < 5 XXX
+    for (i = 0; i < size; i++) { // && i < 5
       e = Array.get(data, i);
       out.print(" [" + i + "] ");
       printAny(e, out);
