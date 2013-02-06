@@ -124,6 +124,7 @@ static String getProjectPath(ForkEntry f) {
 
 // as of now, it is meant to compute things in the big fork tree of each project, so that for forks
 // at different layers the computed aggregation depth is parent's one - 1.
+// with a large depth param value the complete fork trees will be visited
 static void computeAggregates(String ids[], ForkList fl, int depth) throws Exception {
   if (fl.size() == 0 || depth < 1) {
     System.err.println("computeAggregates : input ERROR.");
@@ -258,7 +259,7 @@ public static void main(String[] args) throws FileNotFoundException, IOException
   try {
     importForkList(trees_out_dir + "forkListDump");
 //    projects = populateForkList(args[0].trim());
-//    computeAggregates(null, projects, 100); // with a large param value the complete fork trees will be visited
+//    computeAggregates(null, projects, Integer.MAX_VALUE);
 //    exportForkList(trees_out_dir + "forkListDump");
 //    projects.printForkTrees(System.out); // from this printout, lists of repos to retrieve can be made
 //    //computeAggregates(null, projects, 1); // reset all projects aggregates
