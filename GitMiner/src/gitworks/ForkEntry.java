@@ -265,10 +265,10 @@ private String getForksIds() {
 
 
 public String toString() {
-  String out; // name + GitMiner.field_sep + owner // (hasForks() ? forks.size() : "0")
-  out = getId() + GitWorks.field_sep + watchers + GitWorks.field_sep + dfsNumForks 
-      + GitWorks.field_sep + dfsChildrenWatchers + GitWorks.field_sep + dfsMaxWatchers
-      + (hasForks() ? GitWorks.field_sep + getForksIds() : "");
+  String out = getId() + GitWorks.field_sep + (hasForks() ? forks.size() : "0")
+      + GitWorks.field_sep + watchers + GitWorks.field_sep + dfsNumForks
+      + GitWorks.field_sep + dfsMaxChildren + GitWorks.field_sep + dfsChildrenWatchers
+      + GitWorks.field_sep + dfsMaxWatchers + (hasForks() ? GitWorks.field_sep + getForksIds() : "");
   return out;
 }
 
