@@ -35,7 +35,7 @@ public String toString() {
 
 @Override
 public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-  // index is set by GitMIner
+  // index is set by GitMiner
   id = (ObjectId)in.readObject();
   name = in.readUTF();
 }

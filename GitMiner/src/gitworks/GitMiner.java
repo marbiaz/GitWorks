@@ -271,7 +271,7 @@ private ArrayList<RevCommit> findCommits(RevWalk walk, ArrayList<RevCommit> incl
     ArrayList<RevCommit> excluded, boolean getBody) throws MissingObjectException,
     IncorrectObjectTypeException, IOException {
   ArrayList<RevCommit> commits = new ArrayList<RevCommit>();
-  commits.ensureCapacity(allBranches.size()); // XXX heuristic workaround
+  commits.ensureCapacity(allBranches.size()); // heuristic workaround
   walk.sort(RevSort.COMMIT_TIME_DESC, true);
   walk.sort(RevSort.TOPO, true);
   walk.setRetainBody(getBody);
@@ -468,6 +468,7 @@ private void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
 
 // fast but resource-demanding
 // find commits that are (uniquely?) in a branch
+// used to build the allCommits and allAuthors arrays as well
 private void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectException,
     IncorrectObjectTypeException, IOException {
 
@@ -545,9 +546,9 @@ private void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectExcep
 
 private void init() {
   allCommits = new ArrayList<Commit>();
-  allCommits.ensureCapacity(allBranches.size()); // XXX heuristic workaround
+  allCommits.ensureCapacity(allBranches.size()); // heuristic workaround
   allAuthors = new ArrayList<Person>();
-  allAuthors.ensureCapacity(allBranches.size()); // XXX heuristic workaround
+  allAuthors.ensureCapacity(allBranches.size()); // heuristic workaround
 }
 
 

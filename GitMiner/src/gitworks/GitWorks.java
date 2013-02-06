@@ -275,7 +275,7 @@ public static void main(String[] args) throws FileNotFoundException, IOException
       try {
         Runtime.getRuntime().exec(pwd + "/loadRepos.sh " + getProjectNameAsRemote(fe)).waitFor();
         if (anew) {
-          purgeMissingForks(projects, fe); // IRREVERSIBLE!!!
+          purgeMissingForks(projects, fe);
         }
 
 //        r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
@@ -285,7 +285,6 @@ public static void main(String[] args) throws FileNotFoundException, IOException
           gitMiners[i] = new GitMiner(getProjectNameAsRemote(fe));
           gitMiners[i].analyzeForkTree(fe);
           exportGitMiner(gitMiners[i], trees_out_dir + gitMiners[i].name + "_"  + gitMiners[i].id + ".dump");
-          printAny(gitMiners[i].commitsInB, System.out); System.out.println("\n");
           gitMiners[i] = null;
           System.gc();
           Thread.sleep(1000);
