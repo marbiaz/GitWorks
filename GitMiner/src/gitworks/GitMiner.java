@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -136,9 +135,9 @@ private LinkedHashMap computePersonStats(LinkedHashMap map) {
   ArrayList<PersOccurEntry> values;
   ArrayList ev;
   LinkedHashMap res = new LinkedHashMap<Object, ArrayList<PersOccurEntry>>(map.size(), 1);
-  Map.Entry e;
-  Set<Map.Entry> es = map.entrySet();
-  Iterator<Map.Entry> esit = es.iterator();
+  Entry e;
+  Set<Entry> es = map.entrySet();
+  Iterator<Entry> esit = es.iterator();
   Iterator<Commit> evit;
   PersOccurEntry p;
   Commit c;
@@ -627,7 +626,7 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
 @SuppressWarnings({ "rawtypes", "unchecked" })
 private void externalizeMap(LinkedHashMap map, ObjectOutput out) throws IOException {
   int keyType = 0, valueType = 1, size;
-  Iterator<Map.Entry> it;
+  Iterator<Entry> it;
   Iterator cit;
   Entry e;
   Object value;
