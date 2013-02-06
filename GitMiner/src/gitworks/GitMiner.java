@@ -37,25 +37,25 @@ import org.eclipse.jgit.transport.RefSpec;
 
 public class GitMiner implements Externalizable {
 
-private class PersOccurEntry implements Comparable<PersOccurEntry> {
+class PersonFrequency implements Comparable<PersonFrequency> {
 
   int index;
   int freq;
 
-  PersOccurEntry(int i) {
+  PersonFrequency(int i) {
     index = i;
     freq = 0;
   }
 
   @Override
   public boolean equals(Object o) {
-    if (o instanceof PersOccurEntry)
-      return this.compareTo((PersOccurEntry)o) == 0;
+    if (o instanceof PersonFrequency)
+      return this.compareTo((PersonFrequency)o) == 0;
     return false;
   }
 
   @Override
-  public int compareTo(PersOccurEntry p) {
+  public int compareTo(PersonFrequency p) {
     return index - p.index;
   }
 
@@ -75,11 +75,11 @@ LinkedHashMap<String, ArrayList<Commit>> commitsNotInR = null;
 LinkedHashMap<String, ArrayList<Commit>> commitsOnlyInR = null;
 LinkedHashMap<BranchRef, ArrayList<Commit>> commitsInB = null;
 LinkedHashMap<BranchRef, ArrayList<Commit>> commitsOnlyInB = null;
-LinkedHashMap<String, ArrayList<PersOccurEntry>> authorsInR = null;
-LinkedHashMap<String, ArrayList<PersOccurEntry>> authorsNotInR = null;
-LinkedHashMap<String, ArrayList<PersOccurEntry>> authorsOnlyInR = null;
-LinkedHashMap<BranchRef, ArrayList<PersOccurEntry>> authorsInB = null;
-LinkedHashMap<BranchRef, ArrayList<PersOccurEntry>> authorsOnlyInB = null;
+LinkedHashMap<String, ArrayList<PersonFrequency>> authorsInR = null;
+LinkedHashMap<String, ArrayList<PersonFrequency>> authorsNotInR = null;
+LinkedHashMap<String, ArrayList<PersonFrequency>> authorsOnlyInR = null;
+LinkedHashMap<BranchRef, ArrayList<PersonFrequency>> authorsInB = null;
+LinkedHashMap<BranchRef, ArrayList<PersonFrequency>> authorsOnlyInB = null;
 ArrayList<Commit> allCommits = null;
 ArrayList<BranchRef> allBranches = null;
 ArrayList<Person> allAuthors = null;
@@ -130,27 +130,27 @@ GitMiner(String n) {
 
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
-private LinkedHashMap computePersonStats(LinkedHashMap map) {
+private LinkedHashMap computePersonFreq(LinkedHashMap map) {
   if (map == null) return null;
-  ArrayList<PersOccurEntry> values;
+  ArrayList<PersonFrequency> values;
   ArrayList ev;
-  LinkedHashMap res = new LinkedHashMap<Object, ArrayList<PersOccurEntry>>(map.size(), 1);
+  LinkedHashMap res = new LinkedHashMap<Object, ArrayList<PersonFrequency>>(map.size(), 1);
   Entry e;
   Set<Entry> es = map.entrySet();
   Iterator<Entry> esit = es.iterator();
   Iterator<Commit> evit;
-  PersOccurEntry p;
+  PersonFrequency p;
   Commit c;
   int i;
   while (esit.hasNext()) {
     e = esit.next();
     ev = (ArrayList)e.getValue();
     evit = ev.iterator();
-    values = new ArrayList<PersOccurEntry>(ev.size());
+    values = new ArrayList<PersonFrequency>(ev.size());
     while (evit.hasNext()) {
       c = evit.next();
       i = Collections.binarySearch(allAuthors, c.getAuthoringInfo());
-      p = new PersOccurEntry(i);
+      p = new PersonFrequency(i);
       i = GitWorks.addUnique(values, p);
       values.get(i).freq++;
     }
@@ -594,11 +594,11 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     getCommitsInR(walk, true);
     getCommitsNotInR(walk);
 
-    authorsInB = computePersonStats(commitsInB);
-    authorsOnlyInB = computePersonStats(commitsOnlyInB);
-    authorsInR = computePersonStats(commitsInR);
-    authorsOnlyInR = computePersonStats(commitsOnlyInR);
-    authorsNotInR = computePersonStats(commitsNotInR);
+    authorsInB = computePersonFreq(commitsInB);
+    authorsOnlyInB = computePersonFreq(commitsOnlyInB);
+    authorsInR = computePersonFreq(commitsInR);
+    authorsOnlyInR = computePersonFreq(commitsOnlyInR);
+    authorsNotInR = computePersonFreq(commitsNotInR);
 
     System.out.println("GitMiner : " + name + " ( " + id + " ) has " + allCommits.size()
         + " commits, " + allAuthors.size() + " authors, "
@@ -643,7 +643,7 @@ private void externalizeMap(LinkedHashMap map, ObjectOutput out) throws IOExcept
   value = cit.next();
   if (((ArrayList)value).get(0).getClass().equals(Commit.class)) {
     valueType = 0;
-  } else if (((ArrayList)value).get(0).getClass().equals(PersOccurEntry.class)) {
+  } else if (((ArrayList)value).get(0).getClass().equals(PersonFrequency.class)) {
     valueType = 2;
   }
   out.writeInt(size);
@@ -664,8 +664,8 @@ private void externalizeMap(LinkedHashMap map, ObjectOutput out) throws IOExcept
         out.writeInt(Collections.binarySearch(allBranches, ((BranchRef)value)));
         break;
       default:
-        out.writeInt(((PersOccurEntry)value).index);
-        out.writeInt(((PersOccurEntry)value).freq);
+        out.writeInt(((PersonFrequency)value).index);
+        out.writeInt(((PersonFrequency)value).freq);
       }
     }
     switch (keyType) {
@@ -683,7 +683,7 @@ private void externalizeMap(LinkedHashMap map, ObjectOutput out) throws IOExcept
 @SuppressWarnings({ "rawtypes", "unchecked" })
 private LinkedHashMap importMap(ObjectInput in) throws IOException {
   int j, i, size, vsize, keyType, valueType;
-  PersOccurEntry p;
+  PersonFrequency p;
   size = in.readInt();
   if (size == 0) {
     return null;
@@ -708,7 +708,7 @@ private LinkedHashMap importMap(ObjectInput in) throws IOException {
     break;
     default:
       for (j = 0; j < vsize; j++) {
-        p = new PersOccurEntry(in.readInt());
+        p = new PersonFrequency(in.readInt());
         p.freq = in.readInt();
         values.add(p);
       }
