@@ -124,9 +124,7 @@ static DfsOperator addAsRemote = new DfsOperator() {
 };
 
 
-GitMiner(String n) {
-  name = n;
-}
+GitMiner() {}
 
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
@@ -589,6 +587,7 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
       addRemotes(git, fe, Integer.MAX_VALUE);
     }
 
+    name = GitWorks.getSafeName(fe);
     if (allBranches == null) buildBranchesMap(fe.howManyForks());
 
     walk = new RevWalk(git.getRepository());
