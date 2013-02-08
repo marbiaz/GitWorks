@@ -253,6 +253,11 @@ Iterator<ForkEntry> getForks() {
 }
 
 
+int getWatchers() {
+  return watchers;
+}
+
+
 private String getForksIds() {
   String out = "";
   Iterator<ForkEntry> it = getForks();
@@ -294,6 +299,7 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
   dfsOk = in.readBoolean();
   dfsMaxWatchers = in.readInt();
   dfsChildrenWatchers = in.readInt();
+  dfsMaxChildren = in.readInt();
   dfsNumForks = in.readInt();
   dfsAggregateDepth = in.readInt();
   int size = in.readInt();
@@ -319,6 +325,7 @@ public void writeExternal(ObjectOutput out) throws IOException {
   out.writeBoolean(dfsOk);
   out.writeInt(dfsMaxWatchers);
   out.writeInt(dfsChildrenWatchers);
+  out.writeInt(dfsMaxChildren);
   out.writeInt(dfsNumForks);
   out.writeInt(dfsAggregateDepth);
   int size = howManyForks();
