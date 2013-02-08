@@ -4,6 +4,7 @@ package gitworks;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.Externalizable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -29,7 +30,7 @@ import java.util.zip.GZIPOutputStream;
 
 public class GitWorks {
 
-public static boolean anew = true; // (re-)create a forktree anew
+public static boolean anew = false; // (re-)create a forktree anew
 public static boolean bare = true; // the forktree is a bare git repo
 
 public static String prefix = "JGIT_"; // to be prepended to any jgit-generated output file name
@@ -48,6 +49,7 @@ public static String pwd; // set according to the current pwd
 static String[] ids = null; // list of root repos to be considered to build the fork trees and perform analysis.
 static ForkList projects;
 static GitMiner[] gitMiners;
+static FeatureList features;
 
 
 static void dfsVisit(int depth, ForkEntry f, DfsOperator t, Object o) throws Exception {
@@ -224,13 +226,16 @@ static ForkList populateForkList(String inputFile) throws Exception {
 
 /**
  * @param args
- * @throws ClassNotFoundException 
- * @throws IOException 
- * @throws FileNotFoundException 
+ * @throws Exception
  */
-public static void main(String[] args) throws FileNotFoundException, IOException, ClassNotFoundException {
+public static void main(String[] args) throws Exception {
 
   ForkEntry fe;
+  Features feat;
+  int k;
+
+//  printAny(System.getenv(), System.err);
+//  System.exit(0);
 
   if (args.length < 5) {
     System.err
@@ -252,111 +257,96 @@ public static void main(String[] args) throws FileNotFoundException, IOException
 
     /************** create fork list ****************/
 
-//  BufferedReader in = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));
-//  String r = "";
-  System.out.println("# Computation started at " + (new java.util.Date()).toString());
+  //BufferedReader in = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));
+  //String r = "";
+  System.out.println("# Computation started at " + (new java.util.Date()).toString() + "\n");
 
-  try {
-    importForkList(trees_out_dir + "forkListDump");
-//    projects = populateForkList(args[0].trim());
-//    computeAggregates(null, projects, Integer.MAX_VALUE);
-//    exportForkList(trees_out_dir + "forkListDump");
-//    projects.printForkTrees(System.out); // from this printout, lists of repos to retrieve can be made
-//    //computeAggregates(null, projects, 1); // reset all projects aggregates
+  if (anew) { // XXX
+    projects = populateForkList(args[0].trim());
+    computeAggregates(null, projects, Integer.MAX_VALUE);
+    exportData(projects, trees_out_dir + "forkListDump.complete");
+    //projects.printForkTrees(System.out); // from this, lists of repos to retrieve can be made
+  } else {
+    projects = new ForkList();
+    importData(projects, trees_out_dir + "forkListDump");//printAny(projects, System.out); System.out.println();
+    //computeAggregates(null, projects, 1); // reset all projects aggregates
+  }
 
     /************** build and analyze fork trees ****************/
 
-    gitMiners = new GitMiner[1];
+  gitMiners = new GitMiner[1];
+  features = new FeatureList(projects.howManyTrees());
+  Measures.init(projects.howManyTrees());
 
-    for (int j = 0; j < projects.size(); j++) {
-      fe = projects.get(j); // (ids[0]) (j);
-      if (!fe.isRoot()) continue;
-
-      try {
-//        Runtime.getRuntime().exec(pwd + "/loadRepos.sh " + getSafeName(fe)).waitFor();
-        if (anew) {
-          purgeMissingForks(projects, fe);
-        }
-
-//        r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
-
-        for (int i = 0; i < gitMiners.length; i++) {
-          gitMiners[i] = importGitMiner(trees_out_dir + getSafeName(fe) + ".dump"); // + i
-//          gitMiners[i] = new GitMiner(getSafeName(fe));
-          gitMiners[i].analyzeForkTree(fe);
-          exportGitMiner(gitMiners[i], trees_out_dir + gitMiners[i].name + "_"  + gitMiners[i].id + ".dump");
-          gitMiners[i] = null;
-          System.gc();
-          Thread.sleep(1000);
-
-//          r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
-        }
-//        Runtime.getRuntime().exec(pwd + "/cleanAndBackup.sh " + getSafeName(fe)).waitFor();
+  k = 0;
+  for (int i = 0; i < projects.size(); i++) {
+    fe = projects.get(i); // (ids[0]) (i);
+    if (!fe.isRoot()) continue;
+    try {
+      feat = new Features();
+      features.add(feat);
+      gitMiners[0] = new GitMiner();
+      if (anew) { // XXX
+        Runtime.getRuntime().exec(pwd + "/loadRepos.sh " + getSafeName(fe)).waitFor();
+        purgeMissingForks(projects, fe);
+        computeAggregates(new String[] { fe.getId() }, projects, Integer.MAX_VALUE);
+        //r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
+        gitMiners[0].analyzeForkTree(fe);
+        feat.setFeatures(fe, gitMiners[0]);
+        exportData(feat, trees_out_dir + gitMiners[0].name + ".feat");
+        exportData(gitMiners[0], trees_out_dir + gitMiners[0].name + ".gm"); //  + "_"  + gitMiners[i].id
+        Runtime.getRuntime().exec(pwd + "/cleanAndBackup.sh " + getSafeName(fe)).waitFor();
+      } else {
+        //importData(gitMiners[0], trees_out_dir + getSafeName(fe) + ".gm");
+        importData(feat, trees_out_dir + getSafeName(fe) + ".feat");
       }
-      catch (InterruptedException ie) {
-        System.err.println("ERROR : computation of " + getSafeName(fe) + " was interrupted before completion!");
-      }
-      catch (Exception e) {
-        System.err.println("ERROR : computation of " + getSafeName(fe) + " was interrupted before completion!");
-        e.printStackTrace();
-      }
-//    }
-  }
-  catch (Exception e) {
-    e.printStackTrace();
-  }
-  finally {
-    System.out.println("# Computation ended at " + (new java.util.Date()).toString());
-  }
+      System.out.println(gitMiners[0].getInfo());
+      //printAny(gitMiners[0].comInB, System.out); System.out.println("\n");
 
+      k = Measures.setMeasures(feat);
+      //r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
+    }
+    catch (Exception e) {
+      System.err.println("ERROR : computation of " + getSafeName(fe) + " was interrupted before completion!");
+      e.printStackTrace();
+    }
+    finally {
+      gitMiners[0] = null;
+      feat = null;
+      System.gc();
+      Thread.sleep(1000);
+    }
+  }
+  //printAny(Measures.candidateMeasures, System.out); System.out.println();
+//  importData(features, trees_out_dir + "featureListDump");
+//  Measures.setMeasures(features);
+  Measures.evaluate();
+  exportData(features, trees_out_dir + "featureListDump");
+  if (anew) { // XXX
+    exportData(projects, trees_out_dir + "forkListDump");
+  }
+  System.out.println("\n# Computation ended at " + (new java.util.Date()).toString());
 }
 
 
-static void exportForkList(String filePath) throws IOException {
-  File dump = new File(filePath);
-  if (dump.exists()) dump.delete();
-  GZIPOutputStream gzOut = new GZIPOutputStream(
-      new BufferedOutputStream(new FileOutputStream(dump)));
-  ObjectOutput out = new ObjectOutputStream(gzOut);
-  projects.writeExternal(out);
-  gzOut.finish();
-  out.close();
-}
-
-
-static void importForkList(String filePath) throws FileNotFoundException, IOException,
+static void importData(Externalizable o, String filePath) throws FileNotFoundException, IOException,
     ClassNotFoundException {
-  projects = new ForkList();
   ObjectInput in = new ObjectInputStream(new GZIPInputStream(new BufferedInputStream(
       new FileInputStream(filePath))));
-  projects.readExternal(in);
+  o.readExternal(in);
   in.close();
 }
 
 
-static void exportGitMiner(GitMiner gm, String filePath) throws IOException {
-  if (gm.id == 0) {
-    System.err.println("GitWorks: WARNING : attempted serialization of an unprocessed GitMiner instance.");
-    return;
-  }
+static void exportData(Externalizable o, String filePath) throws IOException {
   File dump = new File(filePath);
   if (dump.exists()) dump.delete();
   GZIPOutputStream gzOut = new GZIPOutputStream(
       new BufferedOutputStream(new FileOutputStream(dump)));
   ObjectOutput out = new ObjectOutputStream(gzOut);
-  gm.writeExternal(out);
+  o.writeExternal(out);
   gzOut.finish();
   out.close();
-}
-
-
-static GitMiner importGitMiner(String filePath) throws IOException, ClassNotFoundException {
-  ObjectInput in = new ObjectInputStream(new GZIPInputStream(new BufferedInputStream(
-      new FileInputStream(filePath))));
-  GitMiner gm = new GitMiner("");
-  gm.readExternal(in);
-  in.close();
-  return gm;
 }
 
 
