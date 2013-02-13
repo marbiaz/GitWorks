@@ -12,7 +12,7 @@ import java.util.Iterator;
 /**
  * @author Marco Biazzini
  */
-public class ForkEntry implements Comparable<ForkEntry>, Externalizable {
+public class ForkEntry implements Comparable<Object>, Externalizable {
 
 private  String owner;
 private  String name;
@@ -279,14 +279,17 @@ public String toString() {
 
 
 public boolean equals(Object o) {
-  return (o instanceof ForkEntry && this.compareTo((ForkEntry)o) == 0);
+  return this.compareTo((ForkEntry)o) == 0;
 }
 
 
 @Override
-public int compareTo(ForkEntry o) {
-  int r = this.owner.compareTo(o.owner);
-  return r == 0 ? this.name.compareTo(o.name) : r;
+public int compareTo(Object o) {
+  if (o instanceof ForkEntry)
+    return getId().compareTo(((ForkEntry)o).getId());
+  if (o instanceof String)
+    return getId().compareTo((String)o);
+  return -1;
 }
 
 

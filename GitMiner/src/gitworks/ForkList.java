@@ -52,12 +52,6 @@ int add(ForkEntry e) {
 }
 
 
-ForkEntry remove(String id) {
-  ForkEntry f = new ForkEntry(id);
-  return remove(f);
-}
-
-
 ForkEntry remove(ForkEntry f) {
   if (repos.isEmpty()) return null;
   int i = Collections.binarySearch(repos, f);
@@ -70,18 +64,12 @@ ForkEntry remove(ForkEntry f) {
 }
 
 
-ForkEntry get(ForkEntry f) {
+ForkEntry get(Object f) {
   int i = Collections.binarySearch(repos, f);
   if (i < 0) {
     return null;
   }
   return repos.get(i);
-}
-
-
-ForkEntry get(String id) {
-  ForkEntry t = new ForkEntry(id);
-  return this.get(t);
 }
 
 
