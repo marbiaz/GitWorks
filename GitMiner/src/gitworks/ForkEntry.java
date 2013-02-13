@@ -63,7 +63,7 @@ static DfsOperator addTreeToList  = new DfsOperator() {
 
   public void run(ForkEntry fe, Object arg) {
     ForkList l = (ForkList)arg;
-    l.add(fe);
+    l.addEntry(fe);
   }
 
   public void finalize(ForkEntry f) {} //TODO: add some trimming to save space
@@ -173,7 +173,7 @@ boolean addFork(ForkEntry f) throws Exception {
   if (!f.equals(this) && f.parent == null) {
     if (forks == null) forks = new ForkList();
     f.parent = this;
-    res = forks.add(f);
+    res = forks.addEntry(f);
     if (res < 0) {
       if (dfsOk) {
         if (dfsAggregateDepth <= 1) {

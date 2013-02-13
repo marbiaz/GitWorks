@@ -11,20 +11,9 @@ import java.util.Iterator;
 import java.util.ArrayList;
 
 
-public class ForkList implements Iterable<ForkEntry>, Externalizable {
+public class ForkList extends ArrayList<ForkEntry> implements Externalizable {
 
-private ArrayList<ForkEntry> repos;
 private int trees = 0; // how many distinct fork trees are in this list
-
-
-ForkList() {
-  repos = new ArrayList<ForkEntry>();
-}
-
-
-int size() {
-  return repos.size();
-}
 
 
 int howManyTrees() {
@@ -34,7 +23,7 @@ int howManyTrees() {
 
 public void setTreeCounter() {
   trees = 0;
-  Iterator<ForkEntry> it = repos.iterator();
+  Iterator<ForkEntry> it = iterator();
   while (it.hasNext()) {
     if (it.next().isRoot()) trees++;
   }
@@ -42,10 +31,10 @@ public void setTreeCounter() {
 
 
 // return the result of binarySearch !!
-int add(ForkEntry e) {
-  int i = Collections.binarySearch(repos, e);
+int addEntry(ForkEntry e) {
+  int i = Collections.binarySearch(this, e);
   if (i < 0) {
-    repos.add(-i - 1, e);
+    add(-i - 1, e);
     if (e.isRoot()) trees++;
   }
   return i;
@@ -53,48 +42,30 @@ int add(ForkEntry e) {
 
 
 ForkEntry remove(ForkEntry f) {
-  if (repos.isEmpty()) return null;
-  int i = Collections.binarySearch(repos, f);
+  if (isEmpty()) return null;
+  int i = Collections.binarySearch(this, f);
   if (i < 0) {
     return null;
   }
-  ForkEntry res =  repos.remove(i);
+  ForkEntry res =  remove(i);
   if (res.isRoot()) trees--;
   return res;
 }
 
 
 ForkEntry get(Object f) {
-  int i = Collections.binarySearch(repos, f);
+  int i = Collections.binarySearch(this, f);
   if (i < 0) {
     return null;
   }
-  return repos.get(i);
-}
-
-
-ForkEntry get(int i) {
-  if (i < 0 || i >= size()) return null;
-  return repos.get(i);
-}
-
-
-public Iterator<ForkEntry> iterator() {
-  Iterator<ForkEntry> i = repos.iterator();
-  return i;
-}
-
-
-int getPos(ForkEntry f) {
-  int res = Collections.binarySearch(repos, f);
-  return res <= 0 ? -1 : res;
+  return get(i);
 }
 
 
 public void printForkTrees(PrintStream out) throws Exception {
   for (int i = 0; i < size(); i++) {
-    if (repos.get(i).isRoot()) {
-      GitWorks.dfsVisit(Integer.MAX_VALUE, repos.get(i), ForkEntry.printAllForks, out);
+    if (get(i).isRoot()) {
+      GitWorks.dfsVisit(Integer.MAX_VALUE, get(i), ForkEntry.printAllForks, out);
       out.print("\n");
     }
   }
@@ -104,7 +75,7 @@ public void printForkTrees(PrintStream out) throws Exception {
 
 public String toString() {
   String out = "";
-  for (ForkEntry f : repos) {
+  for (ForkEntry f : this) {
     out += f.toString() + "\n";
   }
   return out;
@@ -113,7 +84,7 @@ public String toString() {
 
 // it is meant to be used only once, i.e. if NO metaEntry has been added to this object yet.
 void addMetaEntries() throws Exception { //TODO: add some trimming to save space
-  ForkEntry roots[] = repos.toArray(new ForkEntry[0]);
+  ForkEntry roots[] = toArray(new ForkEntry[0]);
   for (int i = 0; i < roots.length; i++) {
     GitWorks.dfsVisit(Integer.MAX_VALUE, roots[i], ForkEntry.addTreeToList, this);
   }
@@ -127,7 +98,7 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
   for (int i = 0; i < trees; i++) {
     fe = new ForkEntry();
     fe.readExternal(in);
-    repos.add(fe);
+    add(fe);
   }
   try {
     addMetaEntries();
@@ -143,7 +114,7 @@ public void writeExternal(ObjectOutput out) throws IOException {
   out.writeInt(trees);
   ForkEntry fe;
   for (int i = 0; i < size(); i++) {
-    fe = repos.get(i);
+    fe = get(i);
     if (fe.isRoot()) fe.writeExternal(out);
   }
   out.flush();
