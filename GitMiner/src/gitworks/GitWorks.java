@@ -259,7 +259,7 @@ public static void main(String[] args) throws Exception {
 
   //BufferedReader in = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));
   //String r = "";
-  System.out.println("# Computation started at " + (new java.util.Date()).toString() + "\n");
+  System.err.println("# Computation started at " + (new java.util.Date()).toString() + "\n");
 
   if (anew) { // XXX
     projects = populateForkList(args[0].trim());
@@ -325,7 +325,7 @@ public static void main(String[] args) throws Exception {
   if (anew) { // XXX
     exportData(projects, trees_out_dir + "forkListDump");
   }
-  System.out.println("\n# Computation ended at " + (new java.util.Date()).toString());
+  System.err.println("\n# Computation ended at " + (new java.util.Date()).toString());
 }
 
 
