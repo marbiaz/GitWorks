@@ -204,9 +204,11 @@ boolean removeFork(String fid) throws Exception {
 // dfs_aggregate_depth; it flags dfs as invalid upwards
 boolean removeFork(ForkEntry f) throws Exception {
   if (forks != null) {
-    if (forks.remove(f) != null && dfsOk) {
-      GitWorks.dfsVisit(dfsAggregateDepth, this, ForkEntry.computeAggregates, new int[5]);
-      setAncestorsDfsKo();
+    if (forks.remove(f) != null) {
+      if (dfsOk) {
+        GitWorks.dfsVisit(dfsAggregateDepth, this, ForkEntry.computeAggregates, new int[5]);
+        setAncestorsDfsKo();
+      }
       return true;
     }
   }
