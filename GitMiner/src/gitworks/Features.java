@@ -100,9 +100,9 @@ void setFeatures(ForkEntry fe, GitMiner gm) {
   }
   cIt = gm.allCommits.iterator();
   i = 0;
-  fork = "";
   Arrays.fill(commitDiffusion, 0.0);
   while (cIt.hasNext()) {
+    fork = "";
     brIt = cIt.next().branches.iterator();
     while (brIt.hasNext()) {
       cur = brIt.next().name.split("/")[0];
