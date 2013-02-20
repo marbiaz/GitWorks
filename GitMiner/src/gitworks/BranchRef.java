@@ -54,8 +54,6 @@ public void writeExternal(ObjectOutput out) throws IOException {
 public int compareTo (Object o) {
   if (o instanceof BranchRef) {
     return this.name.compareTo(((BranchRef)o).name);
-  } else if (o instanceof Ref) {
-    return this.name.compareTo(((Ref)o).getName());
   } else if (o instanceof String) {
     return this.name.compareTo((String)o);
   }
