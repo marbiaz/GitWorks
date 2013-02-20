@@ -14,12 +14,12 @@ import java.util.Iterator;
 import org.apache.commons.math3.stat.descriptive.summary.Sum;
 
 
-class Features implements Externalizable {
+public class Features implements Externalizable {
 
 String name;
 
 // for each author, how many commits in each fork
-ArrayList<Double> authorsImpactPerF[];
+public ArrayList<Double> authorsImpactPerF[];
 // All fork names, in order
 String allF[];
 // Names of forks with unique commits, in order
