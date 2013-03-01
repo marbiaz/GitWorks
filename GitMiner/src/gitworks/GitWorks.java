@@ -38,6 +38,7 @@ public static boolean bare = true; // the forktree is a bare git repo
 public static String prefix = "JGIT_"; // to be prepended to any jgit-generated output file name
 public static String field_sep = "    "; // field separator in input datafile's lines
 public static String id_sep = "/"; // the string that separates owner and name in a fork id string
+public static String safe_sep = "@-@";
 public static String list_sep = ","; // fork id separator in the list taken from the input file
 public static String log_sep = "<#>"; // field separator within a git log output line
 public static String repo_dir; // the absolute path to the dir that contains the git repos to be
@@ -46,7 +47,7 @@ public static String gits_out_dir; // the relative path to the dir which will co
                                     // jgit-generated git repos to analyse
 public static String trees_out_dir; // the relative path to the dir which will contain the
                                      // jgit-generated trees of the repos
-public static String pwd; // set according to the current pwd
+static String pwd; // set according to the current pwd
 
 static String[] ids = null; // list of root repos to be considered to build the fork trees and perform analysis.
 static ForkList projects;
@@ -115,7 +116,7 @@ static void dfsVisit(int depth, ForkEntry f, DfsOperator t, int[] t_arg) throws 
 
 // Returns the project ID formatted in a convenient way to serve as a remote name...
 static String getSafeName(ForkEntry f) {
-  return f.getId().replace("/", "--");
+  return f.getId().replace(GitWorks.id_sep, safe_sep);
 }
 
 
