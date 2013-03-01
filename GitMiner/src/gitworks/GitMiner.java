@@ -31,6 +31,7 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevFlag;
 import org.eclipse.jgit.revwalk.RevSort;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.revwalk.filter.CommitTimeRevFilter;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.RefSpec;
 
@@ -266,13 +267,17 @@ private Repository createRepo(String repoDir, String gitDir) throws IOException 
 
 // the RevWalk must be reset by the caller upon return!
 private ArrayList<RevCommit> findCommits(RevWalk walk, ArrayList<RevCommit> included,
-    ArrayList<RevCommit> excluded, boolean getBody) throws MissingObjectException,
+    ArrayList<RevCommit> excluded, boolean getBody, long after) throws MissingObjectException,
     IncorrectObjectTypeException, IOException {
   ArrayList<RevCommit> commits = new ArrayList<RevCommit>();
   commits.ensureCapacity(allBranches.size()); // heuristic workaround
   walk.sort(RevSort.COMMIT_TIME_DESC, true);
   walk.sort(RevSort.TOPO, true);
   walk.setRetainBody(getBody);
+  if (after > 0)
+    walk.setRevFilter(CommitTimeRevFilter.after(after));
+  else
+    walk.setRevFilter(null);
   walk.markStart(included);
   RevCommit c;
   Iterator<RevCommit> it = excluded.iterator();
@@ -385,7 +390,7 @@ private void getCommitsInR(RevWalk walk, boolean only)
         }
       }
     }
-    comm = findCommits(walk, included, excluded, false);
+    comm = findCommits(walk, included, excluded, false, 0);
     if (comm != null) {
       newcos = new ArrayList<Commit>(comm.size());
       for (int i = 0; i < comm.size(); i++) {
@@ -443,7 +448,7 @@ private void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
         }
       }
     }
-    comm = findCommits(walk, included, excluded, false);
+    comm = findCommits(walk, included, excluded, false, 0);
     if (comm != null) {
       newcos = new ArrayList<Commit>(comm.size());
       for (int i = 0; i < comm.size(); i++) {
@@ -505,7 +510,7 @@ private void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectExcep
       }
     }
     included.add(walk.parseCommit(b.id));
-    comm = findCommits(walk, included, excluded, !only);
+    comm = findCommits(walk, included, excluded, !only, 0);
     if (comm != null) { // if only == false this is always true
       newcos = new ArrayList<Commit>(comm.size());
       for (int j = 0; j < comm.size(); j++) {
