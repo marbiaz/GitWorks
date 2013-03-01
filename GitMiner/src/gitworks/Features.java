@@ -22,6 +22,8 @@ String name;
 public ArrayList<Double> authorsImpactPerF[];
 // All fork names, in order
 String allF[];
+// All fork's creation timestamps, ordered as allF.
+long since[];
 // Names of forks with unique commits, in order
 String uF[];
 // Number of commits in each fork, in order
@@ -55,7 +57,7 @@ public int nForks;
 
 
 void setFeatures(ForkEntry fe, GitMiner gm) {
-  int i;
+  int i = 0;
   PersonFrequency p;
   String fork, cur;
   Iterator<PersonFrequency> pIt;
@@ -68,6 +70,10 @@ void setFeatures(ForkEntry fe, GitMiner gm) {
   authorsImpactPerF = aipr;
   allF = gm.comInF.keySet().toArray(new String[0]);
   rootAIndex = Arrays.binarySearch(allF, gm.name);
+  since = new long[allF.length];
+  for (String f : allF) {System.err.println(i + f); System.err.flush();
+    since[i++] = GitWorks.projects.get(f.replaceFirst(GitWorks.safe_sep, GitWorks.id_sep)).getCreationTimestamp();
+  }
   if (gm.comOnlyInF != null) {
     uF = gm.comOnlyInF.keySet().toArray(new String[0]);
     rootUIndex = Arrays.binarySearch(uF, gm.name);
@@ -165,8 +171,10 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
     }
   }
   allF = new String[in.readInt()];
+  since = new long[allF.length];
   for (i = 0; i < allF.length; i++) {
     allF[i] = in.readUTF();
+    since[i] = in.readLong();
   }
   rootAIndex = Arrays.binarySearch(allF, name);
   size = in.readInt();
@@ -222,8 +230,9 @@ public void writeExternal(ObjectOutput out) throws IOException {
     }
   }
   out.writeInt(allF.length);
-  for (String s : allF) {
-    out.writeUTF(s);
+  for (int i = 0; i < allF.length; i++) {
+    out.writeUTF(allF[i]);
+    out.writeLong(since[i]);
   }
   if (uF != null) {
     out.writeInt(uF.length);
