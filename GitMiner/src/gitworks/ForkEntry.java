@@ -16,7 +16,7 @@ public class ForkEntry implements Comparable<Object>, Externalizable {
 
 private  String owner;
 private  String name;
-// private long since;
+private long since;
 private int watchers = -1;
 private int dfsMaxWatchers = 0;
 private int dfsNumForks = 0;
@@ -135,10 +135,11 @@ public ForkEntry(String id) {
 }
 
 
-ForkEntry(String owner, String name, int watchers) {
+ForkEntry(String owner, String name, int watchers, long creationTstamp) {
   this.name = name;
   this.owner = owner;
   this.watchers = watchers;
+  this.since = creationTstamp;
 }
 
 
@@ -260,6 +261,11 @@ int getWatchers() {
 }
 
 
+long getCreationTimestamp() {
+  return since;
+}
+
+
 private String getForksIds() {
   String out = "";
   Iterator<ForkEntry> it = getForks();
@@ -273,6 +279,7 @@ private String getForksIds() {
 
 public String toString() {
   String out = getId() + GitWorks.field_sep + (hasForks() ? forks.size() : "0")
+      + GitWorks.field_sep + new java.util.Date(since).toString()
       + GitWorks.field_sep + watchers + GitWorks.field_sep + dfsNumForks
       + GitWorks.field_sep + dfsMaxChildren + GitWorks.field_sep + dfsChildrenWatchers
       + GitWorks.field_sep + dfsMaxWatchers + (hasForks() ? GitWorks.field_sep + getForksIds() : "");
@@ -301,6 +308,7 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
   owner = in.readUTF();
   name = in.readUTF();
   watchers = in.readInt();
+  since = in.readLong();
   dfsOk = in.readBoolean();
   dfsMaxWatchers = in.readInt();
   dfsChildrenWatchers = in.readInt();
@@ -327,6 +335,7 @@ public void writeExternal(ObjectOutput out) throws IOException {
   out.writeUTF(owner);
   out.writeUTF(name);
   out.writeInt(watchers);
+  out.writeLong(since);
   out.writeBoolean(dfsOk);
   out.writeInt(dfsMaxWatchers);
   out.writeInt(dfsChildrenWatchers);

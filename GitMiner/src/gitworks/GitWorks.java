@@ -17,6 +17,8 @@ import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Array;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -183,13 +185,13 @@ static ForkList populateForkList(String inputFile) throws Exception {
   BufferedReader listFile = new BufferedReader(
       new InputStreamReader(new FileInputStream(inputFile)));
   ForkList l = new ForkList();
-
+  DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX");
   while ((line = listFile.readLine()) != null) {
     c++;
     tokens = line.split(GitWorks.field_sep);
     if (ForkEntry.isValidId(tokens[1] + GitWorks.id_sep + tokens[0])) {
       cc = l.addEntry(new ForkEntry(tokens[1], tokens[0], tokens[3].equalsIgnoreCase("nan") ? -1
-          : Integer.valueOf(tokens[3])));
+          : Integer.valueOf(tokens[3]), df.parse(tokens[2]).getTime()));
       if (cc < 0) {
         children.add(-cc - 1, tokens.length == 5 ? tokens[4] : "");
       } else {
