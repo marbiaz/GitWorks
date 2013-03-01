@@ -281,7 +281,7 @@ public String toString() {
 
 
 public boolean equals(Object o) {
-  return this.compareTo((ForkEntry)o) == 0;
+  return this.compareTo(o) == 0;
 }
 
 
