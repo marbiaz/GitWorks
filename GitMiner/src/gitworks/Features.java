@@ -9,11 +9,14 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.Date;
 
 import org.apache.commons.math3.stat.descriptive.summary.Sum;
+import org.eclipse.jgit.lib.PersonIdent;
 
-
+//TODO : allAuthors ??? 'after-creation' version of commitDiffusion and authorsImpact
 public class Features implements Externalizable {
 
 String name;
@@ -21,25 +24,31 @@ String name;
 // for each author, how many commits in each fork
 public ArrayList<Double> authorsImpactPerF[];
 // All fork names, in order
-String allF[];
+String allForks[];
 // All fork's creation timestamps, ordered as allF.
 long since[];
-// Names of forks with unique commits, in order
-String uF[];
-// Number of commits in each fork, in order
+//For each fork, number of commits, in order
 public double[] commitsOfF;
+//For each fork, number of authors of commits, in order
+public double[] authorsOfF;
+//For each fork, number of commits after the fork's creation, in order
+public double[] acCommitsOfF;
+//For each fork, number of authors of commits after fork's creation, in order
+public double[] acAuthorsOfF;
 // For each commit, how many forks is it in
 public double[] commitDiffusion;
-// For each fork, how many unique commits
+// For each fork, number of unique commits, in order
 public double[] uCommitsOfF;
-// For each fork, how many authors of unique commits
+// For each fork, number of authors of unique commits, in order
 public double[] uAuthorsOfF;
-// For each fork, the number of branches
+//For each fork, number of unique commits after fork's creation, in order
+public double[] acUCommitsOfF;
+//For each fork, number of authors of unique commits after fork's creation, in order
+public double[] acUAuthorsOfF;
+// For each fork, number of branches, in order
 public double[] branchesOfF;
 // Index of the root fork in allF
-int rootAIndex;
-// Index of the root fork in uF ( < 0 if not present)
-int rootUIndex;
+int rootIndex;
 // Number of commits in the fork tree
 public int nCommits;
 // Number of watchers of the root fork
@@ -57,42 +66,47 @@ public int nForks;
 
 
 void setFeatures(ForkEntry fe, GitMiner gm) {
-  int i = 0;
+  int j, i = 0;
   PersonFrequency p;
-  String fork, cur;
+  PersonIdent pi;
+  ArrayList <PersonFrequency> ap;
   Iterator<PersonFrequency> pIt;
   Iterator<Commit> cIt;
-  Iterator<BranchRef> brIt;
   Iterator<ArrayList<PersonFrequency>> apit;
   Iterator<ArrayList<BranchRef>> brAlIt;
+  ArrayList<Commit> ca; Commit c; int indx;
   @SuppressWarnings("unchecked")
   ArrayList<Double> aipr[] = new ArrayList[gm.allAuthors.size()];
   authorsImpactPerF = aipr;
-  allF = gm.comInF.keySet().toArray(new String[0]);
-  rootAIndex = Arrays.binarySearch(allF, gm.name);
-  since = new long[allF.length];
-  for (String f : allF) {System.err.println(i + f); System.err.flush();
-    since[i++] = GitWorks.projects.get(f.replaceFirst(GitWorks.safe_sep, GitWorks.id_sep)).getCreationTimestamp();
-  }
-  if (gm.comOnlyInF != null) {
-    uF = gm.comOnlyInF.keySet().toArray(new String[0]);
-    rootUIndex = Arrays.binarySearch(uF, gm.name);
-    uCommitsOfF = new double[uF.length];
-    uAuthorsOfF = new double[uF.length];
-    for(i = 0; i < uF.length; i++) {
-      uAuthorsOfF[i] = gm.authOfComOnlyInF.get(uF[i]).size();
-      uCommitsOfF[i] = gm.comOnlyInF.get(uF[i]).size();
-    }
-  } else {
-    uF = null;
-    rootUIndex = -1;
-    uCommitsOfF = uAuthorsOfF = null;
-  }
-  commitsOfF = new double[allF.length];
   commitDiffusion = new double[gm.allCommits.size()];
+  branchesOfF = new double[gm.branches.size()];
+  allForks = gm.comInF.keySet().toArray(new String[0]);
+  rootIndex = Arrays.binarySearch(allForks, gm.name);
+  uCommitsOfF = new double[allForks.length];
+  uAuthorsOfF = new double[allForks.length];
+  commitsOfF = new double[allForks.length];
+  authorsOfF = new double[allForks.length];
+  acUCommitsOfF = new double[allForks.length];
+  acUAuthorsOfF = new double[allForks.length];
+  acCommitsOfF = new double[allForks.length];
+  acAuthorsOfF = new double[allForks.length];
+  since = new long[allForks.length];
+
+  for (String f : allForks) {
+    since[i++] = GitWorks.projects.get(
+        f.replaceFirst(GitWorks.safe_sep, GitWorks.id_sep)).getCreationTimestamp();
+  }
+  brAlIt = gm.branches.values().iterator();
+  i = 0;
+  while (brAlIt.hasNext()) {
+    branchesOfF[i++] = brAlIt.next().size();
+  }
   apit = gm.authOfComInF.values().iterator();
+  i = 0;
   while (apit.hasNext()) {
-    pIt = apit.next().iterator();
+    ap = apit.next();
+    authorsOfF[i++] = ap.size();
+    pIt = ap.iterator();
     while (pIt.hasNext()) {
       p = pIt.next();
       if (authorsImpactPerF[p.index] == null) {
@@ -106,28 +120,64 @@ void setFeatures(ForkEntry fe, GitMiner gm) {
   }
   cIt = gm.allCommits.iterator();
   i = 0;
-  Arrays.fill(commitDiffusion, 0.0);
   while (cIt.hasNext()) {
-    fork = "";
-    brIt = cIt.next().branches.iterator();
-    while (brIt.hasNext()) {
-      cur = brIt.next().name.split("/")[0];
-      if (!cur.equals(fork)) {
-        commitDiffusion[i]++;
-        fork = cur;
+    commitDiffusion[i++] = cIt.next().repoCount();
+  }
+
+  Arrays.fill(uCommitsOfF, 0.0);
+  Arrays.fill(uAuthorsOfF, 0.0);
+  Arrays.fill(acUCommitsOfF, 0.0);
+  Arrays.fill(acUAuthorsOfF, 0.0);
+  Arrays.fill(acCommitsOfF, 0.0);
+  Arrays.fill(acAuthorsOfF, 0.0);
+  String uF[] = null; Date fDate;
+  int authorsHere[] = new int[gm.allAuthors.size()];
+  if (gm.comOnlyInF != null)
+    uF = gm.comOnlyInF.keySet().toArray(new String[0]);
+
+  // XXX: maybe better by scanning allCommits once and for all ??
+  for(i = 0, j = 0; i < allForks.length; i++) {
+    fDate = new Date(since[i]);
+    ca = gm.comInF.get(allForks[i]);
+    commitsOfF[i] = ca.size();
+    authorsOfF[i] = gm.authOfComInF.get(allForks[i]).size();
+    Arrays.fill(authorsHere, 0);
+    cIt = ca.iterator();
+    while (cIt.hasNext()) {
+      c = cIt.next();
+      pi = c.getCommittingInfo();
+      if (pi.getWhen().after(fDate)) {
+        pi = c.getAuthoringInfo();
+        indx = Collections.binarySearch(gm.allAuthors, pi);
+        authorsHere[indx]++;
+        if (authorsHere[indx] == 1) {
+          acAuthorsOfF[i]++;
+        }
+        acCommitsOfF[i]++;
       }
     }
-    i++;
+    if (uF != null && j < uF.length && allForks[i].equals(uF[j])) {
+      ca = gm.comOnlyInF.get(uF[j]);
+      uCommitsOfF[i] = ca.size();
+      uAuthorsOfF[i] = gm.authOfComOnlyInF.get(uF[j++]).size();
+      Arrays.fill(authorsHere, 0);
+      cIt = ca.iterator();
+      while (cIt.hasNext()) {
+        c = cIt.next();
+        pi = c.getCommittingInfo();
+        if (pi.getWhen().after(fDate)) {
+          pi = c.getAuthoringInfo();
+          indx =  Collections.binarySearch(gm.allAuthors, pi);
+          authorsHere[indx]++;
+          if (authorsHere[indx] == 1) {
+            acUAuthorsOfF[i]++;
+          }
+          acUCommitsOfF[i]++;
+        }
+      }
+    }
   }
-  for(i = 0; i < allF.length; i++) {
-    commitsOfF[i] = gm.comInF.get(allF[i]).size();
-  }
-  branchesOfF = new double[gm.branches.size()];
-  brAlIt = gm.branches.values().iterator();
-  i = 0;
-  while (brAlIt.hasNext()) {
-    branchesOfF[i++] = brAlIt.next().size();
-  }
+
   nCommits = gm.allCommits.size();
   nForks = fe.howManyForks();
   nWatchers = fe.getWatchers();
@@ -146,7 +196,7 @@ void setFeatures(ForkEntry fe, GitMiner gm) {
 public String toString() {
   String res = "";
   res += "Name : " + name + " ; "
-      + "Forks : " + allF.length + " ; "
+      + "Forks : " + allForks.length + " ; "
       + "Commits : " + nCommits + "\n"
       + "Root's children : " + nForks + " ; "
       + "Tot watchers : " + totWatchers + " ; "
@@ -170,42 +220,35 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
       authorsImpactPerF[i].add(in.readDouble());
     }
   }
-  allF = new String[in.readInt()];
-  since = new long[allF.length];
-  for (i = 0; i < allF.length; i++) {
-    allF[i] = in.readUTF();
-    since[i] = in.readLong();
-  }
-  rootAIndex = Arrays.binarySearch(allF, name);
   size = in.readInt();
-  if (size > 0) {
-    uF = new String[size];
-    uCommitsOfF = new double[uF.length];
-    uAuthorsOfF = new double[uF.length];
-    for (i = 0; i < uF.length; i++) {
-      uF[i] = in.readUTF();
-    }
-    for(i = 0; i < uF.length; i++) {
-      uAuthorsOfF[i] = in.readDouble();
-      uCommitsOfF[i] = in.readDouble();
-    }
-    rootUIndex = Arrays.binarySearch(uF, name);
-  } else {
-    uF = null;
-    uCommitsOfF = uAuthorsOfF = null;
-    rootUIndex = -1;
-  }
-  commitsOfF = new double[in.readInt()];
-  for(i = 0; i < commitsOfF.length; i++) {
+  allForks = new String[size];
+  commitsOfF = new double[size];
+  authorsOfF = new double[size];
+  uCommitsOfF = new double[size];
+  uAuthorsOfF = new double[size];
+  acCommitsOfF = new double[size];
+  acAuthorsOfF = new double[size];
+  acUCommitsOfF = new double[size];
+  acUAuthorsOfF = new double[size];
+  since = new long[size];
+  branchesOfF = new double[size];
+  for (i = 0; i < size; i++) {
+    allForks[i] = in.readUTF();
+    since[i] = in.readLong();
+    authorsOfF[i] = in.readDouble();
     commitsOfF[i] = in.readDouble();
+    branchesOfF[i] = in.readDouble();
+    uAuthorsOfF[i] = in.readDouble();
+    uCommitsOfF[i] = in.readDouble();
+    acAuthorsOfF[i] = in.readDouble();
+    acCommitsOfF[i] = in.readDouble();
+    acUAuthorsOfF[i] = in.readDouble();
+    acUCommitsOfF[i] = in.readDouble();
   }
+  rootIndex = Arrays.binarySearch(allForks, name);
   commitDiffusion = new double[in.readInt()];
   for(i = 0; i < commitDiffusion.length; i++) {
     commitDiffusion[i] = in.readDouble();
-  }
-  branchesOfF = new double[in.readInt()];
-  for(i = 0; i < branchesOfF.length; i++) {
-    branchesOfF[i] = in.readDouble();
   }
   nCommits = in.readInt();
   nWatchers = in.readInt();
@@ -229,33 +272,22 @@ public void writeExternal(ObjectOutput out) throws IOException {
       out.writeDouble(dit.next());
     }
   }
-  out.writeInt(allF.length);
-  for (int i = 0; i < allF.length; i++) {
-    out.writeUTF(allF[i]);
+  out.writeInt(allForks.length);
+  for (int i = 0; i < allForks.length; i++) {
+    out.writeUTF(allForks[i]);
     out.writeLong(since[i]);
-  }
-  if (uF != null) {
-    out.writeInt(uF.length);
-    for (String s : uF) {
-      out.writeUTF(s);
-    }
-    for(int i = 0; i < uF.length; i++) {
-      out.writeDouble(uAuthorsOfF[i]);
-      out.writeDouble(uCommitsOfF[i]);
-    }
-  } else {
-    out.writeInt(0);
-  }
-  out.writeInt(commitsOfF.length);
-  for (double d : commitsOfF) {
-    out.writeDouble(d);
+    out.writeDouble(authorsOfF[i]);
+    out.writeDouble(commitsOfF[i]);
+    out.writeDouble(branchesOfF[i]);
+    out.writeDouble(uAuthorsOfF[i]);
+    out.writeDouble(uCommitsOfF[i]);
+    out.writeDouble(acAuthorsOfF[i]);
+    out.writeDouble(acCommitsOfF[i]);
+    out.writeDouble(acUAuthorsOfF[i]);
+    out.writeDouble(acUCommitsOfF[i]);
   }
   out.writeInt(commitDiffusion.length);
   for (double d : commitDiffusion) {
-    out.writeDouble(d);
-  }
-  out.writeInt(branchesOfF.length);
-  for (double d : branchesOfF) {
     out.writeDouble(d);
   }
   out.writeInt(nCommits);
