@@ -209,7 +209,7 @@ static ForkList populateForkList(String inputFile) throws Exception {
     fe = it.next();
     if (!"".equals(children.get(i))) {
       cc = 0;
-      tokens = children.get(i).split(GitWorks.list_sep);
+      tokens = children.get(i).split(list_sep);
       for (String f : tokens) {
         cc++;
         fc = l.get(f);
