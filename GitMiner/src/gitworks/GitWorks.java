@@ -32,8 +32,13 @@ import java.util.zip.GZIPOutputStream;
 
 public class GitWorks {
 
-public static boolean anew = false; // (re-)create a forktree anew
 public static boolean bare = true; // the forktree is a bare git repo
+
+public static boolean anew = false; // (re-)create a forktree anew
+static boolean globMeasuresOnly = true; // only compute measures from serialized features
+static boolean compuForkTrees = false; // if true compute fork trees anew ; if false use serialized forkList
+static boolean newAnalysis = false; // if true perform a full gitMiner analysis ; if false use serialized gitMiner data
+static boolean compuFeatures = false; // if true compute features from gitMiner data; if false, use serialized features
 
 public static String prefix = "JGIT_"; // to be prepended to any jgit-generated output file name
 public static String field_sep = "    "; // field separator in input datafile's lines
@@ -235,7 +240,6 @@ public static void main(String[] args) throws Exception {
 
   ForkEntry fe;
   Features feat;
-  int k;
 
 //  printAny(System.getenv(), System.err);
 //  System.exit(0);
@@ -264,7 +268,7 @@ public static void main(String[] args) throws Exception {
   //String r = "";
   System.err.println("# Computation started at " + (new java.util.Date()).toString() + "\n");
 
-  if (anew) { // XXX
+  if (compuForkTrees) {
     projects = populateForkList(args[0].trim());
     computeAggregates(null, projects, Integer.MAX_VALUE);
     exportData(projects, trees_out_dir + "forkListDump.complete");
@@ -279,35 +283,35 @@ public static void main(String[] args) throws Exception {
 
   gitMiners = new GitMiner[1];
   features = new FeatureList(projects.howManyTrees());
-  Measures.init(projects.howManyTrees());
 
-  k = 0;
-  for (int i = 0; i < projects.size(); i++) {
-    fe = projects.get(i); // (ids[0]) (i);
+  for (int i = 0; !globMeasuresOnly && i < projects.size(); i++) {
+    fe = projects.get(i);
     if (!fe.isRoot()) continue;
     try {
       feat = new Features();
       features.add(feat);
       gitMiners[0] = new GitMiner();
-      if (anew) { // XXX
+      if (newAnalysis) {
         Runtime.getRuntime().exec(pwd + "/loadRepos.sh " + getSafeName(fe)).waitFor();
         purgeMissingForks(projects, fe);
         computeAggregates(new String[] { fe.getId() }, projects, Integer.MAX_VALUE);
         //r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
         gitMiners[0].analyzeForkTree(fe);
-        feat.setFeatures(fe, gitMiners[0]);
-        exportData(feat, trees_out_dir + gitMiners[0].name + ".feat");
-        exportData(gitMiners[0], trees_out_dir + gitMiners[0].name + ".gm"); //  + "_"  + gitMiners[i].id
+        exportData(gitMiners[0], trees_out_dir + "dumpFiles/" + gitMiners[0].name + ".gm"); //  + "_"  + gitMiners[i].id
         Runtime.getRuntime().exec(pwd + "/cleanAndBackup.sh " + getSafeName(fe)).waitFor();
-      } else {
-        //importData(gitMiners[0], trees_out_dir + getSafeName(fe) + ".gm");
-        importData(feat, trees_out_dir + getSafeName(fe) + ".feat");
+        System.out.println(gitMiners[0].getInfo());
+      } else if (compuFeatures) { // otherwise, no need to load gitMiner's data
+        importData(gitMiners[0], trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".gm"); //  + "_*"
+        System.out.println(gitMiners[0].getInfo());
       }
-      System.out.println(gitMiners[0].getInfo());
-      //printAny(gitMiners[0].comInB, System.out); System.out.println("\n");
-
-      k = Measures.setMeasures(feat);
-      //r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
+      if (compuFeatures) {
+        feat.setFeatures(fe, gitMiners[0]);
+        exportData(feat, trees_out_dir + "dumpFiles/" + feat.name + ".feat");
+      } else {
+        importData(feat, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".feat");
+      }
+      Runtime.getRuntime().exec(pwd + "/cleanAndBackup.sh " + getSafeName(fe)).waitFor();
+      printAny(feat, "\n", System.out);
     }
     catch (Exception e) {
       System.err.println("ERROR : computation of " + getSafeName(fe) + " was interrupted before completion!");
@@ -317,17 +321,18 @@ public static void main(String[] args) throws Exception {
       gitMiners[0] = null;
       feat = null;
       System.gc();
-      Thread.sleep(1000);
+      //r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
     }
   }
-  //printAny(Measures.candidateMeasures, System.out); System.out.println();
-//  importData(features, trees_out_dir + "featureListDump");
-//  Measures.setMeasures(features);
-  Measures.evaluate();
-  exportData(features, trees_out_dir + "featureListDump");
-  if (anew) { // XXX
+  if (compuForkTrees && newAnalysis) {
     exportData(projects, trees_out_dir + "forkListDump");
   }
+  if (globMeasuresOnly)
+    importData(features, trees_out_dir + "featureListDump");
+  else
+    exportData(features, trees_out_dir + "featureListDump");
+
+  Runtime.getRuntime().exec(pwd + "/makePlots.sh").waitFor();
   System.err.println("\n# Computation ended at " + (new java.util.Date()).toString());
 }
 
