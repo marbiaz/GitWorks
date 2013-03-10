@@ -25,6 +25,11 @@ BranchRef(Ref r) {
 }
 
 
+String getRepoName() {
+  return name.split("/")[0];
+}
+
+
 @Override
 public String toString() {
   String out = "";
