@@ -43,15 +43,16 @@ public void writeExternal(ObjectOutput out) throws IOException {
 
 @Override
 public int compareTo(Object o) {
-  String oName = "";//, oEmail;
+//  String oName = "";
+  String oEmail = "";
   if (o instanceof Person) {
-    oName = ((Person)o).name;
-//    oEmail = ((Person)o).email;
+//    oName = ((Person)o).name;
+    oEmail = ((Person)o).email;
   } else if (o instanceof PersonIdent) {
-    oName = ((PersonIdent)o).getName();
-//    oEmail = ((PersonIdent)o).getEmailAddress();
+//    oName = ((PersonIdent)o).getName();
+    oEmail = ((PersonIdent)o).getEmailAddress();
   }
-  return (name).compareTo(oName);
+  return email.compareTo(oEmail);
 }
 
 
