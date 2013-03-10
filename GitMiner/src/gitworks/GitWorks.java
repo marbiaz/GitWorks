@@ -122,8 +122,8 @@ static String getSafeName(ForkEntry f) {
 
 // It gives the absolute path (internal URI) of the repo corresponding to the given ForkEntry.
 static String getProjectPath(ForkEntry f) {
-  String t[] = f.getId().split(GitWorks.id_sep);
-  return GitWorks.repo_dir + t[0] + "/" + t[1] + ".git"; // t[1] + "/" + t[0] + "/" + t[1] + ".git";
+  String t[] = f.getId().split(id_sep);
+  return repo_dir + t[0] + "/" + t[1] + ".git"; // t[1] + "/" + t[0] + "/" + t[1] + ".git";
 }
 
 
@@ -189,14 +189,14 @@ static ForkList populateForkList(String inputFile) throws Exception {
   DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX");
   while ((line = listFile.readLine()) != null) {
     c++;
-    tokens = line.split(GitWorks.field_sep);
-    if (ForkEntry.isValidId(tokens[1] + GitWorks.id_sep + tokens[0])) {
+    tokens = line.split(field_sep);
+    if (ForkEntry.isValidId(tokens[1] + id_sep + tokens[0])) {
       cc = l.addEntry(new ForkEntry(tokens[1], tokens[0], tokens[3].equalsIgnoreCase("nan") ? -1
           : Integer.valueOf(tokens[3]), df.parse(tokens[2]).getTime()));
       if (cc < 0) {
         children.add(-cc - 1, tokens.length == 5 ? tokens[4] : "");
       } else {
-        System.err.println("WARNING: duplicate entry in input file (" + tokens[1] + GitWorks.id_sep
+        System.err.println("WARNING: duplicate entry in input file (" + tokens[1] + id_sep
             + tokens[0] + ").");
       }
     } else {
