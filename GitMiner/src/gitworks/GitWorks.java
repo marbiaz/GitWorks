@@ -385,11 +385,13 @@ static int addUnique(List set, Comparable item) {
  *
  * @param data
  *          Data to be printed
+ * @param trailer
+ *          A string that will always be printed after the data
  * @param out
  *          Stream in which the data printout must be written
  */
 @SuppressWarnings({ "unchecked", "rawtypes" })
-static public void printAny(Object data, PrintStream out) {
+static public void printAny(Object data, String trailer, PrintStream out) {
   int size, i = 0;
   if (data == null) {
     out.print("NULL");
@@ -398,18 +400,15 @@ static public void printAny(Object data, PrintStream out) {
     Iterator ecit = ((Map)data).entrySet().iterator();
     while (ecit.hasNext()) { // && i++ < 3
       ec = (Map.Entry)ecit.next();
-      printAny(ec.getKey(), out);
-      out.println(" :");
-      printAny(ec.getValue(), out);
-      out.println("\n------------------------------");
+      printAny(ec.getKey(), " :\n", out);
+      printAny(ec.getValue(), "\n------------------------------", out);
     }
   } else if (data instanceof List) {
     List<Object> a = (List<Object>)data;
     size = a.size();
     for (i = 0; i < size; i++) { // && i < 5
       out.print(" entry # " + i + " : ");
-      printAny(a.get(i), out);
-      out.println();
+      printAny(a.get(i), "\n", out);
     }
   } else if (data.getClass().isArray()) {
     Object e;
@@ -417,8 +416,7 @@ static public void printAny(Object data, PrintStream out) {
     for (i = 0; i < size; i++) { // && i < 5
       e = Array.get(data, i);
       out.print(" [" + i + "] ");
-      printAny(e, out);
-      out.println();
+      printAny(e, "\n", out);
     }
   } else if (data.getClass().isPrimitive()) {
     out.print(data);
@@ -427,6 +425,7 @@ static public void printAny(Object data, PrintStream out) {
   } else {
     out.println("\nERROR : cannot print " + data.getClass().toString() + " !");
   }
+  out.print(trailer);
   out.flush();
 }
 
