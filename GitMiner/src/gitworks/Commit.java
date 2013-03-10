@@ -7,6 +7,7 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
@@ -48,6 +49,23 @@ void addBranch(BranchRef b) {
 }
 
 
+int repoCount() {
+  int res = 1;
+  String prev, curr;
+  if (branches == null || branches.isEmpty()) return 0;
+  Iterator<BranchRef> brIt = branches.iterator();
+  prev = brIt.next().getRepoName();
+  while (brIt.hasNext()) {
+    curr = brIt.next().getRepoName();
+    if (!curr.equals(prev)) {
+      res++;
+      prev = curr;
+    }
+  }
+  return res;
+}
+
+
 PersonIdent getAuthoringInfo() {
   return RawParseUtils.parsePersonIdent(data, RawParseUtils.author(data, 0));
 }
@@ -85,13 +103,11 @@ ObjectId[] getParents() {
 public String toString() {
   String out = "";
   out += "id " + id.getName() + "\n";
-  out += RawParseUtils.decode(data);
-  if (branches != null) {
-    out += "\nbranches";
-    for (BranchRef r : branches) {
-      out += " " + r.toString();
-    }
-  }
+  out += RawParseUtils.decode(RawParseUtils.parseEncoding(data), data);
+  out += "\nbranches : " + branches.size() + " ; forks : " + repoCount();
+//  for (BranchRef r : branches) {
+//    out += " " + r.toString();
+//  }
   return out;
 }
 
