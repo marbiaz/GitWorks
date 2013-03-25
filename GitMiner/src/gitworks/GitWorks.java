@@ -244,14 +244,14 @@ public static void main(String[] args) throws Exception {
 //  printAny(System.getenv(), System.err);
 //  System.exit(0);
 
-  if (args.length < 5) {
+  if (args.length < 4) {
     System.err
-        .println("Usage: java GitWorks <repo list file path> <repo dir path> <jgit gits out dir> <jgit trees out dir> <comma-separated no-space list of fork ids>");
+        .println("Usage: java GitWorks <repo list file path> <repo dir path> <jgit gits out dir> <jgit trees out dir> [<comma-separated no-space list of fork ids>]");
     System.exit(2);
   }
   pwd = System.getenv("PWD");
   repo_dir = args[1].trim() + (args[1].trim().endsWith("/") ? "" : "/");
-  ids = args[4].trim().split(",");
+  if (args.length == 5) ids = args[4].trim().split(",");
   gits_out_dir = args[2].trim() + (args[2].trim().endsWith("/") ? "" : "/");
   trees_out_dir = args[3].trim() + (args[3].trim().endsWith("/") ? "" : "/");
   if (!new File(repo_dir).isDirectory() || !(new File(trees_out_dir)).isDirectory()
@@ -284,8 +284,8 @@ public static void main(String[] args) throws Exception {
   gitMiners = new GitMiner[1];
   features = new FeatureList(projects.howManyTrees());
 
-  for (int i = 0; !globMeasuresOnly && i < projects.size(); i++) {
-    fe = projects.get(i);
+  for (int i = 0, j = 0; !globMeasuresOnly && i < projects.size() && (ids == null || j < ids.length); i++) {
+    fe = ids != null ? projects.get(ids[j++]) : projects.get(i);
     if (!fe.isRoot()) continue;
     try {
       feat = new Features();
