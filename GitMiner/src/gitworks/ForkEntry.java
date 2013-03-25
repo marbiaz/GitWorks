@@ -18,14 +18,14 @@ private  String owner;
 private  String name;
 private long since;
 private int watchers = -1;
-private int dfsMaxWatchers = 0;
-private int dfsNumForks = 0;
-private int dfsChildrenWatchers = 0;
-private int dfsAggregateDepth = 0;
-private int dfsMaxChildren = 0;
+int dfsMaxWatchers = 0;
+int dfsNumForks = 0;
+int dfsChildrenWatchers = 0;
+int dfsAggregateDepth = 0;
+int dfsMaxChildren = 0;
 private ForkList forks = null;
 private ForkEntry parent = null;
-private boolean dfsOk = true;
+boolean dfsOk = true;
 
 // this operator requires a PrintStream as parameter
 static DfsOperator printAllForks  = new DfsOperator() {
