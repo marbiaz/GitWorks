@@ -271,11 +271,11 @@ public static void main(String[] args) throws Exception {
   if (compuForkTrees) {
     projects = populateForkList(args[0].trim());
     computeAggregates(null, projects, Integer.MAX_VALUE);
-    exportData(projects, trees_out_dir + "forkListDump.complete");
+    exportData(projects, trees_out_dir + "dumpFiles/" + "forkListDump.complete");
     //projects.printForkTrees(System.out); // from this, lists of repos to retrieve can be made
   } else {
     projects = new ForkList();
-    importData(projects, trees_out_dir + "forkListDump");//printAny(projects, System.out); System.out.println();
+    importData(projects, trees_out_dir + "dumpFiles/" + "forkListDump");
     //computeAggregates(null, projects, 1); // reset all projects aggregates
   }
 
@@ -325,8 +325,9 @@ public static void main(String[] args) throws Exception {
     }
   }
   if (compuForkTrees && newAnalysis) {
-    exportData(projects, trees_out_dir + "forkListDump");
+    exportData(projects, trees_out_dir + "dumpFiles/" + "forkListDump");
   }
+
   if (globMeasuresOnly)
     importData(features, trees_out_dir + "featureListDump");
   else
