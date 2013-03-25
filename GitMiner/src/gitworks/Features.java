@@ -41,10 +41,14 @@ public double[] commitDiffusion;
 public double[] uCommitsOfF;
 // For each fork, number of authors of unique commits, in order
 public double[] uAuthorsOfF;
-//For each fork, number of unique commits after fork's creation, in order
-public double[] acUCommitsOfF;
-//For each fork, number of authors of unique commits after fork's creation, in order
-public double[] acUAuthorsOfF;
+//For each fork, ratio of the number of unique commits over the number of commits, in order
+public double[] rUCommitsOfF;
+//For each fork, ratio of the number of authors of unique commits over the number of authors, in order
+public double[] rUAuthorsOfF;
+// For each fork, ratio of the number of commits after fork's creation over the number of commits, in order
+public double[] rAcCommitsOfF;
+//For each fork, ratio of the number of authors of commits after fork's creation over the number of authors, in order
+public double[] rAcAuthorsOfF;
 // For each fork, number of branches, in order
 public double[] branchesOfF;
 // Index of the root fork in allF
@@ -86,10 +90,12 @@ void setFeatures(ForkEntry fe, GitMiner gm) {
   uAuthorsOfF = new double[allForks.length];
   commitsOfF = new double[allForks.length];
   authorsOfF = new double[allForks.length];
-  acUCommitsOfF = new double[allForks.length];
-  acUAuthorsOfF = new double[allForks.length];
   acCommitsOfF = new double[allForks.length];
   acAuthorsOfF = new double[allForks.length];
+  rUCommitsOfF = new double[allForks.length];
+  rUAuthorsOfF = new double[allForks.length];
+  rAcCommitsOfF = new double[allForks.length];
+  rAcAuthorsOfF = new double[allForks.length];
   since = new long[allForks.length];
 
   for (String f : allForks) {
@@ -126,8 +132,6 @@ void setFeatures(ForkEntry fe, GitMiner gm) {
 
   Arrays.fill(uCommitsOfF, 0.0);
   Arrays.fill(uAuthorsOfF, 0.0);
-  Arrays.fill(acUCommitsOfF, 0.0);
-  Arrays.fill(acUAuthorsOfF, 0.0);
   Arrays.fill(acCommitsOfF, 0.0);
   Arrays.fill(acAuthorsOfF, 0.0);
   String uF[] = null; Date fDate;
@@ -160,22 +164,13 @@ void setFeatures(ForkEntry fe, GitMiner gm) {
       ca = gm.comOnlyInF.get(uF[j]);
       uCommitsOfF[i] = ca.size();
       uAuthorsOfF[i] = gm.authOfComOnlyInF.get(uF[j++]).size();
-      Arrays.fill(authorsHere, 0);
-      cIt = ca.iterator();
-      while (cIt.hasNext()) {
-        c = cIt.next();
-        pi = c.getCommittingInfo();
-        if (pi.getWhen().after(fDate)) {
-          pi = c.getAuthoringInfo();
-          indx =  Collections.binarySearch(gm.allAuthors, pi);
-          authorsHere[indx]++;
-          if (authorsHere[indx] == 1) {
-            acUAuthorsOfF[i]++;
-          }
-          acUCommitsOfF[i]++;
-        }
-      }
     }
+  }
+  for (i = 0; i < allForks.length; i++) {
+    rUCommitsOfF[i] = uCommitsOfF[i] / commitsOfF[i];
+    rUAuthorsOfF[i] = uAuthorsOfF[i] / authorsOfF[i];
+    rAcCommitsOfF[i] = acCommitsOfF[i] / commitsOfF[i];
+    rAcAuthorsOfF[i] = acAuthorsOfF[i] / authorsOfF[i];
   }
 
   nCommits = gm.allCommits.size();
@@ -228,8 +223,10 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
   uAuthorsOfF = new double[size];
   acCommitsOfF = new double[size];
   acAuthorsOfF = new double[size];
-  acUCommitsOfF = new double[size];
-  acUAuthorsOfF = new double[size];
+  rUCommitsOfF = new double[size];
+  rUAuthorsOfF = new double[size];
+  rAcCommitsOfF = new double[size];
+  rAcAuthorsOfF = new double[size];
   since = new long[size];
   branchesOfF = new double[size];
   for (i = 0; i < size; i++) {
@@ -242,8 +239,10 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
     uCommitsOfF[i] = in.readDouble();
     acAuthorsOfF[i] = in.readDouble();
     acCommitsOfF[i] = in.readDouble();
-    acUAuthorsOfF[i] = in.readDouble();
-    acUCommitsOfF[i] = in.readDouble();
+    rUCommitsOfF[i] = in.readDouble();
+    rUAuthorsOfF[i] = in.readDouble();
+    rAcCommitsOfF[i] = in.readDouble();
+    rAcAuthorsOfF[i] = in.readDouble();
   }
   rootIndex = Arrays.binarySearch(allForks, name);
   commitDiffusion = new double[in.readInt()];
@@ -283,8 +282,10 @@ public void writeExternal(ObjectOutput out) throws IOException {
     out.writeDouble(uCommitsOfF[i]);
     out.writeDouble(acAuthorsOfF[i]);
     out.writeDouble(acCommitsOfF[i]);
-    out.writeDouble(acUAuthorsOfF[i]);
-    out.writeDouble(acUCommitsOfF[i]);
+    out.writeDouble(rUCommitsOfF[i]);
+    out.writeDouble(rUAuthorsOfF[i]);
+    out.writeDouble(rAcCommitsOfF[i]);
+    out.writeDouble(rAcAuthorsOfF[i]);
   }
   out.writeInt(commitDiffusion.length);
   for (double d : commitDiffusion) {
