@@ -85,7 +85,7 @@ ArrayList<Commit> allCommits = null;
 ArrayList<BranchRef> allBranches = null;
 ArrayList<Person> allAuthors = null;
 Git git;
-int id = 0;
+long id = 0;
 String name;
 
 // this operator requires a Git object as parameter
@@ -338,12 +338,9 @@ private void buildBranchesMap(int size) throws GitAPIException {
   }
   allBranches.trimToSize();
   Collections.sort(allBranches);
-  String bhashes = "";
   for (int i = 0; i < allBranches.size(); i++) {
     allBranches.get(i).index = i;
-    bhashes += allBranches.get(i).id.name();
   }
-  id = bhashes.hashCode(); // TODO: avoid overflows with something better
 //  Entry<String, ArrayList<BranchRef>> e;
 //  Iterator<Entry<String, ArrayList<BranchRef>>> eit = branches.entrySet().iterator();
 //  while (eit.hasNext()) {
@@ -593,6 +590,7 @@ void analyzeForkTree(ForkEntry fe) throws Exception {
     }
 
     name = GitWorks.getSafeName(fe);
+    id = fe.getRetrievalTimestamp();
     if (allBranches == null) buildBranchesMap(fe.howManyForks());
 
     walk = new RevWalk(git.getRepository());
@@ -740,7 +738,7 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
   int i, j, size;
   BranchRef b;
   name = in.readUTF();
-  id = in.readInt();
+  id = in.readLong();
   size = in.readInt();
   allBranches = new ArrayList<BranchRef>(size);
   for (i = 0; i < size; i++) {
@@ -786,7 +784,7 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
 @Override
 public void writeExternal(ObjectOutput out) throws IOException {
   out.writeUTF(name);
-  out.writeInt(id);
+  out.writeLong(id);
   out.writeInt(allBranches.size());
   Iterator<BranchRef> itb = allBranches.iterator();
   while (itb.hasNext()) {

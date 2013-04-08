@@ -197,7 +197,7 @@ static ForkList populateForkList(String inputFile) throws Exception {
     tokens = line.split(field_sep);
     if (ForkEntry.isValidId(tokens[1] + id_sep + tokens[0])) {
       cc = l.addEntry(new ForkEntry(tokens[1], tokens[0], tokens[3].equalsIgnoreCase("nan") ? -1
-          : Integer.valueOf(tokens[3]), df.parse(tokens[2]).getTime()));
+          : Integer.valueOf(tokens[3]), df.parse(tokens[2]).getTime(), df.parse(tokens[tokens.length - 1]).getTime()));
       if (cc < 0) {
         children.add(-cc - 1, tokens.length == 5 ? tokens[4] : "");
       } else {
