@@ -42,10 +42,14 @@ class PersonFrequency implements Comparable<PersonFrequency> {
 
   int index;
   int freq;
+  long since;
+  long until;
 
   PersonFrequency(int i) {
     index = i;
     freq = 0;
+    since = Long.MAX_VALUE;
+    until = 0;
   }
 
   @Override
@@ -139,6 +143,7 @@ private LinkedHashMap computePersonFreq(LinkedHashMap map) {
   Iterator<Entry> esit = es.iterator();
   Iterator<Commit> evit;
   PersonFrequency p;
+  long pTs;
   Commit c;
   int i;
   while (esit.hasNext()) {
@@ -148,10 +153,16 @@ private LinkedHashMap computePersonFreq(LinkedHashMap map) {
     values = new ArrayList<PersonFrequency>(ev.size());
     while (evit.hasNext()) {
       c = evit.next();
+      pTs = c.getCommittingInfo().getWhen().getTime();
       i = Collections.binarySearch(allAuthors, c.getAuthoringInfo());
       p = new PersonFrequency(i);
       i = GitWorks.addUnique(values, p);
-      values.get(i).freq++;
+      p = values.get(i);
+      p.freq++;
+      if (p.since > pTs)
+        p.since = pTs;
+      if (p.until < pTs)
+        p.until = pTs;
     }
     values.trimToSize();
     res.put(e.getKey(), values);
@@ -673,6 +684,8 @@ private void externalizeMap(LinkedHashMap map, ObjectOutput out) throws IOExcept
       default:
         out.writeInt(((PersonFrequency)value).index);
         out.writeInt(((PersonFrequency)value).freq);
+        out.writeLong(((PersonFrequency)value).since);
+        out.writeLong(((PersonFrequency)value).until);
       }
     }
     switch (keyType) {
@@ -717,6 +730,8 @@ private LinkedHashMap importMap(ObjectInput in) throws IOException {
       for (j = 0; j < vsize; j++) {
         p = new PersonFrequency(in.readInt());
         p.freq = in.readInt();
+        p.since = in.readLong();
+        p.until = in.readLong();
         values.add(p);
       }
     }
