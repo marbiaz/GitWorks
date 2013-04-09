@@ -22,7 +22,7 @@ public class Features implements Externalizable {
 String name;
 
 // for each author, how many commits in each fork
-public ArrayList<Double> authorsImpactPerF[];
+public double[][] authorsImpactPerF;
 // All fork names, in order
 String allForks[];
 // All fork's creation timestamps, ordered as allF.
@@ -36,7 +36,9 @@ public double[] acCommitsOfF;
 //For each fork, number of authors of commits after fork's creation, in order
 public double[] acAuthorsOfF;
 // For each commit, how many forks is it in
-public double[] commitDiffusion;
+double[] commitDiffusion;
+//For each commit, how many forks is it in, among those created before the commit time
+double[] acCommitDiffusion;
 // For each fork, number of unique commits, in order
 public double[] uCommitsOfF;
 // For each fork, number of authors of unique commits, in order
@@ -79,13 +81,12 @@ void setFeatures(ForkEntry fe, GitMiner gm) {
   Iterator<ArrayList<PersonFrequency>> apit;
   Iterator<ArrayList<BranchRef>> brAlIt;
   ArrayList<Commit> ca; Commit c; int indx;
-  @SuppressWarnings("unchecked")
-  ArrayList<Double> aipr[] = new ArrayList[gm.allAuthors.size()];
-  authorsImpactPerF = aipr;
   commitDiffusion = new double[gm.allCommits.size()];
+  acCommitDiffusion = new double[gm.allCommits.size()];
   branchesOfF = new double[gm.branches.size()];
   allForks = gm.comInF.keySet().toArray(new String[0]);
   rootIndex = Arrays.binarySearch(allForks, gm.name);
+  authorsImpactPerF = new double[gm.allAuthors.size()][allForks.length];
   uCommitsOfF = new double[allForks.length];
   uAuthorsOfF = new double[allForks.length];
   commitsOfF = new double[allForks.length];
@@ -107,27 +108,52 @@ void setFeatures(ForkEntry fe, GitMiner gm) {
   while (brAlIt.hasNext()) {
     branchesOfF[i++] = brAlIt.next().size();
   }
+
+  for (int d = 0; d < authorsImpactPerF.length; d++) {
+    Arrays.fill(authorsImpactPerF[d], 0.0);
+  }
   apit = gm.authOfComInF.values().iterator();
   i = 0;
   while (apit.hasNext()) {
     ap = apit.next();
-    authorsOfF[i++] = ap.size();
+    authorsOfF[i] = ap.size();
     pIt = ap.iterator();
     while (pIt.hasNext()) {
       p = pIt.next();
-      if (authorsImpactPerF[p.index] == null) {
-        authorsImpactPerF[p.index] = new ArrayList<Double>(gm.authOfComInF.size());
-      }
-      authorsImpactPerF[p.index].add(p.freq * 1.0);
+      authorsImpactPerF[p.index][i] = p.freq * 1.0;
     }
+    i++;
   }
-  for (ArrayList<Double> a : authorsImpactPerF) {
-    a.trimToSize();
-  }
+
   cIt = gm.allCommits.iterator();
   i = 0;
+  int res, acRes;
+  long tstamp;
+  String prev, curr;
+  Commit co;
+  Iterator<BranchRef> brIt;
   while (cIt.hasNext()) {
-    commitDiffusion[i++] = cIt.next().repoCount();
+    co = cIt.next();
+    res = 1;
+    acRes = 0;
+    brIt = co.branches.iterator();
+    tstamp = co.getCommittingInfo().getWhen().getTime();
+    prev = brIt.next().getRepoName();
+    if (fe.getFork(prev).getCreationTimestamp() < tstamp) {
+      acRes++;
+    }
+    while (brIt.hasNext()) {
+      curr = brIt.next().getRepoName();
+      if (!curr.equals(prev)) {
+        res++;
+        prev = curr;
+        if (fe.getFork(curr).getCreationTimestamp() < tstamp) {
+          acRes++;
+        }
+      }
+    }
+    commitDiffusion[i] = res;
+    acCommitDiffusion[i++] = acRes;
   }
 
   Arrays.fill(uCommitsOfF, 0.0);
@@ -202,20 +228,13 @@ public String toString() {
 }
 
 
-@SuppressWarnings("unchecked")
 @Override
 public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-  int j, i, size;
+  int j, i, authors, size;
   name = in.readUTF();
-  authorsImpactPerF = new ArrayList[in.readInt()];
-  for (i = 0; i < authorsImpactPerF.length; i++) {
-    size = in.readInt();
-    authorsImpactPerF[i] = new ArrayList<Double>(size);
-    for (j = 0; j < size; j++) {
-      authorsImpactPerF[i].add(in.readDouble());
-    }
-  }
   size = in.readInt();
+  authors = in.readInt();
+  authorsImpactPerF = new double[authors][size];
   allForks = new String[size];
   commitsOfF = new double[size];
   authorsOfF = new double[size];
@@ -232,6 +251,9 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
   for (i = 0; i < size; i++) {
     allForks[i] = in.readUTF();
     since[i] = in.readLong();
+    for (j = 0; j < authors; j++) {
+      authorsImpactPerF[j][i] = in.readDouble();
+    }
     authorsOfF[i] = in.readDouble();
     commitsOfF[i] = in.readDouble();
     branchesOfF[i] = in.readDouble();
@@ -245,9 +267,12 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
     rAcAuthorsOfF[i] = in.readDouble();
   }
   rootIndex = Arrays.binarySearch(allForks, name);
-  commitDiffusion = new double[in.readInt()];
+  size = in.readInt();
+  commitDiffusion = new double[size];
+  acCommitDiffusion = new double[size];
   for(i = 0; i < commitDiffusion.length; i++) {
     commitDiffusion[i] = in.readDouble();
+    acCommitDiffusion[i] = in.readDouble();
   }
   nCommits = in.readInt();
   nWatchers = in.readInt();
@@ -261,20 +286,15 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
 
 @Override
 public void writeExternal(ObjectOutput out) throws IOException {
-  Iterator<Double> dit;
   out.writeUTF(name);
-  out.writeInt(authorsImpactPerF.length);
-  for (ArrayList<Double> ad : authorsImpactPerF) {
-    out.writeInt(ad.size());
-    dit = ad.iterator();
-    while (dit.hasNext()) {
-      out.writeDouble(dit.next());
-    }
-  }
   out.writeInt(allForks.length);
+  out.writeInt(authorsImpactPerF.length);
   for (int i = 0; i < allForks.length; i++) {
     out.writeUTF(allForks[i]);
     out.writeLong(since[i]);
+    for (int j = 0; j < authorsImpactPerF.length; j++) {
+      out.writeDouble(authorsImpactPerF[j][i]);
+    }
     out.writeDouble(authorsOfF[i]);
     out.writeDouble(commitsOfF[i]);
     out.writeDouble(branchesOfF[i]);
@@ -288,8 +308,9 @@ public void writeExternal(ObjectOutput out) throws IOException {
     out.writeDouble(rAcAuthorsOfF[i]);
   }
   out.writeInt(commitDiffusion.length);
-  for (double d : commitDiffusion) {
-    out.writeDouble(d);
+  for (int d = 0; d < commitDiffusion.length; d++) {
+    out.writeDouble(commitDiffusion[d]);
+    out.writeDouble(acCommitDiffusion[d]);
   }
   out.writeInt(nCommits);
   out.writeInt(nWatchers);
