@@ -16,7 +16,7 @@ import java.util.Date;
 import org.apache.commons.math3.stat.descriptive.summary.Sum;
 import org.eclipse.jgit.lib.PersonIdent;
 
-//TODO : allAuthors ??? 'after-creation' version of commitDiffusion and authorsImpact
+
 public class Features implements Externalizable {
 
 String name;
@@ -25,6 +25,8 @@ String name;
 public double[][] authorsImpactPerF;
 // All fork names, in order
 String allForks[];
+//All author names, in order
+String allAuthors[];
 // All fork's creation timestamps, ordered as allF.
 long since[];
 //For each fork, number of commits, in order
@@ -85,6 +87,7 @@ void setFeatures(ForkEntry fe, GitMiner gm) {
   acCommitDiffusion = new double[gm.allCommits.size()];
   branchesOfF = new double[gm.branches.size()];
   allForks = gm.comInF.keySet().toArray(new String[0]);
+  allAuthors = new String [gm.allAuthors.size()];
   rootIndex = Arrays.binarySearch(allForks, gm.name);
   authorsImpactPerF = new double[gm.allAuthors.size()][allForks.length];
   uCommitsOfF = new double[allForks.length];
@@ -99,6 +102,10 @@ void setFeatures(ForkEntry fe, GitMiner gm) {
   rAcAuthorsOfF = new double[allForks.length];
   since = new long[allForks.length];
 
+  for (Person pe : gm.allAuthors) {
+    allAuthors[i++] = pe.name;
+  }
+  i = 0;
   for (String f : allForks) {
     since[i++] = GitWorks.projects.get(
         f.replaceFirst(GitWorks.safe_sep, GitWorks.id_sep)).getCreationTimestamp();
@@ -235,6 +242,7 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
   size = in.readInt();
   authors = in.readInt();
   authorsImpactPerF = new double[authors][size];
+  allAuthors = new String[authors];
   allForks = new String[size];
   commitsOfF = new double[size];
   authorsOfF = new double[size];
@@ -274,6 +282,9 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
     commitDiffusion[i] = in.readDouble();
     acCommitDiffusion[i] = in.readDouble();
   }
+  for (i = 0; i < authors; i++) {
+    allAuthors[i] = in.readUTF();
+  }
   nCommits = in.readInt();
   nWatchers = in.readInt();
   totWatchers = in.readInt();
@@ -288,7 +299,7 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
 public void writeExternal(ObjectOutput out) throws IOException {
   out.writeUTF(name);
   out.writeInt(allForks.length);
-  out.writeInt(authorsImpactPerF.length);
+  out.writeInt(allAuthors.length);
   for (int i = 0; i < allForks.length; i++) {
     out.writeUTF(allForks[i]);
     out.writeLong(since[i]);
@@ -311,6 +322,9 @@ public void writeExternal(ObjectOutput out) throws IOException {
   for (int d = 0; d < commitDiffusion.length; d++) {
     out.writeDouble(commitDiffusion[d]);
     out.writeDouble(acCommitDiffusion[d]);
+  }
+  for (int i = 0; i < allAuthors.length; i++) {
+    out.writeUTF(allAuthors[i]);
   }
   out.writeInt(nCommits);
   out.writeInt(nWatchers);
