@@ -145,12 +145,12 @@ void setFeatures(ForkEntry fe, GitMiner gm) {
     acRes = 0;
     brIt = co.branches.iterator();
     tstamp = co.getCommittingInfo().getWhen().getTime();
-    prev = brIt.next().getRepoName();
+    prev = brIt.next().getRepoName().replace(GitWorks.safe_sep, GitWorks.id_sep);
     if (fe.getFork(prev).getCreationTimestamp() < tstamp) {
       acRes++;
     }
     while (brIt.hasNext()) {
-      curr = brIt.next().getRepoName();
+      curr = brIt.next().getRepoName().replace(GitWorks.safe_sep, GitWorks.id_sep);
       if (!curr.equals(prev)) {
         res++;
         prev = curr;
