@@ -199,7 +199,7 @@ static ForkList populateForkList(String inputFile) throws Exception {
       cc = l.addEntry(new ForkEntry(tokens[1], tokens[0], tokens[3].equalsIgnoreCase("nan") ? -1
           : Integer.valueOf(tokens[3]), df.parse(tokens[2]).getTime(), df.parse(tokens[tokens.length - 1]).getTime()));
       if (cc < 0) {
-        children.add(-cc - 1, tokens.length == 5 ? tokens[4] : "");
+        children.add(-cc - 1, tokens.length == 6 ? tokens[4] : "");
       } else {
         System.err.println("WARNING: duplicate entry in input file (" + tokens[1] + id_sep
             + tokens[0] + ").");
