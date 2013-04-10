@@ -73,7 +73,7 @@ public int maxGenSize;
 public int nForks;
 
 
-void setFeatures(ForkEntry fe, GitMiner gm) {
+void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
   int j, i = 0;
   PersonFrequency p;
   PersonIdent pi;
@@ -146,7 +146,7 @@ void setFeatures(ForkEntry fe, GitMiner gm) {
     brIt = co.branches.iterator();
     tstamp = co.getCommittingInfo().getWhen().getTime();
     prev = brIt.next().getRepoName().replace(GitWorks.safe_sep, GitWorks.id_sep);
-    if (fe.getFork(prev).getCreationTimestamp() < tstamp) {
+    if (fl.get(prev).getCreationTimestamp() < tstamp) {
       acRes++;
     }
     while (brIt.hasNext()) {
@@ -154,7 +154,7 @@ void setFeatures(ForkEntry fe, GitMiner gm) {
       if (!curr.equals(prev)) {
         res++;
         prev = curr;
-        if (fe.getFork(curr).getCreationTimestamp() < tstamp) {
+        if (fl.get(curr).getCreationTimestamp() < tstamp) {
           acRes++;
         }
       }

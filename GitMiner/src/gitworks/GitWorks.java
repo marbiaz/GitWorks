@@ -305,7 +305,7 @@ public static void main(String[] args) throws Exception {
         System.out.println(gitMiners[0].getInfo());
       }
       if (compuFeatures) {
-        feat.setFeatures(fe, gitMiners[0]);
+        feat.setFeatures(projects, fe, gitMiners[0]);
         exportData(feat, trees_out_dir + "dumpFiles/" + feat.name + ".feat");
       } else {
         importData(feat, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".feat");
