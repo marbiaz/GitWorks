@@ -26,6 +26,11 @@ Person() {
 }
 
 
+public String getUniqueID() {
+  return email;
+}
+
+
 @Override
 public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
   name = in.readUTF();
@@ -43,16 +48,13 @@ public void writeExternal(ObjectOutput out) throws IOException {
 
 @Override
 public int compareTo(Object o) {
-//  String oName = "";
-  String oEmail = "";
+  String oID = "";
   if (o instanceof Person) {
-//    oName = ((Person)o).name;
-    oEmail = ((Person)o).email;
+    oID = ((Person)o).getUniqueID();
   } else if (o instanceof PersonIdent) {
-//    oName = ((PersonIdent)o).getName();
-    oEmail = ((PersonIdent)o).getEmailAddress();
+    oID = ((PersonIdent)o).getEmailAddress();
   }
-  return email.compareTo(oEmail);
+  return email.compareTo(oID);
 }
 
 
