@@ -33,17 +33,20 @@ import java.util.zip.GZIPOutputStream;
 public class GitWorks {
 
 public static boolean bare = true; // the forktree is a bare git repo
+public static boolean anew = true; // (re-)create a forktree anew
 
-public static boolean anew = false; // (re-)create a forktree anew
-static boolean globMeasuresOnly = true; // only compute measures from serialized features
 static boolean compuForkTrees = false; // if true compute fork trees anew ; if false use serialized forkList
 static boolean newAnalysis = false; // if true perform a full gitMiner analysis ; if false use serialized gitMiner data
 static boolean compuFeatures = false; // if true compute features from gitMiner data; if false, use serialized features
+static boolean compuMeasure = false; // if true compute single measures
+static boolean globMeasures = true; // if true compute global measures
+static boolean globMeasuresOnly = true; // only compute global measures from serialized features
 
 public static String prefix = "JGIT_"; // to be prepended to any jgit-generated output file name
 public static String field_sep = "    "; // field separator in input datafile's lines
 public static String id_sep = "/"; // the string that separates owner and name in a fork id string
-public static String safe_sep = "@~@";
+public static String safe_sep = "__A-T__"; // weird marker that should hopefully never occur in usernames,
+                                             // repo names and that is filesystem safe
 public static String list_sep = ","; // fork id separator in the list taken from the input file
 public static String log_sep = "<#>"; // field separator within a git log output line
 public static String repo_dir; // the absolute path to the dir that contains the git repos to be
