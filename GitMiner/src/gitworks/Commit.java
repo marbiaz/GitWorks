@@ -50,19 +50,46 @@ void addBranch(BranchRef b) {
 
 
 int repoCount() {
-  int res = 1;
-  String prev, curr;
-  if (branches == null || branches.isEmpty()) return 0;
+  return getRepos().length;
+}
+
+
+String[] getRepos() {
+  ArrayList<String> res = new ArrayList<String>();
+  String curr, prev;
+  if (branches == null || branches.isEmpty()) return null;
   Iterator<BranchRef> brIt = branches.iterator();
   prev = brIt.next().getRepoName();
+  res.add(prev);
   while (brIt.hasNext()) {
     curr = brIt.next().getRepoName();
     if (!curr.equals(prev)) {
-      res++;
+      res.add(curr);
       prev = curr;
     }
   }
-  return res;
+  return res.toArray(new String[0]);
+}
+
+
+boolean isInRepo(String repo) {
+  String[] repos = getRepos();
+  return isInRepo(repo, repos, 0, repos.length);
+}
+
+
+private boolean isInRepo(String repo, String[] repos, int init, int end) {
+  int res, cur = (end - init) / 2;
+  res = repos[cur].compareTo(repo);
+  if (res == 0) return true;
+  else if (res > 0) {
+      if (cur == init) return false;
+      else return isInRepo(repo, repos, init, cur);
+  }
+  else {
+    if (cur + 1 == end) return false;
+    return isInRepo(repo, repos, cur + 1, end);
+  }
 }
 
 
