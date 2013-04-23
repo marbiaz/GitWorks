@@ -330,6 +330,9 @@ public static void main(String[] args) throws Exception {
   if (compuForkTrees && newAnalysis) {
     exportData(projects, trees_out_dir + "dumpFiles/" + "forkListDump");
   }
+  if (compuFeatures) {
+    exportData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
+  }
 
   if (globMeasuresOnly)
     importData(features, trees_out_dir + "featureListDump");
