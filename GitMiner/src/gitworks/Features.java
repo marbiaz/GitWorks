@@ -23,7 +23,7 @@ String name = "";
 //Index of the root fork in allF
 int rootIndex = -1;
 // for each author, how many commits in each fork (overall and after fork creation)
-public int[][][] authorsImpactPerF;
+int[][][] authorsImpactPerF;
 // For each fork, the indexes of the commits in it
 int[][] forkCommit;
 // for each commit, the meaningful forks it is in
@@ -39,7 +39,7 @@ public long until[];
 // For each commit, its timestamp
 public long[] commitTimeLine;
 // Ordered list of root's commit indexes
-public int[] acRootCommits;
+int[] acRootCommits;
 // For each commit, its author
 public int[] commitAuthor;
 //For each fork, number of commits, in order
@@ -70,7 +70,7 @@ public int totWatchers;
 public int maxWatchers;
 // Depth of the fork tree
 public int nGenerations;
-// Max number of siblings among generations of forks
+// Max number of siblings among generations of forks (not direct children of root fork)
 public int maxGenSize;
 // Number of direct forks of the root fork
 public int nForks;
@@ -113,7 +113,7 @@ void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
   i = 0;
   ForkEntry f2;
   for (String f : allForks) {
-    f2 = GitWorks.projects.get(
+    f2 = fl.get(
         f.replaceFirst(GitWorks.safe_sep, GitWorks.id_sep));
     since[i] = f2.getCreationTimestamp();
     until[i++] = f2.getRetrievalTimestamp();
