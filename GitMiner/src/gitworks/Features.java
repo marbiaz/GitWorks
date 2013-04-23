@@ -137,32 +137,30 @@ void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
 
   cIt = gm.allCommits.iterator();
   i = 0;
-  int res, acRes, fIndex;
-  String prev, curr;
+  int acRes, fIndex, k;
+  boolean inRoot;
   Commit co;
-  Iterator<BranchRef> brIt;
+  String[] repos;
   while (cIt.hasNext()) {
     co = cIt.next();
-    res = 0;
     acRes = 0;
-    brIt = co.branches.iterator();
     commitAuthor[i] = Collections.binarySearch(gm.allAuthors, co.getAuthoringInfo());
     commitTimeLine[i] = co.getCommittingInfo().getWhen().getTime();
-    prev = "";
-    do {
-      curr = brIt.next().getRepoName();
-      if (!curr.equals(prev)) {
-        res++;
-        prev = curr;
-        fIndex = Arrays.binarySearch(allForks, curr);
-        if (fl.get(curr.replace(GitWorks.safe_sep, GitWorks.id_sep)).getCreationTimestamp() < commitTimeLine[i]) {
-          acRes++;
-          if (fIndex == rootIndex) acMainlineCommits.add(i);
-          authorsImpactPerF[commitAuthor[i]][fIndex][1]++;
-        }
+    repos = co.getRepos();
+    inRoot = Arrays.binarySearch(repos, allForks[rootIndex]) >= 0;
+
+    for (String s : repos) {
+      fIndex = Arrays.binarySearch(allForks, s);
+      if (since[fIndex] < commitTimeLine[i]) {
+        acRes++;
+        if (fIndex == rootIndex) acMainlineCommits.add(i);
+        authorsImpactPerF[commitAuthor[i]][fIndex][1]++;
+        vipF.add(fIndex);
+      } else if (!inRoot) {
+        vipF.add(fIndex);
       }
-    } while (brIt.hasNext());
-    commitDiffusion[i] = res;
+    }
+    commitDiffusion[i] = repos.length;
     acCommitDiffusion[i] = acRes;
 
     i++;
