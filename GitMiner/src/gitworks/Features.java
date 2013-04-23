@@ -24,6 +24,10 @@ String name = "";
 int rootIndex = -1;
 // for each author, how many commits in each fork (overall and after fork creation)
 public int[][][] authorsImpactPerF;
+// For each fork, the indexes of the commits in it
+int[][] forkCommit;
+// for each commit, the meaningful forks it is in
+int[][] vipForkForC;
 // All fork names, in order
 public String allForks[];
 //All author unique identifiers, in order
@@ -83,6 +87,7 @@ void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
   Iterator<ArrayList<BranchRef>> brAlIt;
   ArrayList<Commit> ca; Commit c; int indx;
   ArrayList<Integer> acMainlineCommits = new ArrayList<Integer>();
+  vipForkForC = new int[gm.allCommits.size()][];
   commitDiffusion = new int[gm.allCommits.size()];
   acCommitDiffusion = new int[gm.allCommits.size()];
   commitTimeLine = new long[gm.allCommits.size()];
@@ -100,6 +105,7 @@ void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
   acAuthorsOfF = new int[allForks.length];
   since = new long[allForks.length];
   until = new long[allForks.length];
+  forkCommit = new int[allForks.length][];
 
   for (Person pe : gm.allAuthors) {
     allAuthors[i++] = pe.getUniqueID();
@@ -141,6 +147,7 @@ void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
   boolean inRoot;
   Commit co;
   String[] repos;
+  ArrayList<Integer> vipF = new ArrayList<Integer>(gm.allCommits.size());
   while (cIt.hasNext()) {
     co = cIt.next();
     acRes = 0;
@@ -162,9 +169,16 @@ void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
     }
     commitDiffusion[i] = repos.length;
     acCommitDiffusion[i] = acRes;
+    vipForkForC[i] = new int[vipF.size()];
+    j = 0;
+    for (int f : vipF) {
+      vipForkForC[i][j++] = f;
+    }
 
+    vipF.clear();
     i++;
   }
+
   acRootCommits = new int[acMainlineCommits.size()];
   for (i = 0; i < acMainlineCommits.size(); i++) {
     acRootCommits[i] = acMainlineCommits.get(i).intValue();
@@ -184,8 +198,10 @@ void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
     ca = gm.comInF.get(allForks[i]);
     commitsOfF[i] = ca.size();
     authorsOfF[i] = gm.authOfComInF.get(allForks[i]).size();
+    forkCommit[i] = new int[ca.size()];
     Arrays.fill(authorsHere, 0);
     cIt = ca.iterator();
+    k = 0;
     while (cIt.hasNext()) {
       c = cIt.next();
       pi = c.getCommittingInfo();
@@ -198,6 +214,7 @@ void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
         }
         acCommitsOfF[i]++;
       }
+      forkCommit[i][k++] = Collections.binarySearch(gm.allCommits, c);
     }
     if (uF != null && j < uF.length && allForks[i].equals(uF[j])) {
       ca = gm.comOnlyInF.get(uF[j]);
@@ -250,6 +267,7 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
   since = new long[size];
   until = new long[size];
   branchesOfF = new int[size];
+  forkCommit = new int[size][];
   for (i = 0; i < size; i++) {
     allForks[i] = in.readUTF();
     since[i] = in.readLong();
@@ -273,11 +291,16 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
   acCommitDiffusion = new int[size];
   commitAuthor = new int[size];
   commitTimeLine = new long[size];
+  vipForkForC = new int[size][];
   for(i = 0; i < commitDiffusion.length; i++) {
     commitDiffusion[i] = in.readInt();
     acCommitDiffusion[i] = in.readInt();
     commitAuthor[i] = in.readInt();
     commitTimeLine[i] = in.readLong();
+    vipForkForC[i] = new int[in.readInt()];
+    for (j = 0; j < vipForkForC[i].length; j++) {
+      vipForkForC[i][j] = in.readInt();
+    }
   }
   acRootCommits = new int[in.readInt()];
   for (i = 0; i < acRootCommits.length; i++) {
@@ -285,6 +308,13 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
   }
   for (i = 0; i < authors; i++) {
     allAuthors[i] = in.readUTF();
+  }
+  for (i = 0; i < allForks.length; i++) {
+    size = in.readInt();
+    forkCommit[i] = new int[size];
+    for (j = 0; j < size; j++) {
+      forkCommit[i][j] = in.readInt();
+    }
   }
   nCommits = in.readInt();
   nWatchers = in.readInt();
@@ -323,6 +353,10 @@ public void writeExternal(ObjectOutput out) throws IOException {
     out.writeInt(acCommitDiffusion[d]);
     out.writeInt(commitAuthor[d]);
     out.writeLong(commitTimeLine[d]);
+    out.writeInt(vipForkForC[d].length);
+    for (int i = 0; i < vipForkForC[d].length; i++) {
+      out.writeInt(vipForkForC[d][i]);
+    }
   }
   out.writeInt(acRootCommits.length);
   for (int i = 0; i < acRootCommits.length; i++) {
@@ -330,6 +364,12 @@ public void writeExternal(ObjectOutput out) throws IOException {
   }
   for (int i = 0; i < allAuthors.length; i++) {
     out.writeUTF(allAuthors[i]);
+  }
+  for (int i = 0; i < forkCommit.length; i++) {
+    out.writeInt(forkCommit[i].length);
+    for (int j = 0; j < forkCommit[i].length; j++) {
+      out.writeInt(forkCommit[i][j]);
+    }
   }
   out.writeInt(nCommits);
   out.writeInt(nWatchers);
