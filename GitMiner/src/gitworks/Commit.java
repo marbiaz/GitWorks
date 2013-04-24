@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 
@@ -74,22 +75,7 @@ String[] getRepos() {
 
 boolean isInRepo(String repo) {
   String[] repos = getRepos();
-  return isInRepo(repo, repos, 0, repos.length);
-}
-
-
-private boolean isInRepo(String repo, String[] repos, int init, int end) {
-  int res, cur = (end - init) / 2;
-  res = repos[cur].compareTo(repo);
-  if (res == 0) return true;
-  else if (res > 0) {
-      if (cur == init) return false;
-      else return isInRepo(repo, repos, init, cur);
-  }
-  else {
-    if (cur + 1 == end) return false;
-    return isInRepo(repo, repos, cur + 1, end);
-  }
+  return Arrays.binarySearch(repos, repo) >= 0;
 }
 
 
