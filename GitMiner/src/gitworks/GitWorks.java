@@ -32,15 +32,14 @@ import java.util.zip.GZIPOutputStream;
 
 public class GitWorks {
 
+
 public static boolean bare = true; // the forktree is a bare git repo
 public static boolean anew = true; // (re-)create a forktree anew
 
 static boolean compuForkTrees = false; // if true compute fork trees anew ; if false use serialized forkList
 static boolean newAnalysis = false; // if true perform a full gitMiner analysis ; if false use serialized gitMiner data
 static boolean compuFeatures = false; // if true compute features from gitMiner data; if false, use serialized features
-static boolean compuMeasure = false; // if true compute single measures
-static boolean globMeasures = true; // if true compute global measures
-static boolean globMeasuresOnly = true; // only compute global measures from serialized features
+static boolean resultsOnly = true; // only compute results from serialized features
 
 public static String prefix = "JGIT_"; // to be prepended to any jgit-generated output file name
 public static String field_sep = "    "; // field separator in input datafile's lines
@@ -239,6 +238,7 @@ static ForkList populateForkList(String inputFile) throws Exception {
  * @param args
  * @throws Exception
  */
+// TODO : load dumps from storage if necessary
 public static void main(String[] args) throws Exception {
 
   ForkEntry fe;
@@ -286,8 +286,7 @@ public static void main(String[] args) throws Exception {
 
   gitMiners = new GitMiner[1];
   features = new FeatureList(projects.howManyTrees());
-
-  for (int i = 0, j = 0; !globMeasuresOnly && i < projects.size() && (ids == null || j < ids.length); i++) {
+  for (int i = 0, j = 0; !resultsOnly && i < projects.size() && (ids == null || j < ids.length); i++) {
     fe = ids != null ? projects.get(ids[j++]) : projects.get(i);
     if (!fe.isRoot()) continue;
     try {
@@ -314,7 +313,7 @@ public static void main(String[] args) throws Exception {
         importData(feat, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".feat");
       }
       Runtime.getRuntime().exec(pwd + "/cleanAndBackup.sh " + getSafeName(fe)).waitFor();
-      printAny(feat, "\n", System.out);
+      //printAny(feat, "\n", System.out);
     }
     catch (Exception e) {
       System.err.println("ERROR : computation of " + getSafeName(fe) + " was interrupted before completion!");
@@ -330,17 +329,17 @@ public static void main(String[] args) throws Exception {
   if (compuForkTrees && newAnalysis) {
     exportData(projects, trees_out_dir + "dumpFiles/" + "forkListDump");
   }
-  if (compuFeatures) {
+  if (compuFeatures && !resultsOnly) {
     exportData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
   }
-
-  if (globMeasuresOnly)
-    importData(features, trees_out_dir + "featureListDump");
-  else
-    exportData(features, trees_out_dir + "featureListDump");
-
-  Runtime.getRuntime().exec(pwd + "/makePlots.sh").waitFor();
+  if (resultsOnly)
+    importData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
+  //Results.createDataFiles(features);
+  Results.createCircosFiles(features);
+  //printAny(features, "\n", System.err);
   System.err.println("\n# Computation ended at " + (new java.util.Date()).toString());
+
+
 }
 
 
@@ -379,7 +378,7 @@ static void exportData(Externalizable o, String filePath) throws IOException {
  * @return The [0, set.size()) index of the item in the List.
  */
 @SuppressWarnings({ "unchecked", "rawtypes" })
-static int addUnique(List set, Comparable item) {
+public static int addUnique(List set, Comparable item) {
   int i = Collections.binarySearch(set, item);
   if (i < 0) {
     i = -i - 1;
