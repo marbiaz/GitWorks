@@ -75,6 +75,159 @@ public int maxGenSize;
 // Number of direct forks of the root fork
 public int nForks;
 
+/************  begin complex features  ************/
+
+public static enum CommitRank {
+  NONE(-1), // in root fork since before it was created
+  ROOT(0), // only in root fork
+  UNIQUE(1), // only in one fork (non root)
+  U_VIP(2), // only in one fork and in root fork
+  VIP(3), // in root fork and in more than one other fork
+  SCATTERED(4), // in more than one fork but not in root fork
+  PERVASIVE(5); // in every fork
+  private final int id;
+  CommitRank(int id) { this.id = id; }
+  public int getValue() { return id; }
+  static public CommitRank getRank(int value) {
+    for (CommitRank c : CommitRank.values()) {
+      if (c.getValue() == value) {
+        return c;
+      }
+    }
+    return null;
+  }
+}
+
+//For each commit, its rank (as defined by CommitRank)
+public int[] commitRank;
+// For each fork : for each rank, the list of commits belonging to that rank
+ArrayList<Integer>[][] vipCommitForF;
+//For each ranking (+1), how many commits are ranked like that (normalized)
+public double[] commitRankRatio;
+// For each entry in commitRankRatio, how many authors are ranked like that (normalized)
+public double[] authorRankRatio;
+// For each week (counting from present time backwards), the number of commits in that week
+public int[] aggregateTimeLines;
+// For each commit, the week it has been committed (counting from retrieval time backwards)
+public int[] extendedTimeLines;
+// For each rank, matrix of the graph that models common commits among forks
+ArrayList<Integer>[][][] cLinkMap;
+// For each rank, matrix of the graph that models authors of common commits among forks
+ArrayList<Integer>[][][] aLinkMap;
+
+
+@SuppressWarnings({"unchecked"})
+private void computeMore() {
+  commitRank = new int[acCommitDiffusion.length];
+  vipCommitForF = new ArrayList[allForks.length][CommitRank.values().length];
+  commitRankRatio = new double[CommitRank.values().length];
+  authorRankRatio = new double[CommitRank.values().length];
+  cLinkMap = new ArrayList[CommitRank.values().length][][];
+  aLinkMap = new ArrayList[CommitRank.values().length][][];
+  ArrayList<Integer>[] authorsInRank = new ArrayList[CommitRank.values().length];
+  int i, k;
+  for (i = 0; i < authorsInRank.length; i++)
+    authorsInRank[i] = new ArrayList<Integer>();
+
+  computeTimeLines();
+
+  for (int q = 0; q < CommitRank.values().length; q++) {
+    cLinkMap[q] = new ArrayList[allForks.length][allForks.length];
+    aLinkMap[q] = new ArrayList[allForks.length][allForks.length];
+    for (i = 0; i < allForks.length; i++) {
+      vipCommitForF[i][q] = new ArrayList<Integer>();
+      for (k = 0; k < allForks.length; k++) {
+        cLinkMap[q][i][k] = new ArrayList<Integer>();
+        aLinkMap[q][i][k] = new ArrayList<Integer>();
+      }
+    }
+  }
+  Arrays.fill(commitRankRatio, 0.0);
+  Arrays.fill(authorRankRatio, 0.0);
+  for (i = 0; i < vipForkForC.length; i++) {
+    switch (vipForkForC[i].length) {
+    case 0:
+      commitRank[i] = CommitRank.NONE.getValue();
+    break;
+    case 1:
+      commitRank[i] = Arrays.binarySearch(acRootCommits, i) >= 0 ? CommitRank.ROOT.getValue()
+          : CommitRank.UNIQUE.getValue();
+    break;
+    case 2:
+      commitRank[i] = Arrays.binarySearch(acRootCommits, i) >= 0 ? CommitRank.U_VIP.getValue()
+          : CommitRank.SCATTERED.getValue();
+    break;
+    default:
+      if (vipForkForC[i].length == allForks.length)
+        commitRank[i] = CommitRank.PERVASIVE.getValue();
+      else
+        commitRank[i] = Arrays.binarySearch(acRootCommits, i) >= 0 ? CommitRank.VIP.getValue()
+            : CommitRank.SCATTERED.getValue();
+    }
+
+    for (k = 0; k < vipForkForC[i].length; k++) {
+      GitWorks.addUnique(vipCommitForF[vipForkForC[i][k]][commitRank[i] + 1], i);
+      for (int kk = k + 1; kk < vipForkForC[i].length; kk++) {
+        GitWorks.addUnique(cLinkMap[commitRank[i] + 1][vipForkForC[i][k]][vipForkForC[i][kk]], i);
+        GitWorks.addUnique(cLinkMap[commitRank[i] + 1][vipForkForC[i][kk]][vipForkForC[i][k]], i);
+        GitWorks.addUnique(aLinkMap[commitRank[i] + 1][vipForkForC[i][k]][vipForkForC[i][kk]],
+            commitAuthor[i]);
+        GitWorks.addUnique(aLinkMap[commitRank[i] + 1][vipForkForC[i][kk]][vipForkForC[i][k]],
+            commitAuthor[i]);
+      }
+    }
+
+    commitRankRatio[commitRank[i] + 1]++;
+    GitWorks.addUnique(authorsInRank[commitRank[i] + 1], commitAuthor[i]);
+  }
+
+  for (i = 0; i < commitRankRatio.length; i++) {
+    commitRankRatio[i] /= acCommitDiffusion.length;
+  }
+
+  for (i = 0; i < authorRankRatio.length; i++) {
+    authorRankRatio[i] = (1.0 * authorsInRank[i].size()) / allAuthors.length;
+  }
+
+}
+
+
+private void computeTimeLines() {
+  final long week = 1000 * 3600 * 24 * 7;
+  int cur, i;
+  long max = 0;
+  long min = Long.MAX_VALUE;
+  for (long l : until)
+    max = Math.max(max, l);
+  for (long l : since)
+    min = Math.min(min, l);
+  aggregateTimeLines = new int[(int)((max - min) / week) + 1];
+  // System.err.println(f.name + " : MAX = " + max + " ; MIN = " + min + " ; #weeks = " +
+  //     aggregateTimeLines.length);
+  extendedTimeLines = new int[commitTimeLine.length];
+  Arrays.fill(aggregateTimeLines, 0);
+  Arrays.fill(extendedTimeLines, 0);
+  for (i = 0; i < commitTimeLine.length; i++) {
+    cur = (int)((max - commitTimeLine[i]) / week);
+    cur = Math.min(cur, aggregateTimeLines.length - 1);
+    aggregateTimeLines[cur]++;
+    extendedTimeLines[i] = cur;
+  }
+
+}
+
+/************  end complex features  ************/
+
+public int getRootIndex() {
+  return rootIndex;
+}
+
+
+public int[] getCommits(int fIndex) {
+  return forkCommit[fIndex];
+}
+
+
 // TODO: better by scanning allCommits once and for all ??
 void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
   int j, i = 0;
@@ -234,6 +387,8 @@ void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
     System.err.println("FeatureSet: ERROR : the aggregates of " + fe.getId() + " are not valid!");
   }
   name = allForks[rootIndex];
+
+  computeMore();
 }
 
 
@@ -242,7 +397,8 @@ public String toString() {
   String res = "";
   res += "Name : " + name + " ; "
       + "Forks : " + allForks.length + " ; "
-      + "Commits : " + nCommits + "\n"
+      + "Commits : " + nCommits + " ; "
+      + "Authors : " + allAuthors.length + " ; "
       + "Root's children : " + nForks + " ; "
       + "Tot watchers : " + totWatchers + " ; "
       + "Max watchers : " + maxWatchers;
@@ -323,6 +479,8 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
   nGenerations = in.readInt();
   maxGenSize = in.readInt();
   nForks = in.readInt();
+
+  computeMore();
 }
 
 
