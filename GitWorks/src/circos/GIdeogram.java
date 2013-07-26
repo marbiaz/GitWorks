@@ -30,7 +30,7 @@ public class GIdeogram {
 
   public GIdeogram(String i, String l, int s, int e, String color){
 		id = i;
-		label = l.replaceAll(GitWorks.safe_sep + ".*", "");
+		label = l.replaceAll(GitWorks.safe_sep + ".*", "").replaceAll("@.*", "");
 		start = s;
 		end = e;
 		color_label = color;
@@ -39,7 +39,7 @@ public class GIdeogram {
 
 	public GIdeogram(String i, String l, int s, int e){
 		id = i;
-		label = l.replaceAll(GitWorks.safe_sep + ".*", "");
+		label = l.replaceAll(GitWorks.safe_sep + ".*", "").replaceAll("@.*", "");
 		start = s;
 		end = e;
 		bands = 0;
