@@ -95,7 +95,7 @@ private void printBands(PrintWriter destination, int maxBand) {
         bandStart = start;
         bandEnd = start + bandWidth;
         line = "band " + gi.getId() + " author" + bandcounter + " author" + bandcounter + " "
-            + bandStart + " " + bandEnd + " " + (String)colors.get((i + 1) * colorIndex - 1);
+            + bandStart + " " + bandEnd + " " + (String)colors.get((i + 1) * colorIndex);
         destination.println(line);
         start = start + bandWidth;
       }
@@ -126,7 +126,7 @@ private void printKaryotype(String ideogramsFileName) {
           + " " + ideogram.getEnd() + " " + ideogram.getColor_label();
       karyofile.println(line);
     }
-    printBands(karyofile, maxBand);
+    if (maxBand > 0) printBands(karyofile, maxBand);
   }
   catch (FileNotFoundException e) {
     // TODO Auto-generated catch block
