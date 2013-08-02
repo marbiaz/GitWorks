@@ -21,6 +21,7 @@ public class Commit implements Comparable<Object>, Externalizable {
 ObjectId id;
 private byte[] data;
 ArrayList<BranchRef> branches; // all branches which this commit belongs to
+ArrayList<BranchRef> heads; // all branches which this commit is HEAD of
 
 Commit() {}
 
@@ -36,6 +37,7 @@ Commit(RevCommit c) {
   System.arraycopy(raw, 0, data, 0, data.length);
   id = c.copy();
   branches = new ArrayList<BranchRef>();
+  heads = null;
 }
 
 
@@ -47,6 +49,17 @@ void addBranches(ArrayList<BranchRef> b) {
 
 void addBranch(BranchRef b) {
   GitWorks.addUnique(branches, b);
+}
+
+
+void addHead(BranchRef b) {
+  if (heads == null) heads = new ArrayList<BranchRef>();
+  GitWorks.addUnique(heads, b);
+}
+
+
+boolean isHead() {
+  return heads != null;
 }
 
 
@@ -140,6 +153,17 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
     bb.index = in.readInt();
     branches.add(bb); // the complete instance must be set by GitMiner
   }
+  size = in.readInt();
+  if (size > 0) {
+    heads = new ArrayList<BranchRef>(size);
+    for (i = 0; i < size; i++) {
+      bb = new BranchRef();
+      bb.index = in.readInt();
+      heads.add(bb); // the complete instance must be set by GitMiner
+    }
+  } else {
+    heads = null;
+  }
 }
 
 
@@ -153,6 +177,12 @@ public void writeExternal(ObjectOutput out) throws IOException {
   out.writeInt(branches.size());
   for (BranchRef br : branches) {
     out.writeInt(br.index); // (see readExternal)
+  }
+  out.writeInt(isHead() ? heads.size() : 0);
+  if (isHead()) {
+    for (BranchRef br : heads) {
+      out.writeInt(br.index); // (see readExternal)
+    }
   }
   out.flush();
 }

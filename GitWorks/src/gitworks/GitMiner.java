@@ -508,6 +508,10 @@ private void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectExcep
       : new LinkedHashMap<Commit, ArrayList<Commit>>(allBranches.size(), 1);
   for (int i = 0; i < allBranches.size(); i++) {
     b = allBranches.get(i);/**/// System.err.println("###### Iteration " + (i+1));
+    if (commits.containsKey(b.id)) {
+      commits.get(b.id).get(0).addHead(b);
+      continue;
+    }
     if (only) {
       temp.clear();
       if (i > 0) temp.addAll(allBranches.subList(0, i));
@@ -527,6 +531,9 @@ private void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectExcep
           c = GitWorks.addUnique(allCommits, newco);
           co = allCommits.get(c);
           co.addBranch(b);
+          if (j == 0) {
+            co.addHead(b);
+          }
           newpe = new Person(co.getAuthoringInfo());
           GitWorks.addUnique(allAuthors, newpe);
         } else {  // this RevCommit has no buffer
@@ -770,6 +777,11 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
     c.readExternal(in);
     for (j = 0; j < c.branches.size(); j++) {
       c.branches.set(j, getBranchRef(c.branches.get(j).index));
+    }
+    if (c.isHead()) {
+      for (j = 0; j < c.heads.size(); j++) {
+        c.heads.set(j, getBranchRef(c.heads.get(j).index));
+      }
     }
     allCommits.add(c);
   }
