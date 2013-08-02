@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 
 
@@ -13,6 +14,17 @@ public class FeatureList extends ArrayList<Features> implements Externalizable {
 
 FeatureList(int size) {
   super(size);
+}
+
+
+Features getFeatures(String f) {
+  int res = Collections.binarySearch(this, f);
+  return res >= 0 ? get(res) : null;
+}
+
+
+int addFeatures(Features f) {
+  return GitWorks.addUnique(this, f);
 }
 
 

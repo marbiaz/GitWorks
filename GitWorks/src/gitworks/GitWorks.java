@@ -291,7 +291,7 @@ public static void main(String[] args) throws Exception {
     if (!fe.isRoot()) continue;
     try {
       feat = new Features();
-      features.add(feat);
+      features.addFeatures(feat);
       gitMiners[0] = new GitMiner();
       if (newAnalysis) {
         Runtime.getRuntime().exec(pwd + "/loadRepos.sh " + getSafeName(fe)).waitFor();
@@ -332,8 +332,16 @@ public static void main(String[] args) throws Exception {
   if (compuFeatures && !resultsOnly) {
     exportData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
   }
-  if (resultsOnly)
+  if (resultsOnly) {
     importData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
+    if (ids != null) {
+      FeatureList feats = new FeatureList(ids.length);
+      for (int i = 0; i < ids.length; i++) {
+        feats.addFeatures(features.getFeatures(getSafeName(projects.get(ids[i]))));
+      }
+      features = feats;
+    }
+  }
   //Results.createDataFiles(features);
   Results.createCircosFiles(features);
   //printAny(features, "\n", System.err);

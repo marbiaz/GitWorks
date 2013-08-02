@@ -16,7 +16,7 @@ import java.util.Date;
 import org.eclipse.jgit.lib.PersonIdent;
 
 
-public class Features implements Externalizable {
+public class Features implements Comparable<Object>, Externalizable {
 
 // The name of the root fork identifies the Features instance
 String name = "";
@@ -537,6 +537,22 @@ public void writeExternal(ObjectOutput out) throws IOException {
   out.writeInt(maxGenSize);
   out.writeInt(nForks);
   out.flush();
+}
+
+
+@Override
+public int compareTo(Object o) {
+  if (o instanceof Features)
+    return name.compareTo(((Features)o).name);
+  else if (o instanceof String)
+    return name.compareTo((String)o);
+  return -1;
+}
+
+
+@Override
+public boolean equals(Object o) {
+  return compareTo(o) == 0;
 }
 
 }
