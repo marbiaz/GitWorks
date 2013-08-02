@@ -20,8 +20,7 @@ public class Commit implements Comparable<Object>, Externalizable {
 
 ObjectId id;
 private byte[] data;
-ArrayList<BranchRef> branches;
-
+ArrayList<BranchRef> branches; // all branches which this commit belongs to
 
 Commit() {}
 
@@ -32,8 +31,9 @@ Commit(ObjectId id) {
 
 
 Commit(RevCommit c) {
-  data = new byte[c.getRawBuffer().length];
-  System.arraycopy(c.getRawBuffer(), 0, data, 0, data.length);
+  byte[] raw = c.getRawBuffer();
+  data = new byte[raw.length];
+  System.arraycopy(raw, 0, data, 0, data.length);
   id = c.copy();
   branches = new ArrayList<BranchRef>();
 }
@@ -58,7 +58,6 @@ int repoCount() {
 String[] getRepos() {
   ArrayList<String> res = new ArrayList<String>();
   String curr, prev;
-  if (branches == null || branches.isEmpty()) return null;
   Iterator<BranchRef> brIt = branches.iterator();
   prev = brIt.next().getRepoName();
   res.add(prev);
