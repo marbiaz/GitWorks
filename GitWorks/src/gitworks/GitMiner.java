@@ -78,13 +78,13 @@ LinkedHashMap<String, ArrayList<Commit>> comInF = null;
 LinkedHashMap<String, ArrayList<BranchRef>> branches = null;
 LinkedHashMap<String, ArrayList<Commit>> comNotInF = null;
 LinkedHashMap<String, ArrayList<Commit>> comOnlyInF = null;
-LinkedHashMap<BranchRef, ArrayList<Commit>> comInB = null;
-LinkedHashMap<BranchRef, ArrayList<Commit>> comOnlyInB = null;
+LinkedHashMap<Commit, ArrayList<Commit>> comInB = null;
+LinkedHashMap<Commit, ArrayList<Commit>> comOnlyInB = null;
 LinkedHashMap<String, ArrayList<PersonFrequency>> authOfComInF = null;
 LinkedHashMap<String, ArrayList<PersonFrequency>> authOfComNotInF = null;
 LinkedHashMap<String, ArrayList<PersonFrequency>> authOfComOnlyInF = null;
-LinkedHashMap<BranchRef, ArrayList<PersonFrequency>> authOfComInB = null;
-LinkedHashMap<BranchRef, ArrayList<PersonFrequency>> authOfComOnlyInB = null;
+LinkedHashMap<Commit, ArrayList<PersonFrequency>> authOfComInB = null;
+LinkedHashMap<Commit, ArrayList<PersonFrequency>> authOfComOnlyInB = null;
 ArrayList<Commit> allCommits = null;
 ArrayList<BranchRef> allBranches = null;
 ArrayList<Person> allAuthors = null;
@@ -390,11 +390,11 @@ private void getCommitsInR(RevWalk walk, boolean only)
       brIt = er.getValue().iterator();
       if (er.getKey().equals(r)) {
         while (brIt.hasNext()) {
-          included.add(walk.parseCommit(brIt.next().id));
+          GitWorks.addUnique(included, walk.parseCommit(brIt.next().id));
         }
       } else if (only) {
         while (brIt.hasNext()) {
-          excluded.add(walk.parseCommit(brIt.next().id));
+          GitWorks.addUnique(excluded, walk.parseCommit(brIt.next().id));
         }
       }
     }
@@ -448,11 +448,11 @@ private void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
       brIt = er.getValue().iterator();
       if (er.getKey().equals(r)) {
         while (brIt.hasNext()) {
-          excluded.add(walk.parseCommit(brIt.next().id));
+          GitWorks.addUnique(excluded, walk.parseCommit(brIt.next().id));
         }
       } else {
         while (brIt.hasNext()) {
-          included.add(walk.parseCommit(brIt.next().id));
+          GitWorks.addUnique(included, walk.parseCommit(brIt.next().id));
         }
       }
     }
@@ -486,7 +486,7 @@ private void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectExcep
   int c;
   BranchRef b;
   Iterator<BranchRef> brIt;
-  LinkedHashMap<BranchRef, ArrayList<Commit>> commits;
+  LinkedHashMap<Commit, ArrayList<Commit>> commits;
   Commit newco, co;
   Person newpe;
   ArrayList<Commit> newcos;
@@ -504,8 +504,8 @@ private void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectExcep
         + " ) ERROR : the allCommits array has already been built!");
     return;
   }
-  commits = only ? new LinkedHashMap<BranchRef, ArrayList<Commit>>()
-      : new LinkedHashMap<BranchRef, ArrayList<Commit>>(allBranches.size(), 1);
+  commits = only ? new LinkedHashMap<Commit, ArrayList<Commit>>()
+      : new LinkedHashMap<Commit, ArrayList<Commit>>(allBranches.size(), 1);
   for (int i = 0; i < allBranches.size(); i++) {
     b = allBranches.get(i);/**/// System.err.println("###### Iteration " + (i+1));
     if (only) {
@@ -514,10 +514,10 @@ private void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectExcep
       temp.addAll(allBranches.subList(i + 1, allBranches.size()));
       brIt = temp.iterator();
       while (brIt.hasNext()) {
-        excluded.add(walk.parseCommit(brIt.next().id));
+        GitWorks.addUnique(excluded, walk.parseCommit(brIt.next().id));
       }
     }
-    included.add(walk.parseCommit(b.id));
+    GitWorks.addUnique(included, walk.parseCommit(b.id));
     comm = findCommits(walk, included, excluded, !only, 0);
     if (comm != null) { // if only == false this is always true
       newcos = new ArrayList<Commit>(comm.size());
@@ -535,7 +535,7 @@ private void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectExcep
         }
         newcos.add(co);
       }
-      commits.put(b, newcos);
+      commits.put(newcos.get(0), newcos);
     }
     included.clear();
     excluded.clear();
@@ -679,7 +679,7 @@ private void externalizeMap(LinkedHashMap map, ObjectOutput out) throws IOExcept
         out.writeInt(Collections.binarySearch(allCommits, ((Commit)value)));
         break;
       case 1:
-        out.writeInt(Collections.binarySearch(allBranches, ((BranchRef)value)));
+        out.writeInt(((BranchRef)value).index);
         break;
       default:
         out.writeInt(((PersonFrequency)value).index);
@@ -690,7 +690,7 @@ private void externalizeMap(LinkedHashMap map, ObjectOutput out) throws IOExcept
     }
     switch (keyType) {
     case 0:
-      out.writeInt(((BranchRef)e.getKey()).index);
+      out.writeInt(Collections.binarySearch(allCommits, (Commit)e.getKey()));
     break;
     case 1:
       out.writeUTF(((String)e.getKey()));
@@ -737,7 +737,7 @@ private LinkedHashMap importMap(ObjectInput in) throws IOException {
     }
     switch (keyType) {
     case 0:
-      res.put(allBranches.get(in.readInt()), values);
+      res.put(allCommits.get(in.readInt()), values);
     break;
     case 1:
       res.put(in.readUTF(), values);
