@@ -22,6 +22,9 @@ ObjectId id;
 private byte[] data;
 ArrayList<BranchRef> branches; // all branches which this commit belongs to
 ArrayList<BranchRef> heads; // all branches which this commit is HEAD of
+int inDegree; // number of parents in the meta-graph
+int outDegree; // number of children in the meta-graph
+ArrayList<Integer> edges;
 
 Commit() {}
 
@@ -38,6 +41,9 @@ Commit(RevCommit c) {
   id = c.copy();
   branches = new ArrayList<BranchRef>();
   heads = null;
+  edges = new ArrayList<Integer>();
+  inDegree = 0;
+  outDegree = 0;
 }
 
 
@@ -145,6 +151,8 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
     data[i] = in.readByte();
   }
   id  = (ObjectId)in.readObject();
+  inDegree = in.readInt();
+  outDegree = in.readInt();
   size = in.readInt();
   branches = new ArrayList<BranchRef>(size);
   BranchRef bb;
@@ -164,6 +172,11 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
   } else {
     heads = null;
   }
+  size = in.readInt();
+  edges = new ArrayList<Integer>(size);
+  for (i = 0; i < size; i++) {
+    edges.add(in.readInt());
+  }
 }
 
 
@@ -174,6 +187,8 @@ public void writeExternal(ObjectOutput out) throws IOException {
     out.write(b);
   }
   out.writeObject(id);
+  out.writeInt(inDegree);
+  out.writeInt(outDegree);
   out.writeInt(branches.size());
   for (BranchRef br : branches) {
     out.writeInt(br.index); // (see readExternal)
@@ -183,6 +198,10 @@ public void writeExternal(ObjectOutput out) throws IOException {
     for (BranchRef br : heads) {
       out.writeInt(br.index); // (see readExternal)
     }
+  }
+  out.writeInt(edges.size());
+  for (int me : edges) {
+    out.writeInt(me);
   }
   out.flush();
 }

@@ -88,6 +88,7 @@ LinkedHashMap<Commit, ArrayList<PersonFrequency>> authOfComOnlyInB = null;
 ArrayList<Commit> allCommits = null;
 ArrayList<BranchRef> allBranches = null;
 ArrayList<Person> allAuthors = null;
+MetaGraph metaGraph = null;
 Git git;
 long id = 0;
 String name;
@@ -560,6 +561,44 @@ private void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectExcep
 }
 
 
+// sort branch heads by number of touched commit, to minimize the length of the recursive calls
+boolean buildMetaGraph() {
+  Commit c;
+  Entry<Commit, ArrayList<Commit>> e;
+  Iterator<Entry<Commit, ArrayList<Commit>>> setIt = comInB.entrySet().iterator();
+  int sorted[], size = comInB.keySet().size();
+  Integer cNum[] = new Integer[size];
+  Commit[] commits = new Commit[size];
+  for (int i = 0; i < size; i++) {
+    e = setIt.next();
+    commits[i] = e.getKey();
+    cNum[i] = e.getValue().size();
+  }
+  sorted = IndexedSortable.sortedPermutation(cNum, false);
+  metaGraph = new MetaGraph(allCommits);
+
+  for (int i = 0; i < size; i++) {
+    c = commits[sorted[i]];
+//    System.err.println("Adding head " + c.id.name()); // XXX
+    if (c.edges.isEmpty()) { // was not found in previous iterations
+      metaGraph.addHead(c);
+    }
+  }
+  for (Commit h : commits) {
+    metaGraph.addLeaf(h);
+  }
+  return metaGraph.checkup();
+}
+
+
+void deleteMetaGraph() {
+  for (Commit c : allCommits) {
+    c.edges.clear();
+    c.inDegree = 0;
+    c.outDegree = 0;
+  }
+  metaGraph = null;
+}
 
 
 private void init() {
@@ -584,7 +623,9 @@ String getInfo() {
   if (allCommits == null) return "GitMiner : uninitialized.";
   return "GitMiner : " + name + " ( " + id + " ) has " + allCommits.size()
       + " commits, " + allAuthors.size() + " authors, "
-      + branches.size() + " forks and " + allBranches.size() + " branches.";
+      + branches.size() + " forks and " + allBranches.size() + "(" + comInB.size() + " distinct) branches."
+      + "\n\t\tIts metagraph " + (metaGraph == null ? "has not been defined yet." :
+        "has " + metaGraph.toString());
 }
 
 
@@ -793,6 +834,12 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
     p.readExternal(in);
     allAuthors.add(p);
   }
+
+  metaGraph = new MetaGraph(allCommits);
+  metaGraph.readExternal(in);
+  if (!metaGraph.checkup())
+    System.err.println("ERROR : Metagraph checkup failed!!!");
+
   branches = importMap(in);
   comInB = importMap(in);
 
@@ -827,6 +874,12 @@ public void writeExternal(ObjectOutput out) throws IOException {
   while (itp.hasNext()) {
     itp.next().writeExternal(out);
   }
+
+  if (metaGraph == null)
+    out.writeInt(0);
+  else
+    metaGraph.writeExternal(out);
+
   externalizeMap(branches, out);
   externalizeMap(comInB, out);
 

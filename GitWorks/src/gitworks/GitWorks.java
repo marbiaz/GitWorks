@@ -301,6 +301,10 @@ public static void main(String[] args) throws Exception {
         gitMiners[0].analyzeForkTree(fe);
         exportData(gitMiners[0], trees_out_dir + "dumpFiles/" + gitMiners[0].name + ".gm"); //  + "_"  + gitMiners[i].id
         Runtime.getRuntime().exec(pwd + "/cleanAndBackup.sh " + getSafeName(fe)).waitFor();
+        if (!gitMiners[0].buildMetaGraph()) {
+          System.err.println("ERROR : Metagraph checkup failed!!!");
+          gitMiners[0].deleteMetaGraph();
+        }
         System.out.println(gitMiners[0].getInfo());
       } else if (compuFeatures) { // otherwise, no need to load gitMiner's data
         importData(gitMiners[0], trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".gm"); //  + "_*"
