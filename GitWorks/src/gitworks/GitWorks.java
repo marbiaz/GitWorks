@@ -16,6 +16,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -60,6 +61,8 @@ static String[] ids = null; // list of root repos to be considered to build the 
 static ForkList projects;
 static GitMiner[] gitMiners;
 static FeatureList features;
+
+static BufferedReader in = null;
 
 
 static void dfsVisit(int depth, ForkEntry f, DfsOperator t, Object o) throws Exception {
@@ -238,7 +241,6 @@ static ForkList populateForkList(String inputFile) throws Exception {
  * @param args
  * @throws Exception
  */
-// TODO : load dumps from storage if necessary
 public static void main(String[] args) throws Exception {
 
   ForkEntry fe;
@@ -267,8 +269,6 @@ public static void main(String[] args) throws Exception {
 
     /************** create fork list ****************/
 
-  //BufferedReader in = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));
-  //String r = "";
   System.err.println("# Computation started at " + (new java.util.Date()).toString() + "\n");
 
   if (compuForkTrees) {
@@ -293,30 +293,35 @@ public static void main(String[] args) throws Exception {
       feat = new Features();
       features.addFeatures(feat);
       gitMiners[0] = new GitMiner();
+      if (!newAnalysis && compuFeatures)
+        Runtime.getRuntime().exec(pwd + "/loadDumps.sh " + getSafeName(fe)).waitFor();
       if (newAnalysis) {
-        Runtime.getRuntime().exec(pwd + "/loadRepos.sh " + getSafeName(fe)).waitFor();
-        purgeMissingForks(projects, fe);
-        computeAggregates(new String[] { fe.getId() }, projects, Integer.MAX_VALUE);
-        //r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
+        if (anew) Runtime.getRuntime().exec(pwd + "/loadRepos.sh " + getSafeName(fe)).waitFor();
+        if (compuForkTrees) {
+          purgeMissingForks(projects, fe);
+          computeAggregates(new String[] { fe.getId() }, projects, Integer.MAX_VALUE);
+        }
         gitMiners[0].analyzeForkTree(fe);
-        exportData(gitMiners[0], trees_out_dir + "dumpFiles/" + gitMiners[0].name + ".gm"); //  + "_"  + gitMiners[i].id
-        Runtime.getRuntime().exec(pwd + "/cleanAndBackup.sh " + getSafeName(fe)).waitFor();
+        if (anew) Runtime.getRuntime().exec(pwd + "/cleanup.sh " + getSafeName(fe)).waitFor();
         if (!gitMiners[0].buildMetaGraph()) {
           System.err.println("ERROR : Metagraph checkup failed!!!");
           gitMiners[0].deleteMetaGraph();
         }
         System.out.println(gitMiners[0].getInfo());
+        exportData(gitMiners[0], trees_out_dir + "dumpFiles/" + gitMiners[0].name + ".gm"); //  + "_"  + gitMiners[i].id
       } else if (compuFeatures) { // otherwise, no need to load gitMiner's data
         importData(gitMiners[0], trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".gm"); //  + "_*"
-        System.out.println(gitMiners[0].getInfo());
+        System.out.println(gitMiners[0].getInfo()); System.out.flush();
       }
       if (compuFeatures) {
+        waitForUser(); // XXX
         feat.setFeatures(projects, fe, gitMiners[0]);
         exportData(feat, trees_out_dir + "dumpFiles/" + feat.name + ".feat");
       } else {
         importData(feat, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".feat");
       }
-      Runtime.getRuntime().exec(pwd + "/cleanAndBackup.sh " + getSafeName(fe)).waitFor();
+      if (newAnalysis || compuFeatures)
+        Runtime.getRuntime().exec(pwd + "/backupDumps.sh " + getSafeName(fe)).waitFor();
       //printAny(feat, "\n", System.out);
     }
     catch (Exception e) {
@@ -327,7 +332,6 @@ public static void main(String[] args) throws Exception {
       gitMiners[0] = null;
       feat = null;
       System.gc();
-      //r = ""; while (!r.equals("y")) { System.out.print("May I go on, sir ? "); r = in.readLine().trim(); }
     }
   }
   if (compuForkTrees && newAnalysis) {
@@ -350,7 +354,6 @@ public static void main(String[] args) throws Exception {
   Results.createCircosFiles(features);
   //printAny(features, "\n", System.err);
   System.err.println("\n# Computation ended at " + (new java.util.Date()).toString());
-
 
 }
 
@@ -450,6 +453,17 @@ static public void printAny(Object data, String trailer, PrintStream out) {
   }
   out.print(trailer);
   out.flush();
+}
+
+
+public static void waitForUser() throws IOException {
+  if (in == null)
+    in = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));
+  String r = "";
+  while (!r.equals("y")) {
+    System.out.print("May I go on, sir ? ");
+    r = in.readLine().trim();
+  }
 }
 
 }
