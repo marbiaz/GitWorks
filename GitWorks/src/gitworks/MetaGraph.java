@@ -269,7 +269,7 @@ boolean checkup() {
     if (allCommits.size() == roots.size()) {
       System.err.println("Metagraph checkup : WARNING : only detached roots!");
     } else {
-      System.err.println("Metagraph checkup : ERROR : no leaf!");
+      System.err.println("Metagraph checkup : ERROR : missing leaves!");
       res = false;
     }
   }
@@ -294,7 +294,8 @@ boolean checkup() {
 
 @Override
 public String toString() {
-  if (maxID == 0) return "not been defined yet.";
+  if (maxID == 0 && roots.isEmpty())
+    return "not been defined yet.";
   return "" + roots.size() + " roots, " + "" + leaves.size() + " leaves, "
       + "" + nodes.size() + " nodes, " + metaEdges.size() + " meta-edges.";
 }
@@ -302,37 +303,35 @@ public String toString() {
 
 @Override
 public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+  MetaEdge e;
   maxID = in.readInt();
-  if (maxID > 0) {
-    MetaEdge e;
-    int i, j, z, size;
-    size = in.readInt();
-    metaEdges = new ArrayList<MetaEdge>(size);
-    for (i = 0; i < size; i++) {
-      e = new MetaEdge(in.readInt());
-      e.first = allCommits.get(in.readInt());
-      e.last = allCommits.get(in.readInt());
-      j = in.readInt();
-      for (z = 0; z < j; z++)
-        e.addInternal(allCommits.get(in.readInt()));
-      if (e.getWeight() > 0) e.getInternals().trimToSize();
-      addEdge(e);
-    }
-    size = in.readInt();
-    roots = new ArrayList<Commit>(size);
-    for (i = 0; i < size; i++) {
-      roots.add(allCommits.get(in.readInt()));
-    }
-    size = in.readInt();
-    leaves = new ArrayList<Commit>(size);
-    for (i = 0; i < size; i++) {
-      leaves.add(allCommits.get(in.readInt()));
-    }
-    size = in.readInt();
-    nodes = new ArrayList<Commit>(size);
-    for (i = 0; i < size; i++) {
-      nodes.add(allCommits.get(in.readInt()));
-    }
+  int i, j, z, size = in.readInt();
+  if (maxID == 0 && size == 0) return;
+  roots = new ArrayList<Commit>(size);
+  for (i = 0; i < size; i++) {
+    roots.add(allCommits.get(in.readInt()));
+  }
+  size = in.readInt();
+  metaEdges = new ArrayList<MetaEdge>(size);
+  for (i = 0; i < size; i++) {
+    e = new MetaEdge(in.readInt());
+    e.first = allCommits.get(in.readInt());
+    e.last = allCommits.get(in.readInt());
+    j = in.readInt();
+    for (z = 0; z < j; z++)
+      e.addInternal(allCommits.get(in.readInt()));
+    if (e.getWeight() > 0) e.getInternals().trimToSize();
+    addEdge(e);
+  }
+  size = in.readInt();
+  leaves = new ArrayList<Commit>(size);
+  for (i = 0; i < size; i++) {
+    leaves.add(allCommits.get(in.readInt()));
+  }
+  size = in.readInt();
+  nodes = new ArrayList<Commit>(size);
+  for (i = 0; i < size; i++) {
+    nodes.add(allCommits.get(in.readInt()));
   }
 }
 
@@ -341,35 +340,37 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
 public void writeExternal(ObjectOutput out) throws IOException {
   MetaEdge me;
   out.writeInt(maxID);
-  if (maxID > 0) {
-    out.writeInt(metaEdges.size());
-    Iterator<MetaEdge> ite = metaEdges.iterator();
-    while (ite.hasNext()) {
-      me = ite.next();
-      out.writeInt(me.ID);
-      out.writeInt(Collections.binarySearch(allCommits, me.first));
-      out.writeInt(Collections.binarySearch(allCommits, me.last));
-      out.writeInt(me.getWeight());
-      if (me.getWeight() > 0)
-        for (Commit c : me.getInternals())
-          out.writeInt(Collections.binarySearch(allCommits, c));
-    }
-    out.writeInt(roots.size());
-    Iterator<Commit> itc = roots.iterator();
-    while (itc.hasNext()) {
-      out.writeInt(Collections.binarySearch(allCommits, itc.next()));
-    }
-    out.writeInt(leaves.size());
-    itc = leaves.iterator();
-    while (itc.hasNext()) {
-      out.writeInt(Collections.binarySearch(allCommits, itc.next()));
-    }
-    out.writeInt(nodes.size());
-    itc = nodes.iterator();
-    while (itc.hasNext()) {
-      out.writeInt(Collections.binarySearch(allCommits, itc.next()));
-    }
+  out.writeInt(roots.size());
+  if (maxID == 0 && roots.isEmpty()) {
+    out.flush();
+    return;
   }
+  Iterator<Commit> itc = roots.iterator();
+  while (itc.hasNext()) {
+    out.writeInt(Collections.binarySearch(allCommits, itc.next()));
+  }
+  out.writeInt(metaEdges.size());
+  Iterator<MetaEdge> ite = metaEdges.iterator();
+  while (ite.hasNext()) {
+    me = ite.next();
+    out.writeInt(me.ID);
+    out.writeInt(Collections.binarySearch(allCommits, me.first));
+    out.writeInt(Collections.binarySearch(allCommits, me.last));
+    out.writeInt(me.getWeight());
+    if (me.getWeight() > 0) for (Commit c : me.getInternals())
+      out.writeInt(Collections.binarySearch(allCommits, c));
+  }
+  out.writeInt(leaves.size());
+  itc = leaves.iterator();
+  while (itc.hasNext()) {
+    out.writeInt(Collections.binarySearch(allCommits, itc.next()));
+  }
+  out.writeInt(nodes.size());
+  itc = nodes.iterator();
+  while (itc.hasNext()) {
+    out.writeInt(Collections.binarySearch(allCommits, itc.next()));
+  }
+  out.flush();
 }
 
 }
