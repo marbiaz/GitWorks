@@ -50,18 +50,15 @@ MetaEdge removeEdge(int id) {
 
 
 private void absorbeEdge(Commit c, MetaEdge me) {
-//  System.err.println("\tOverwriting edge from " + c.id.name()); // XXX
   MetaEdge curMe = removeEdge(c.edges.remove(0));
-  if (!c.edges.isEmpty()) System.err.println("\tFATAL in " + c.id.name()); // XXX
   Commit c2;
   removeEdge(curMe.ID);
   me.addInternal(c);
   for (int i = 0; i < curMe.getWeight(); i++) {
     c2 = curMe.getInternals().get(i);
     me.addInternal(c2);
-    c2.edges.remove(0); // XXX c2.edges.remove(Collections.binarySearch(c2.edges, curMe.ID));
-    if (!c2.edges.isEmpty()) System.err.println("\tFATAL in " + c2.id.name()); // XXX
-    c2.edges.add(me.ID); // XXX GitWorks.addUnique(c2.edges, me.ID);
+    c2.edges.remove(0);
+    c2.edges.add(me.ID);
   }
   me.first = curMe.first;
   me.first.edges.remove(Collections.binarySearch(me.first.edges, curMe.ID));
@@ -71,7 +68,6 @@ private void absorbeEdge(Commit c, MetaEdge me) {
 
 
 private void splitEdge(Commit c) {
-//  System.err.println("\tSplitting edge from " + c.id.name()); // XXX
   MetaEdge newMe, me = getEdge(c.edges.get(0));
   Commit c2 = me.first;
   me.first = c;
@@ -85,9 +81,8 @@ private void splitEdge(Commit c) {
   while (z < me.getWeight() - 1) {
     c2 = me.getInternals().remove(z + 1);
     newMe.addInternal(c2);
-    c2.edges.remove(0); // XXX c2.edges.remove(Collections.binarySearch(c2.edges, me.ID));
-    if (!c2.edges.isEmpty()) System.err.println("\tFATAL in " + c2.id.name()); // XXX
-    c2.edges.add(newMe.ID); // XXX GitWorks.addUnique(c2.edges, newMe.ID);
+    c2.edges.remove(0);
+    c2.edges.add(newMe.ID);
   }
   me.getInternals().remove(z);
   GitWorks.addUnique(c.edges, newMe.ID);
@@ -100,7 +95,7 @@ private Commit[] addCommit(Commit c, MetaEdge me) {
   c.outDegree++;
   if (c.edges.isEmpty()) { // c has never been considered before
     parents = c.getParents();
-    c.inDegree = parents.length; // FIXME :  parents == null ? 0 :
+    c.inDegree = parents.length;
     if (c.inDegree == 0 || c.inDegree > 1)
       me.first = c; // first commit of the repo or merge commit
     else
@@ -137,7 +132,7 @@ void addHead(Commit c) {
   ArrayList<Commit[]> next = new ArrayList<Commit[]>();
   ObjectId[] ps = c.getParents();
   // if a branch HEAD points the first commit of the repo, just return
-  if (ps.length == 0) { // XXX ps == null ||
+  if (ps.length == 0) {
     if(!roots.isEmpty() && Collections.binarySearch(roots, c) < 0)
       System.err.println("Metagraph : WARNING : there are more than one root!");
     GitWorks.addUnique(roots, c);
@@ -155,7 +150,6 @@ void addHead(Commit c) {
     for (int i = 1; i < cur.length; i++) {
       me = new MetaEdge(++maxID);
       me.last = c;
-//      System.err.println("Considering " + cur[i].id.name()); // XXX
       GitWorks.addUnique(c.edges, me.ID);
       p = addCommit(cur[i], me);
       if (p[0].inDegree == 0) {
@@ -176,7 +170,6 @@ void addHead(Commit c) {
 void addLeaf(Commit c) {
   if (c.inDegree > 0 && c.outDegree == 0) {
     GitWorks.addUnique(leaves, c);
-//    System.err.println("Set leaf " + c.id.name()); // XXX
   }
 }
 
@@ -216,9 +209,9 @@ boolean checkup() {
           me.last.id.getName() + " lacks pointer to edge " + me.ID + " !");
        res = false;
     }
-//    System.out.println(me.toString()); // XXX
+//    System.out.println(me.toString());
   }
-//  System.out.flush(); // XXX
+//  System.out.flush();
   Collections.sort(internals);
   Iterator<Commit> cit = internals.iterator();
   Commit c1 = null, c2;

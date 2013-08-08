@@ -579,7 +579,6 @@ boolean buildMetaGraph() {
 
   for (int i = 0; i < size; i++) {
     c = commits[sorted[i]];
-//    System.err.println("Adding head " + c.id.name()); // XXX
     if (c.edges.isEmpty()) { // was not found in previous iterations
       metaGraph.addHead(c);
     }
