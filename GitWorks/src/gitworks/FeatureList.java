@@ -17,12 +17,6 @@ FeatureList(int size) {
 }
 
 
-Features getFeatures(String f) {
-  int res = Collections.binarySearch(this, f);
-  return res >= 0 ? get(res) : null;
-}
-
-
 int addFeatures(Features f) {
   return GitWorks.addUnique(this, f);
 }

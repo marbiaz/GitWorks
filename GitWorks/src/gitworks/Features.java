@@ -266,8 +266,7 @@ void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
   i = 0;
   ForkEntry f2;
   for (String f : allForks) {
-    f2 = fl.get(
-        f.replaceFirst(GitWorks.safe_sep, GitWorks.id_sep));
+    f2 = GitWorks.getElement(fl, f.replaceFirst(GitWorks.safe_sep, GitWorks.id_sep));
     since[i] = f2.getCreationTimestamp();
     until[i++] = f2.getRetrievalTimestamp();
   }

@@ -375,7 +375,7 @@ private void getCommitsInR(RevWalk walk, boolean only)
   ArrayList<RevCommit> excluded = new ArrayList<RevCommit>();
   Entry<String, ArrayList<BranchRef>> er;
   String r;
-  int c;
+  Commit c;
   ArrayList<Commit> newcos;
   Iterator<Entry<String, ArrayList<BranchRef>>> erit;
   Iterator<String> sit = branches.keySet().iterator();
@@ -403,8 +403,8 @@ private void getCommitsInR(RevWalk walk, boolean only)
     if (comm != null) {
       newcos = new ArrayList<Commit>(comm.size());
       for (int i = 0; i < comm.size(); i++) {
-        c = Collections.binarySearch(allCommits, comm.get(i));
-        newcos.add(allCommits.get(c));
+        c = GitWorks.getElement(allCommits, comm.get(i));
+        newcos.add(c);
       }
       commits.put(r, newcos);
     }
@@ -435,6 +435,7 @@ private void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
 
   Entry<String, ArrayList<BranchRef>> er;
   String r;
+  Commit c;
   ArrayList<Commit> newcos;
   Iterator<Entry<String, ArrayList<BranchRef>>> erit;
   Iterator<String> sit = branches.keySet().iterator();
@@ -461,7 +462,8 @@ private void getCommitsNotInR(RevWalk walk) throws MissingObjectException,
     if (comm != null) {
       newcos = new ArrayList<Commit>(comm.size());
       for (int i = 0; i < comm.size(); i++) {
-        newcos.add(allCommits.get(Collections.binarySearch(allCommits, comm.get(i))));
+        c = GitWorks.getElement(allCommits, comm.get(i));
+        newcos.add(c);
       }
       commits.put(r, newcos);
     }
@@ -538,8 +540,7 @@ private void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectExcep
           newpe = new Person(co.getAuthoringInfo());
           GitWorks.addUnique(allAuthors, newpe);
         } else {  // this RevCommit has no buffer
-          c = Collections.binarySearch(allCommits, comm.get(j));
-          co = allCommits.get(c);
+          co = GitWorks.getElement(allCommits, comm.get(j));
         }
         newcos.add(co);
       }

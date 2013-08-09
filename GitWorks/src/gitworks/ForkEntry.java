@@ -249,7 +249,7 @@ int howManyForks() {
 
 
 ForkEntry getFork(String id) {
-  return forks.get(id);
+  return GitWorks.getElement(forks, id);
 }
 
 

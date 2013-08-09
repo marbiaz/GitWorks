@@ -54,8 +54,9 @@ public void addLink(DLink l) {
 
 public void addLink(String left, String right, int val) {
   if (left.equals(right)) return;
-  DLink l = new DLink(allIn.get(Collections.binarySearch(allIn, left)),
-      allIn.get(Collections.binarySearch(allIn, right)), val);
+  DIdeogram dLeft = GitWorks.getElement(allIn, left);
+  DIdeogram dRight = GitWorks.getElement(allIn, right);
+  DLink l = new DLink(dLeft, dRight, val);
   addLink(l);
 }
 
@@ -92,7 +93,7 @@ public List<DIdeogram> getAllSets() {
 
 // returns the fork that is called name
 public DIdeogram getDIdeogram(String name) {
-  return allIn.get(Collections.binarySearch(allIn, name));
+  return GitWorks.getElement(allIn, name);
 }
 
 

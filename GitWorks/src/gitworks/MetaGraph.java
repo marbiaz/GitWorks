@@ -33,8 +33,7 @@ public MetaGraph(ArrayList<Commit> all) {
 
 
 MetaEdge getEdge(int id) {
-  int i = Collections.binarySearch(metaEdges, id);
-  return i >= 0 ? metaEdges.get(i) : null;
+  return GitWorks.getElement(metaEdges, id);
 }
 
 
@@ -91,7 +90,7 @@ private void splitEdge(Commit c) {
 
 private Commit[] addCommit(Commit c, MetaEdge me) {
   ObjectId[] parents;
-  Commit res[] = null;
+  Commit co, res[] = null;
   c.outDegree++;
   if (c.edges.isEmpty()) { // c has never been considered before
     parents = c.getParents();
@@ -102,12 +101,13 @@ private Commit[] addCommit(Commit c, MetaEdge me) {
       me.addInternal(c);
     if (c.inDegree == 1) { // simple commit: chain it with its parent
       GitWorks.addUnique(c.edges, me.ID);
-      return addCommit(allCommits.get(Collections.binarySearch(allCommits, parents[0])), me);
+      co = GitWorks.getElement(allCommits, parents[0]);
+      return addCommit(co, me);
     } else { // merge commit: return the list of parents ; first commit: return it
       res = new Commit[c.inDegree + 1];
       res[0] = c;
       for (int i = 0; i < parents.length; i++)
-        res[i + 1] = allCommits.get(Collections.binarySearch(allCommits, parents[i]));
+        res[i + 1] = GitWorks.getElement(allCommits, parents[i]);
     }
   } else { // c has already been considered in previous calls
     if (c.outDegree == 1 && c.inDegree == 1) { // terminal commit: change it to internal
@@ -141,7 +141,7 @@ void addHead(Commit c) {
   p = new Commit[ps.length + 1];
   p[0] = c;
   for (int i = 0; i < ps.length; i++)
-    p[i + 1] = allCommits.get(Collections.binarySearch(allCommits, ps[i]));
+    p[i + 1] = GitWorks.getElement(allCommits, ps[i]);
   next.add(p);
   do {
     cur = next.remove(0);

@@ -53,15 +53,6 @@ ForkEntry remove(ForkEntry f) {
 }
 
 
-ForkEntry get(Object f) {
-  int i = Collections.binarySearch(this, f);
-  if (i < 0) {
-    return null;
-  }
-  return get(i);
-}
-
-
 public void printForkTrees(PrintStream out) throws Exception {
   for (int i = 0; i < size(); i++) {
     if (get(i).isRoot()) {

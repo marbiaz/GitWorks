@@ -152,13 +152,15 @@ static void computeAggregates(String ids[], ForkList fl, int depth) throws Excep
       if (f.isRoot()) ids[i++] = f.getId();
     }
   }
+  ForkEntry fe;
   for (String id : ids) {
     if (!ForkEntry.isValidId(id)) {
       System.err.println("computeAggregates : input ERROR (invalid id: " + id + ").");
       continue;
     }
     Arrays.fill(r, 0);
-    dfsVisit(depth, fl.get(id), ForkEntry.computeAggregates, r);
+    fe = GitWorks.getElement(fl, id);
+    dfsVisit(depth, fe, ForkEntry.computeAggregates, r);
   }
 }
 
@@ -222,7 +224,7 @@ static ForkList populateForkList(String inputFile) throws Exception {
       tokens = children.get(i).split(list_sep);
       for (String f : tokens) {
         cc++;
-        fc = l.get(f);
+        fc = GitWorks.getElement(l, f);
         if (fc != null) {
           fe.addFork(fc);
         } else {
@@ -287,7 +289,10 @@ public static void main(String[] args) throws Exception {
   gitMiners = new GitMiner[1];
   features = new FeatureList(projects.howManyTrees());
   for (int i = 0, j = 0; !resultsOnly && i < projects.size() && (ids == null || j < ids.length); i++) {
-    fe = ids != null ? projects.get(ids[j++]) : projects.get(i);
+    if (ids != null)
+      fe = GitWorks.getElement(projects, ids[j++]);
+    else
+      fe = projects.get(i);
     if (!fe.isRoot()) continue;
     try {
       feat = new Features();
@@ -344,8 +349,11 @@ public static void main(String[] args) throws Exception {
     importData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
     if (ids != null) {
       FeatureList feats = new FeatureList(ids.length);
+      ForkEntry f; Features ft;
       for (int i = 0; i < ids.length; i++) {
-        feats.addFeatures(features.getFeatures(getSafeName(projects.get(ids[i]))));
+        f = GitWorks.getElement(projects, ids[i]);
+        ft = GitWorks.getElement(features, getSafeName(f));
+        feats.addFeatures(ft);
       }
       features = feats;
     }
@@ -400,6 +408,29 @@ public static int addUnique(List set, Comparable item) {
     set.add(i, item);
   }
   return i;
+}
+
+
+/**
+ * It gets a {@link java.lang.Comparable} object from a given list, that matches the given target.
+ * The list must be ordered according to the natural ordering of the items. If the list contains duplicates,
+ * the element returned is the one that would be found by {@link java.util.Collections#binarySearch}.<br>
+ * No type checking on the argument to search for is performed. Thus the caller must be sure that the
+ * arguments are mutually comparable.
+ *
+ * @param list
+ *          The list that hosts the items
+ * @param target
+ *          An object comparable with the elements in the list
+ * @return The object in the list that matches target.
+ */
+@SuppressWarnings({ "rawtypes", "unchecked" })
+public static <T extends Comparable> T getElement (List list, Comparable target) {
+  int i = Collections.binarySearch(list, target);
+  if (i >= 0) {
+    return (T)list.get(i);
+  } else
+    return null;
 }
 
 
