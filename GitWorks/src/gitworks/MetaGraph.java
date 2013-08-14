@@ -6,6 +6,7 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Iterator;
 
 import org.eclipse.jgit.lib.ObjectId;
@@ -197,6 +198,92 @@ ArrayList<MetaEdge> getInEdges(Commit c) {
     }
   }
   return res;
+}
+
+
+// It returns a sub-metagraph taken from this object,
+// with only commits up to the given date (committing date is considered).
+// Pay attention to the fact that the pointers to the original metaedges in the commits are NOT modified!
+MetaGraph buildSubgraph(Date maxAge) {
+  int i;
+  MetaGraph res = new MetaGraph(new ArrayList<Commit>(allCommits.size()));
+  MetaEdge e;
+  Date dFirst, dLast;
+  for (Commit c : roots) {
+    if (c.getCommittingInfo().getWhen().compareTo(maxAge) < 0) {
+      GitWorks.addUnique(res.roots, c);
+    }
+  }
+  for (Commit c : leaves) {
+    if (c.getCommittingInfo().getWhen().compareTo(maxAge) <= 0) {
+      GitWorks.addUnique(res.leaves, c);
+    }
+  }
+  for (MetaEdge me : metaEdges) {
+    dFirst = me.first.getCommittingInfo().getWhen();
+    dLast = me.last.getCommittingInfo().getWhen();
+    if (dFirst.compareTo(maxAge) < 0) {
+      if (dLast.compareTo(maxAge) <= 0) {
+        if (me.getWeight() > 0) res.allCommits.addAll(me.getInternals());
+        if (GitWorks.getElement(res.leaves, me.last) == null)
+          GitWorks.addUnique(res.nodes, me.last);
+        if (GitWorks.getElement(res.roots, me.first) == null)
+          GitWorks.addUnique(res.nodes, me.first);
+        GitWorks.addUnique(res.metaEdges, me);
+      } else if (me.getWeight() > 0
+            && me.getInternals().get(me.getWeight() - 1).getCommittingInfo().getWhen()
+                .compareTo(maxAge) <= 0) {
+        e = new MetaEdge(me.ID); // subgraph will contain a part of the original edge
+        e.first = me.first;
+        for (i = 0; i < me.getWeight(); i++) {
+          if (me.getInternals().get(i).getCommittingInfo().getWhen().compareTo(maxAge) <= 0) break;
+        }
+        e.last = me.getInternals().get(i++);
+        for (; i < me.getWeight(); i++) {
+          e.addInternal(me.getInternals().get(i));
+          res.allCommits.add(me.getInternals().get(i));
+        }
+        GitWorks.addUnique(res.leaves, e.last);
+        if (GitWorks.getElement(res.roots, e.first) == null)
+          GitWorks.addUnique(res.nodes, e.first);
+        GitWorks.addUnique(res.metaEdges, e);
+      }
+    }
+  }
+  res.allCommits.addAll(res.nodes);
+  res.allCommits.addAll(res.leaves);
+  res.allCommits.addAll(res.roots);
+  res.allCommits.trimToSize();
+  Collections.sort(res.allCommits);
+  return res;
+}
+
+
+double checkTimestamps() {
+  Date t1, t2;
+  Commit cur;
+  int count = 0;
+  for (MetaEdge me : metaEdges) {
+    cur = me.last;
+    if (me.getWeight() > 0) {
+      for (Commit c : me.getInternals()) {
+        t1 = cur.getCommittingInfo().getWhen();
+        t2 = c.getCommittingInfo().getWhen();
+        if (t1.compareTo(t2) < 0) {
+          System.err.println("\tTimestamp inconsistency in commit " + cur.id.getName());
+          count++;
+        }
+        cur = c;
+      }
+    }
+    t1 = cur.getCommittingInfo().getWhen();
+    t2 = me.first.getCommittingInfo().getWhen();
+    if (t1.compareTo(t2) < 0) {
+      System.err.println("\tTimestamp inconsistency in commit " + cur.id.getName());
+      count++;
+    }
+  }
+  return ((double)count) / allCommits.size();
 }
 
 
