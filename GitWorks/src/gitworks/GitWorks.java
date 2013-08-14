@@ -412,7 +412,8 @@ public static int addUnique(List set, Comparable item) {
 
 
 /**
- * It gets a {@link java.lang.Comparable} object from a given list, that matches the given target.
+ * It gets a object from a given list, that matches the given target.
+ * The object is cast to the runtime class of the variable to which is assigned to, with NO type check.
  * The list must be ordered according to the natural ordering of the items. If the list contains duplicates,
  * the element returned is the one that would be found by {@link java.util.Collections#binarySearch}.<br>
  * No type checking on the argument to search for is performed. Thus the caller must be sure that the
@@ -422,10 +423,10 @@ public static int addUnique(List set, Comparable item) {
  *          The list that hosts the items
  * @param target
  *          An object comparable with the elements in the list
- * @return The object in the list that matches target.
+ * @return The object in the list that matches target, or null.
  */
 @SuppressWarnings({ "rawtypes", "unchecked" })
-public static <T extends Comparable> T getElement (List list, Comparable target) {
+public static <T> T getElement (List list, Comparable target) {
   int i = Collections.binarySearch(list, target);
   if (i >= 0) {
     return (T)list.get(i);
