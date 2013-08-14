@@ -303,7 +303,7 @@ public static void main(String[] args) throws Exception {
       if (newAnalysis) {
         if (anew) Runtime.getRuntime().exec(pwd + "/loadRepos.sh " + getSafeName(fe)).waitFor();
         if (compuForkTrees) {
-          purgeMissingForks(projects, fe);
+          if (anew) purgeMissingForks(projects, fe);
           computeAggregates(new String[] { fe.getId() }, projects, Integer.MAX_VALUE);
         }
         gitMiners[0].analyzeForkTree(fe);
