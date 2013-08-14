@@ -106,9 +106,9 @@ ArrayList<Integer>[][] vipCommitForF;
 public double[] commitRankRatio;
 // For each entry in commitRankRatio, how many authors are ranked like that (normalized)
 public double[] authorRankRatio;
-// For each week (counting from present time backwards), the number of commits in that week
+// For each week (week of the first commit is 0), the number of commits in that week
 public int[] aggregateTimeLines;
-// For each commit, the week it has been committed (counting from retrieval time backwards)
+// For each commit, the week it has been committed (week of the first commit is 0)
 public int[] extendedTimeLines;
 // For each rank, matrix of the graph that models common commits among forks
 ArrayList<Integer>[][][] cLinkMap;
@@ -192,15 +192,15 @@ private void computeMore() {
 }
 
 
-private void computeTimeLines() {
+private long computeTimeLines() {
   final long week = 1000 * 3600 * 24 * 7;
-  int cur, i;
+  int cur, i, res;
   long max = 0;
   long min = Long.MAX_VALUE;
-  for (long l : until)
+  for (long l : commitTimeLine) {
     max = Math.max(max, l);
-  for (long l : since)
     min = Math.min(min, l);
+  }
   aggregateTimeLines = new int[(int)((max - min) / week) + 1];
   // System.err.println(f.name + " : MAX = " + max + " ; MIN = " + min + " ; #weeks = " +
   //     aggregateTimeLines.length);
@@ -208,12 +208,11 @@ private void computeTimeLines() {
   Arrays.fill(aggregateTimeLines, 0);
   Arrays.fill(extendedTimeLines, 0);
   for (i = 0; i < commitTimeLine.length; i++) {
-    cur = (int)((max - commitTimeLine[i]) / week);
-    cur = Math.min(cur, aggregateTimeLines.length - 1);
+    cur = (int)((commitTimeLine[i] - min) / week);
     aggregateTimeLines[cur]++;
     extendedTimeLines[i] = cur;
   }
-
+  return min;
 }
 
 /************  end complex features  ************/
