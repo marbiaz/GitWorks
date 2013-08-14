@@ -174,6 +174,32 @@ void addLeaf(Commit c) {
 }
 
 
+ArrayList<MetaEdge> getOutEdges(Commit c) {
+  ArrayList<MetaEdge> res = new ArrayList<MetaEdge>(c.outDegree);
+  MetaEdge me;
+  for (int i : c.edges) {
+    me = GitWorks.getElement(metaEdges, i);
+    if (!me.last.equals(c)) { // c is internal or first
+      GitWorks.addUnique(res, me); // sorted list
+    }
+  }
+  return res;
+}
+
+
+ArrayList<MetaEdge> getInEdges(Commit c) {
+  ArrayList<MetaEdge> res = new ArrayList<MetaEdge>(c.inDegree);
+  MetaEdge me;
+  for (int i : c.edges) {
+    me = GitWorks.getElement(metaEdges, i);
+    if (!me.first.equals(c)) { // c is internal or last
+      GitWorks.addUnique(res, me); // sorted list
+    }
+  }
+  return res;
+}
+
+
 boolean checkup() {
   boolean res = true;
   metaEdges.trimToSize();
