@@ -98,7 +98,9 @@ public static enum CommitRank {
   }
 }
 
-//For each commit, its rank (as defined by CommitRank)
+// Timestamp of the oldest commit
+public long oldestTstamp;
+// For each commit, its rank (as defined by CommitRank)
 public int[] commitRank;
 // For each fork : for each rank, the list of commits belonging to that rank
 ArrayList<Integer>[][] vipCommitForF;
@@ -128,8 +130,6 @@ private void computeMore() {
   int i, k;
   for (i = 0; i < authorsInRank.length; i++)
     authorsInRank[i] = new ArrayList<Integer>();
-
-  computeTimeLines();
 
   for (int q = 0; q < CommitRank.values().length; q++) {
     cLinkMap[q] = new ArrayList[allForks.length][allForks.length];
@@ -189,6 +189,7 @@ private void computeMore() {
     authorRankRatio[i] = (1.0 * authorsInRank[i].size()) / allAuthors.length;
   }
 
+  oldestTstamp = computeTimeLines();
 }
 
 
