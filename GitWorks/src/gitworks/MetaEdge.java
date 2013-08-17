@@ -8,7 +8,7 @@ public class MetaEdge implements Comparable<Object> {
 
 int ID;
 private ArrayList<Commit> internals;
-Commit first; // ancestor commit (oldest in this meta edge) 
+Commit first; // ancestor commit (oldest in this meta edge)
 Commit last; // latest commit in this meta edge
 
 
@@ -36,8 +36,8 @@ ArrayList<Commit> getInternals() {
 
 
 public String toString() {
-  return "ID = " + ID + " ; first = " + first.id.getName()
-      + " ; last = " + last.id.getName() + " ; weight = " + getWeight();
+  return "ID = " + ID + " ; first = " + first.id.getName().substring(0, 6)
+      + " ; last = " + last.id.getName().substring(0, 6) + " ; weight = " + getWeight();
 }
 
 
