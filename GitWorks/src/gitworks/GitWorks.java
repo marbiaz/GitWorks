@@ -362,7 +362,7 @@ public static void main(String[] args) throws Exception {
   Results.createCircosFiles(features);
   //printAny(features, "\n", System.err);
   System.err.println("\n# Computation ended at " + (new java.util.Date()).toString());
-
+  System.exit(0);
 }
 
 
