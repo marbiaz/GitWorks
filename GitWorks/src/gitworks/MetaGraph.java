@@ -1,12 +1,12 @@
 package gitworks;
 
+
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Iterator;
 
 import org.eclipse.jgit.lib.ObjectId;
@@ -17,42 +17,27 @@ public class MetaGraph implements Externalizable {
 private int maxID;
 
 private ArrayList<Commit> allCommits; // it points to the same-name array in the GitMiner that contains this MetaGraph
-private ArrayList<Commit> nodes; // every nodes in the graph but root and leaves
-private ArrayList<Commit> leaves; // nodes with no child
-private ArrayList<Commit> roots; // nodes with no parent
-private ArrayList<MetaEdge> metaEdges; // graph's edges
+ArrayList<Dag> dags;
 
 
 public MetaGraph(ArrayList<Commit> all) {
   maxID = 0;
   allCommits = all;
-  metaEdges = new ArrayList<MetaEdge>();
-  leaves = new ArrayList<Commit>();
-  nodes = new ArrayList<Commit>();
-  roots = new ArrayList<Commit>();
+  dags = new ArrayList<Dag>();
 }
 
 
-MetaEdge getEdge(int id) {
-  return GitWorks.getElement(metaEdges, id);
+private Dag getDag(int edgeId) {
+  for (Dag d : dags)
+    if (d.getEdge(edgeId) != null)
+      return d;
+  return null;
 }
 
 
-int addEdge(MetaEdge me) {
-  return GitWorks.addUnique(metaEdges, me);
-}
-
-
-MetaEdge removeEdge(int id) {
-  int i = Collections.binarySearch(metaEdges, id);
-  return i >= 0 ? metaEdges.remove(i) : null;
-}
-
-
-private void absorbeEdge(Commit c, MetaEdge me) {
-  MetaEdge curMe = removeEdge(c.edges.remove(0));
+private void absorbeEdge(Dag d, Commit c, MetaEdge me) {
+  MetaEdge curMe = d.removeEdge(c.edges.remove(0));
   Commit c2;
-  removeEdge(curMe.ID);
   me.addInternal(c);
   for (int i = 0; i < curMe.getWeight(); i++) {
     c2 = curMe.getInternals().get(i);
@@ -67,12 +52,12 @@ private void absorbeEdge(Commit c, MetaEdge me) {
 }
 
 
-private void splitEdge(Commit c) {
-  MetaEdge newMe, me = getEdge(c.edges.get(0));
+private void splitEdge(Dag d, Commit c, int newID) {
+  MetaEdge newMe, me = d.getEdge(c.edges.get(0));
   Commit c2 = me.first;
   me.first = c;
-  newMe = new MetaEdge(++maxID);
-  addEdge(newMe);
+  newMe = new MetaEdge(newID);
+  d.addEdge(newMe);
   newMe.last = c;
   newMe.first = c2;
   c2.edges.remove(Collections.binarySearch(c2.edges, me.ID));
@@ -89,7 +74,7 @@ private void splitEdge(Commit c) {
 }
 
 
-private Commit[] addCommit(Commit c, MetaEdge me) {
+private Commit[] addCommit(Dag d, Commit c, MetaEdge me) {
   ObjectId[] parents;
   Commit co, res[] = null;
   c.outDegree++;
@@ -103,7 +88,7 @@ private Commit[] addCommit(Commit c, MetaEdge me) {
     if (c.inDegree == 1) { // simple commit: chain it with its parent
       GitWorks.addUnique(c.edges, me.ID);
       co = GitWorks.getElement(allCommits, parents[0]);
-      return addCommit(co, me);
+      return addCommit(d, co, me);
     } else { // merge commit: return the list of parents ; first commit: return it
       res = new Commit[c.inDegree + 1];
       res[0] = c;
@@ -111,15 +96,19 @@ private Commit[] addCommit(Commit c, MetaEdge me) {
         res[i + 1] = GitWorks.getElement(allCommits, parents[i]);
     }
   } else { // c has already been considered in previous calls
+    Dag d1 = getDag(c.edges.get(0));
+    if (d1 == null) d1 = d;
     if (c.outDegree == 1 && c.inDegree == 1) { // terminal commit: change it to internal
-      absorbeEdge(c, me);
+      absorbeEdge(d1, c, me);
     } else if (c.outDegree == 2 && c.inDegree == 1) {
       // internal commit: change it to terminal
       me.first = c;
-      splitEdge(c);
+      splitEdge(d1, c, ++maxID);
     } else { // branch commit or merge commit
       me.first = c;
     }
+    if (d.union(d1))
+      dags.remove(dags.indexOf(d1));
     res = new Commit[] {me.first};
   }
   GitWorks.addUnique(c.edges, me.ID);
@@ -132,11 +121,17 @@ void addHead(Commit c) {
   MetaEdge me;
   ArrayList<Commit[]> next = new ArrayList<Commit[]>();
   ObjectId[] ps = c.getParents();
+  Dag d = new Dag();
   // if a branch HEAD points the first commit of the repo, just return
   if (ps.length == 0) {
-    if(!roots.isEmpty() && Collections.binarySearch(roots, c) < 0)
+    if(!dags.isEmpty()) {
+      for (Dag d1 : dags)
+        if (Collections.binarySearch(d1.roots, c) >= 0)
+          return;
       System.err.println("Metagraph : WARNING : there are more than one root!");
-    GitWorks.addUnique(roots, c);
+      GitWorks.addUnique(d.roots, c);
+    }
+    dags.add(d);
     return; 
   }
   p = new Commit[ps.length + 1];
@@ -152,292 +147,98 @@ void addHead(Commit c) {
       me = new MetaEdge(++maxID);
       me.last = c;
       GitWorks.addUnique(c.edges, me.ID);
-      p = addCommit(cur[i], me);
+      p = addCommit(d, cur[i], me);
       if (p[0].inDegree == 0) {
-        if(!roots.isEmpty() && Collections.binarySearch(roots, p[0]) < 0)
-          System.err.println("Metagraph : WARNING : there are more than one root!");
-        GitWorks.addUnique(roots, p[0]);
+        if(!dags.isEmpty()) {
+          for (Dag d1 : dags)
+            if (Collections.binarySearch(d1.roots, c) >= 0) {
+              d.union(d1); System.err.println("MERGING DAGS... (ROOTS)..."); // XXX
+              break;
+            }
+        }
+        GitWorks.addUnique(d.roots, p[0]);
       } else
-        GitWorks.addUnique(nodes, p[0]);
-      addEdge(me);
+        GitWorks.addUnique(d.nodes, p[0]);
+      d.addEdge(me);
       if (p.length > 1) {
         next.add(p);
       }
     }
   } while (!next.isEmpty());
+  dags.add(d);
 }
 
 
 void addLeaf(Commit c) {
   if (c.inDegree > 0 && c.outDegree == 0) {
-    GitWorks.addUnique(leaves, c);
+    GitWorks.addUnique(getDag(c.edges.get(0)).leaves, c);
   }
-}
-
-
-ArrayList<MetaEdge> getOutEdges(Commit c) {
-  ArrayList<MetaEdge> res = new ArrayList<MetaEdge>(c.outDegree);
-  MetaEdge me;
-  for (int i : c.edges) {
-    me = GitWorks.getElement(metaEdges, i);
-    if (!me.last.equals(c)) { // c is internal or first
-      GitWorks.addUnique(res, me); // sorted list
-    }
-  }
-  return res;
-}
-
-
-ArrayList<MetaEdge> getInEdges(Commit c) {
-  ArrayList<MetaEdge> res = new ArrayList<MetaEdge>(c.inDegree);
-  MetaEdge me;
-  for (int i : c.edges) {
-    me = GitWorks.getElement(metaEdges, i);
-    if (!me.first.equals(c)) { // c is internal or last
-      GitWorks.addUnique(res, me); // sorted list
-    }
-  }
-  return res;
-}
-
-
-// It returns a sub-metagraph taken from this object,
-// with only commits up to the given date (committing date is considered).
-// Pay attention to the fact that the pointers to the original metaedges in the commits are NOT modified!
-MetaGraph buildSubgraph(Date maxAge) {
-  int i;
-  MetaGraph res = new MetaGraph(new ArrayList<Commit>(allCommits.size()));
-  MetaEdge e;
-  Date dFirst, dLast;
-  for (Commit c : roots) {
-    if (c.getCommittingInfo().getWhen().compareTo(maxAge) < 0) {
-      GitWorks.addUnique(res.roots, c);
-    }
-  }
-  for (Commit c : leaves) {
-    if (c.getCommittingInfo().getWhen().compareTo(maxAge) <= 0) {
-      GitWorks.addUnique(res.leaves, c);
-    }
-  }
-  for (MetaEdge me : metaEdges) {
-    dFirst = me.first.getCommittingInfo().getWhen();
-    dLast = me.last.getCommittingInfo().getWhen();
-    if (dFirst.compareTo(maxAge) < 0) {
-      if (dLast.compareTo(maxAge) <= 0) {
-        if (me.getWeight() > 0) res.allCommits.addAll(me.getInternals());
-        if (GitWorks.getElement(res.leaves, me.last) == null)
-          GitWorks.addUnique(res.nodes, me.last);
-        if (GitWorks.getElement(res.roots, me.first) == null)
-          GitWorks.addUnique(res.nodes, me.first);
-        GitWorks.addUnique(res.metaEdges, me);
-      } else if (me.getWeight() > 0
-            && me.getInternals().get(me.getWeight() - 1).getCommittingInfo().getWhen()
-                .compareTo(maxAge) <= 0) {
-        e = new MetaEdge(me.ID); // subgraph will contain a part of the original edge
-        e.first = me.first;
-        for (i = 0; i < me.getWeight(); i++) {
-          if (me.getInternals().get(i).getCommittingInfo().getWhen().compareTo(maxAge) <= 0) break;
-        }
-        e.last = me.getInternals().get(i++);
-        for (; i < me.getWeight(); i++) {
-          e.addInternal(me.getInternals().get(i));
-          res.allCommits.add(me.getInternals().get(i));
-        }
-        GitWorks.addUnique(res.leaves, e.last);
-        if (GitWorks.getElement(res.roots, e.first) == null)
-          GitWorks.addUnique(res.nodes, e.first);
-        GitWorks.addUnique(res.metaEdges, e);
-      }
-    }
-  }
-  res.allCommits.addAll(res.nodes);
-  res.allCommits.addAll(res.leaves);
-  res.allCommits.addAll(res.roots);
-  res.allCommits.trimToSize();
-  Collections.sort(res.allCommits);
-  return res;
-}
-
-
-double checkTimestamps() {
-  Date t1, t2;
-  Commit cur;
-  int count = 0;
-  for (MetaEdge me : metaEdges) {
-    cur = me.last;
-    if (me.getWeight() > 0) {
-      for (Commit c : me.getInternals()) {
-        t1 = cur.getCommittingInfo().getWhen();
-        t2 = c.getCommittingInfo().getWhen();
-        if (t1.compareTo(t2) < 0) {
-          System.err.println("\tTimestamp inconsistency in commit " + cur.id.getName());
-          count++;
-        }
-        cur = c;
-      }
-    }
-    t1 = cur.getCommittingInfo().getWhen();
-    t2 = me.first.getCommittingInfo().getWhen();
-    if (t1.compareTo(t2) < 0) {
-      System.err.println("\tTimestamp inconsistency in commit " + cur.id.getName());
-      count++;
-    }
-  }
-  return ((double)count) / allCommits.size();
 }
 
 
 boolean checkup() {
-  boolean res = true;
-  metaEdges.trimToSize();
-  leaves.trimToSize();
-  nodes.trimToSize();
-  roots.trimToSize();
-  ArrayList<Commit> terminals = new ArrayList<Commit>(metaEdges.size());
-  ArrayList<Commit> internals = new ArrayList<Commit>(allCommits.size());
-  for (MetaEdge me : metaEdges) {
-    if (me.getWeight() > 0)
-      for (Commit c : me.getInternals()) {
-        internals.add(c);
-        if (Collections.binarySearch(c.edges, me.ID) < 0) {
-          System.err.println("Metagraph checkup : ERROR : internal commit " + c.id.getName()
-              + " lacks pointer to edge " + me.ID + " !");
-          res = false;
-        }
-        if (c.edges.size() != 1) {
-          System.err.println("Metagraph checkup : ERROR : internal commit " + c.id.getName()
-              + " points to " + c.edges.size() + " edges!");
-          res = false;
-        }
-      }
-    GitWorks.addUnique(terminals, me.first);
-    if (Collections.binarySearch(me.first.edges, me.ID) < 0) {
-      System.err.println("Metagraph checkup : ERROR : terminal commit " +
-          me.first.id.getName() + " lacks pointer to edge " + me.ID + " !");
-       res = false;
-    }
-    GitWorks.addUnique(terminals, me.last);
-    if (Collections.binarySearch(me.last.edges, me.ID) < 0) {
-      System.err.println("Metagraph checkup : ERROR : terminal commit " +
-          me.last.id.getName() + " lacks pointer to edge " + me.ID + " !");
-       res = false;
-    }
-//    System.out.println(me.toString());
+  boolean res;
+  int max = 0;
+  dags.trimToSize();
+  res = allCommits == null || allCommits.size() == 0;
+  for (Dag d : dags) {
+    max += d.getNumMetaEdges();
+    res = res || !d.checkup(true);
   }
-//  System.out.flush();
-  Collections.sort(internals);
-  Iterator<Commit> cit = internals.iterator();
-  Commit c1 = null, c2;
-  if (cit.hasNext()) c1 = cit.next();
-  while (cit.hasNext()) {
-    c2 = cit.next();
-    if (c1.equals(c2)) {
-      System.err.println("Metagraph checkup : ERROR : duplicate internal commit (" +
-         c1.id.getName() + ") " + "!");
-      res = false;
-    }
-    c1 = c2;
-  }
-  for (Commit c : terminals) {
-    if (Collections.binarySearch(internals, c) >= 0) {
-      System.err.println("Metagraph checkup : ERROR : commit " + c.id.getName() +
-          " is both internal and terminal!");
-       res = false;
-    }
-    if (Collections.binarySearch(leaves, c) < 0 &&
-        Collections.binarySearch(nodes, c) < 0 && Collections.binarySearch(roots, c) < 0) {
-      System.err.println("Metagraph checkup : ERROR : terminal commit " + c.id.getName() +
-          " is not included in the proper list of nodes.");
-       res = false;
-    }
-  }
-  if (roots.isEmpty()) {
-    System.err.println("Metagraph checkup : ERROR : Root is not set!");
-    res = false;
-  } else {
-    for (Commit c : roots) {
-      if (c.inDegree != 0) {
-        System.err.println("Metagraph checkup : ERROR : Wrong root (" + c.id.name() + ")!");
-        res = false;
-      } else if (Collections.binarySearch(terminals, c) < 0) {
-        if (c.outDegree == 0) {
-          System.err.println("Metagraph checkup : WARNING : detached root " + c.id.name());
-        }
-        else {
-          System.err.println("Metagraph checkup : ERROR : root " + c.id.name()
-              + " is not listed as terminal node!");
-          res = false;
-        }
-      }
-    }
-  }
-  if (leaves.isEmpty()) {
-    if (allCommits.size() == roots.size()) {
-      System.err.println("Metagraph checkup : WARNING : only detached roots!");
-    } else {
-      System.err.println("Metagraph checkup : ERROR : missing leaves!");
-      res = false;
-    }
-  }
-  for (Commit c : leaves) {
-    if (Collections.binarySearch(terminals, c) < 0) {
-      System.err.println("Metagraph checkup : ERROR : leaf " + c.id.name() +
-          " is not listed as terminal node!");
-      res = false;
-    }
-  }
-  for (Commit c : nodes) {
-    if (Collections.binarySearch(terminals, c) < 0) {
-      System.err.println("Metagraph checkup : ERROR : node " + c.id.getName() +
-          " is missing in one of its edges.");
-       res = false;
-    }
-  }
-  System.gc();
-  return res;
+  res = res || (maxID < max);
+  return !res;
 }
 
 
 @Override
 public String toString() {
-  if (maxID == 0 && roots.isEmpty())
+  if (dags.isEmpty())
     return "not been defined yet.";
-  return "" + roots.size() + " roots, " + "" + leaves.size() + " leaves, "
-      + "" + nodes.size() + " nodes, " + metaEdges.size() + " meta-edges.";
+  int roots = 0, leaves = 0, nodes = 0, edges = 0;
+  for (Dag d : dags) {
+    roots += d.roots.size();
+    leaves += d.leaves.size();
+    nodes += d.nodes.size();
+    edges += d.getNumMetaEdges();
+  }
+  return "" + dags.size() + " dags, " + roots + " roots, " + leaves + " leaves, "
+      + nodes + " nodes, " + edges + " metaedges.";
 }
 
 
 @Override
 public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
   MetaEdge e;
+  int i, j, z, size, dagsNum = in.readInt();
+  if (dagsNum == 0) return;
   maxID = in.readInt();
-  int i, j, z, size = in.readInt();
-  if (maxID == 0 && size == 0) return;
-  roots = new ArrayList<Commit>(size);
-  for (i = 0; i < size; i++) {
-    roots.add(allCommits.get(in.readInt()));
-  }
-  size = in.readInt();
-  metaEdges = new ArrayList<MetaEdge>(size);
-  for (i = 0; i < size; i++) {
-    e = new MetaEdge(in.readInt());
-    e.first = allCommits.get(in.readInt());
-    e.last = allCommits.get(in.readInt());
-    j = in.readInt();
-    for (z = 0; z < j; z++)
-      e.addInternal(allCommits.get(in.readInt()));
-    if (e.getWeight() > 0) e.getInternals().trimToSize();
-    addEdge(e);
-  }
-  size = in.readInt();
-  leaves = new ArrayList<Commit>(size);
-  for (i = 0; i < size; i++) {
-    leaves.add(allCommits.get(in.readInt()));
-  }
-  size = in.readInt();
-  nodes = new ArrayList<Commit>(size);
-  for (i = 0; i < size; i++) {
-    nodes.add(allCommits.get(in.readInt()));
+  for (int k = 0; k < dagsNum; k++) {
+    Dag d = new Dag();
+    dags.add(d);
+    size = in.readInt();
+    for (i = 0; i < size; i++) {
+      d.roots.add(allCommits.get(in.readInt()));
+    }
+    size = in.readInt();
+    for (i = 0; i < size; i++) {
+      e = new MetaEdge(in.readInt());
+      e.first = allCommits.get(in.readInt());
+      e.last = allCommits.get(in.readInt());
+      j = in.readInt();
+      for (z = 0; z < j; z++)
+        e.addInternal(allCommits.get(in.readInt()));
+      if (e.getWeight() > 0) e.getInternals().trimToSize();
+      d.addEdge(e);
+    }
+    size = in.readInt();
+    for (i = 0; i < size; i++) {
+      d.leaves.add(allCommits.get(in.readInt()));
+    }
+    size = in.readInt();
+    for (i = 0; i < size; i++) {
+      d.nodes.add(allCommits.get(in.readInt()));
+    }
+    d.checkup(false);
   }
 }
 
@@ -445,36 +246,39 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
 @Override
 public void writeExternal(ObjectOutput out) throws IOException {
   MetaEdge me;
-  out.writeInt(maxID);
-  out.writeInt(roots.size());
-  if (maxID == 0 && roots.isEmpty()) {
+  out.writeInt(dags.size());
+  if (dags.isEmpty()) {
     out.flush();
     return;
   }
-  Iterator<Commit> itc = roots.iterator();
-  while (itc.hasNext()) {
-    out.writeInt(Collections.binarySearch(allCommits, itc.next()));
-  }
-  out.writeInt(metaEdges.size());
-  Iterator<MetaEdge> ite = metaEdges.iterator();
-  while (ite.hasNext()) {
-    me = ite.next();
-    out.writeInt(me.ID);
-    out.writeInt(Collections.binarySearch(allCommits, me.first));
-    out.writeInt(Collections.binarySearch(allCommits, me.last));
-    out.writeInt(me.getWeight());
-    if (me.getWeight() > 0) for (Commit c : me.getInternals())
-      out.writeInt(Collections.binarySearch(allCommits, c));
-  }
-  out.writeInt(leaves.size());
-  itc = leaves.iterator();
-  while (itc.hasNext()) {
-    out.writeInt(Collections.binarySearch(allCommits, itc.next()));
-  }
-  out.writeInt(nodes.size());
-  itc = nodes.iterator();
-  while (itc.hasNext()) {
-    out.writeInt(Collections.binarySearch(allCommits, itc.next()));
+  out.writeInt(maxID);
+  for (Dag d : dags) {
+    out.writeInt(d.roots.size());
+    Iterator<Commit> itc = d.roots.iterator();
+    while (itc.hasNext()) {
+      out.writeInt(Collections.binarySearch(allCommits, itc.next()));
+    }
+    out.writeInt(d.getNumMetaEdges());
+    Iterator<MetaEdge> ite = d.getMetaEdges();
+    while (ite.hasNext()) {
+      me = ite.next();
+      out.writeInt(me.ID);
+      out.writeInt(Collections.binarySearch(allCommits, me.first));
+      out.writeInt(Collections.binarySearch(allCommits, me.last));
+      out.writeInt(me.getWeight());
+      if (me.getWeight() > 0) for (Commit c : me.getInternals())
+        out.writeInt(Collections.binarySearch(allCommits, c));
+    }
+    out.writeInt(d.leaves.size());
+    itc = d.leaves.iterator();
+    while (itc.hasNext()) {
+      out.writeInt(Collections.binarySearch(allCommits, itc.next()));
+    }
+    out.writeInt(d.nodes.size());
+    itc = d.nodes.iterator();
+    while (itc.hasNext()) {
+      out.writeInt(Collections.binarySearch(allCommits, itc.next()));
+    }
   }
   out.flush();
 }
