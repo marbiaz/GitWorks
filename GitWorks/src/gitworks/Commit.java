@@ -133,9 +133,9 @@ ObjectId[] getParents() {
 @Override
 public String toString() {
   String out = "";
-  out += "id " + id.getName() + "\n";
+  out += "id " + id.getName() + " ;\n";
   out += RawParseUtils.decode(RawParseUtils.parseEncoding(data), data);
-  out += "\nbranches : " + branches.size() + " ; forks : " + repoCount();
+  out += "\nbranches : " + branches.size() + " ; forks : " + repoCount() + " .";
 //  for (BranchRef r : branches) {
 //    out += " " + r.toString();
 //  }

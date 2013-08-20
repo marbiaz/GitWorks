@@ -104,7 +104,7 @@ public long oldestTstamp;
 public int[] commitRank;
 // For each fork : for each rank, the list of commits belonging to that rank
 ArrayList<Integer>[][] vipCommitForF;
-//For each ranking (+1), how many commits are ranked like that (normalized)
+// For each ranking (+1), how many commits are ranked like that (normalized)
 public double[] commitRankRatio;
 // For each entry in commitRankRatio, how many authors are ranked like that (normalized)
 public double[] authorRankRatio;
@@ -195,7 +195,7 @@ private void computeMore() {
 
 private long computeTimeLines() {
   final long week = 1000 * 3600 * 24 * 7;
-  int cur, i, res;
+  int cur, i;
   long max = 0;
   long min = Long.MAX_VALUE;
   for (long l : commitTimeLine) {

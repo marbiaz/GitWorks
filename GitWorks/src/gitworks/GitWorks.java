@@ -16,7 +16,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -247,9 +246,6 @@ public static void main(String[] args) throws Exception {
 
   ForkEntry fe;
   Features feat;
-
-//  printAny(System.getenv(), System.err);
-//  System.exit(0);
 
   if (args.length < 4) {
     System.err
