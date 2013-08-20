@@ -624,8 +624,7 @@ String getInfo() {
   return "GitMiner : " + name + " ( " + id + " ) has " + allCommits.size()
       + " commits, " + allAuthors.size() + " authors, "
       + branches.size() + " forks and " + allBranches.size() + "(" + comInB.size() + " distinct) branches."
-      + "\n\t\tIts metagraph " + (metaGraph == null ? "has not been defined yet." :
-        "has " + metaGraph.toString());
+      + "\n\t\tIts metagraph has " + (metaGraph == null ? "not been defined yet." : metaGraph.toString());
 }
 
 
@@ -835,11 +834,6 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
     allAuthors.add(p);
   }
 
-  metaGraph = new MetaGraph(allCommits);
-  metaGraph.readExternal(in);
-  if (!metaGraph.checkup())
-    System.err.println("ERROR : Metagraph checkup failed!!!");
-
   branches = importMap(in);
   comInB = importMap(in);
 
@@ -852,6 +846,14 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
   authOfComInF = importMap(in);
   authOfComOnlyInF = importMap(in);
   authOfComNotInF = importMap(in);
+
+  metaGraph = new MetaGraph(allCommits);
+  metaGraph.readExternal(in);
+  if (!metaGraph.checkup())
+    System.err.println("ERROR : Metagraph checkup failed!!!");
+//  else // XXX
+//    System.out.println(this.name + " post-dated commit ratio : " + metaGraph.checkTimestamps()); //.exportToGexf(name + "_complete");
+
 }
 
 
@@ -875,11 +877,6 @@ public void writeExternal(ObjectOutput out) throws IOException {
     itp.next().writeExternal(out);
   }
 
-  if (metaGraph == null)
-    out.writeInt(0);
-  else
-    metaGraph.writeExternal(out);
-
   externalizeMap(branches, out);
   externalizeMap(comInB, out);
 
@@ -892,6 +889,12 @@ public void writeExternal(ObjectOutput out) throws IOException {
   externalizeMap(authOfComInF, out);
   externalizeMap(authOfComOnlyInF, out);
   externalizeMap(authOfComNotInF, out);
+
+  if (metaGraph == null)
+    out.writeInt(0);
+  else
+    metaGraph.writeExternal(out);
+
   out.flush();
 }
 
