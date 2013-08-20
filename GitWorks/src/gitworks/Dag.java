@@ -163,7 +163,6 @@ ArrayList<MetaEdge> getInEdges(Commit c) {
 
 boolean union(Dag d) {
   if (this == d) return false;
-  //System.out.println("Dag : merging..."); // XXX
   int tot = getNumCommits() + d.getNumCommits();
   for (Commit c : d.leaves)
     GitWorks.addUnique(leaves, c);
@@ -214,7 +213,8 @@ Dag buildSubDag(Date maxAge) {
         e = new MetaEdge(me.ID); // subgraph will contain a part of the original edge
         e.first = me.first;
         for (i = 0; i < me.getWeight(); i++) {
-          if (me.getInternals().get(i).getCommittingInfo().getWhen().compareTo(maxAge) <= 0) break;
+          if (me.getInternals().get(i).getCommittingInfo().getWhen()
+              .compareTo(maxAge) <= 0) break;
         }
         e.last = me.getInternals().get(i++);
         for (; i < me.getWeight(); i++) {
@@ -275,31 +275,34 @@ boolean checkup(boolean verify) {
       for (Commit c : me.getInternals()) {
         internals.add(c);
         if (Collections.binarySearch(c.edges, me.ID) < 0) {
-          System.err.println("Metagraph checkup : ERROR : internal commit " + c.id.getName()
+          System.err.println("Dag checkup : ERROR : internal commit " + c.id.getName()
               + " lacks pointer to edge " + me.ID + " !");
           res = false;
         }
         if (c.edges.size() != 1) {
-          System.err.println("Metagraph checkup : ERROR : internal commit " + c.id.getName()
+          System.err.println("Dag checkup : ERROR : internal commit " + c.id.getName()
               + " points to " + c.edges.size() + " edges!");
           res = false;
         }
       }
     GitWorks.addUnique(terminals, me.first);
     if (Collections.binarySearch(me.first.edges, me.ID) < 0) {
-      System.err.println("Metagraph checkup : ERROR : terminal commit " + me.first.id.getName()
+      System.err.println("Dag checkup : ERROR : terminal commit " + me.first.id.getName()
           + " lacks pointer to edge " + me.ID + " !");
       res = false;
     }
     GitWorks.addUnique(terminals, me.last);
     if (Collections.binarySearch(me.last.edges, me.ID) < 0) {
-      System.err.println("Metagraph checkup : ERROR : terminal commit " + me.last.id.getName()
+      System.err.println("Dag checkup : ERROR : terminal commit " + me.last.id.getName()
           + " lacks pointer to edge " + me.ID + " !");
       res = false;
     }
     // System.out.println(me.toString());
   }
   // System.out.flush();
+  for (Commit c : roots) // count detached roots as terminals
+    if (c.outDegree == 0)
+      GitWorks.addUnique(terminals, c);
   Collections.sort(internals);
   Iterator<Commit> cit = internals.iterator();
   Commit c1 = null, c2;
@@ -307,7 +310,7 @@ boolean checkup(boolean verify) {
   while (cit.hasNext()) {
     c2 = cit.next();
     if (c1.equals(c2)) {
-      System.err.println("Metagraph checkup : ERROR : duplicate internal commit ("
+      System.err.println("Dag checkup : ERROR : duplicate internal commit ("
           + c1.id.getName() + ") " + "!");
       res = false;
     }
@@ -315,54 +318,46 @@ boolean checkup(boolean verify) {
   }
   for (Commit c : terminals) {
     if (Collections.binarySearch(internals, c) >= 0) {
-      System.err.println("Metagraph checkup : ERROR : commit " + c.id.getName()
+      System.err.println("Dag checkup : ERROR : commit " + c.id.getName()
           + " is both internal and terminal!");
       res = false;
     }
     if (Collections.binarySearch(leaves, c) < 0 && Collections.binarySearch(nodes, c) < 0
         && Collections.binarySearch(roots, c) < 0) {
-      System.err.println("Metagraph checkup : ERROR : terminal commit " + c.id.getName()
+      System.err.println("Dag checkup : ERROR : terminal commit " + c.id.getName()
           + " is not included in the proper list of nodes.");
       res = false;
     }
   }
   if (roots.isEmpty()) {
-    System.err.println("Metagraph checkup : ERROR : Root is not set!");
+    System.err.println("Dag checkup : ERROR : Root is not set!");
     res = false;
   } else {
     for (Commit c : roots) {
       if (c.inDegree != 0) {
-        System.err.println("Metagraph checkup : ERROR : Wrong root (" + c.id.name() + ")!");
+        System.err.println("Dag checkup : ERROR : Wrong root (" + c.id.name() + ")!");
         res = false;
       } else if (Collections.binarySearch(terminals, c) < 0) {
-        if (c.outDegree == 0) {
-          System.err.println("Metagraph checkup : WARNING : detached root " + c.id.name());
-        } else {
-          System.err.println("Metagraph checkup : ERROR : root " + c.id.name()
-              + " is not listed as terminal node!");
-          res = false;
-        }
+        System.err.println("Dag checkup : ERROR : root " + c.id.name()
+            + " is not listed as terminal node!");
+        res = false;
       }
     }
-  }
-  if (leaves.isEmpty()) {
-    if (tot == roots.size()) {
-      System.err.println("Metagraph checkup : WARNING : only detached roots!");
-    } else {
-      System.err.println("Metagraph checkup : ERROR : missing leaves!");
-      res = false;
+    if (leaves.isEmpty() && tot != roots.size()) {
+        System.err.println("Dag checkup : ERROR : missing leaves!");
+        res = false;
     }
   }
   for (Commit c : leaves) {
     if (Collections.binarySearch(terminals, c) < 0) {
-      System.err.println("Metagraph checkup : ERROR : leaf " + c.id.name()
+      System.err.println("Dag checkup : ERROR : leaf " + c.id.name()
           + " is not listed as terminal node!");
       res = false;
     }
   }
   for (Commit c : nodes) {
     if (Collections.binarySearch(terminals, c) < 0) {
-      System.err.println("Metagraph checkup : ERROR : node " + c.id.getName()
+      System.err.println("Dag checkup : ERROR : node " + c.id.getName()
           + " is missing in one of its edges.");
       res = false;
     }

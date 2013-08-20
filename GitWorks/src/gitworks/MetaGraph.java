@@ -89,7 +89,7 @@ private Commit[] addCommit(Dag d, Commit c, MetaEdge me) {
       GitWorks.addUnique(c.edges, me.ID);
       co = GitWorks.getElement(allCommits, parents[0]);
       return addCommit(d, co, me);
-    } else { // merge commit: return the list of parents ; first commit: return it
+    } else { // return the commit and its list of parents
       res = new Commit[c.inDegree + 1];
       res[0] = c;
       for (int i = 0; i < parents.length; i++)
@@ -116,6 +116,7 @@ private Commit[] addCommit(Dag d, Commit c, MetaEdge me) {
 }
 
 
+// must NOT be called more then once for the came commit!
 void addHead(Commit c) {
   Commit[] p, cur;
   MetaEdge me;
@@ -128,9 +129,8 @@ void addHead(Commit c) {
       for (Dag d1 : dags)
         if (Collections.binarySearch(d1.roots, c) >= 0)
           return;
-      System.err.println("Metagraph : WARNING : there are more than one root!");
-      GitWorks.addUnique(d.roots, c);
     }
+    GitWorks.addUnique(d.roots, c);
     dags.add(d);
     return; 
   }
@@ -151,8 +151,9 @@ void addHead(Commit c) {
       if (p[0].inDegree == 0) {
         if(!dags.isEmpty()) {
           for (Dag d1 : dags)
-            if (Collections.binarySearch(d1.roots, c) >= 0) {
-              d.union(d1); System.err.println("MERGING DAGS... (ROOTS)..."); // XXX
+            if (Collections.binarySearch(d1.roots, p[0]) >= 0) {
+              d.union(d1);
+              dags.remove(dags.indexOf(d1));
               break;
             }
         }
@@ -181,11 +182,24 @@ boolean checkup() {
   int max = 0;
   dags.trimToSize();
   res = allCommits == null || allCommits.size() == 0;
-  for (Dag d : dags) {
-    max += d.getNumMetaEdges();
-    res = res || !d.checkup(true);
+  if (res)
+    System.err.println("MetaGraph: ERROR : allCommits array is not set.");
+  else {
+    for (Dag d : dags) {
+      max += d.getNumMetaEdges();
+      res = res || !d.checkup(true);
+    }
+    if (res)
+      System.err.println("MetaGraph : ERROR : inconsistent dags.");
+    else {
+      res = res || (maxID < max);
+      if (res) System.err.println("MetaGraph : ERROR : maxID is too low.");
+    }
+//    if (res) {
+//      System.err.println("MetaGraph : allCommits :");
+//      GitWorks.printAny(allCommits, "\n", System.err);
+//    }
   }
-  res = res || (maxID < max);
   return !res;
 }
 
