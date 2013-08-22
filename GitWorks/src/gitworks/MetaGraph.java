@@ -14,8 +14,20 @@ import org.eclipse.jgit.lib.ObjectId;
 
 public class MetaGraph implements Externalizable {
 
-private int maxID;
+static class NodeDegreeComparator implements java.util.Comparator<Commit> {
 
+  @Override
+  public int compare(Commit c1, Commit c2) {
+    int res;
+    res = c2.outDegree - c1.outDegree;
+    if (res == 0) res = c2.inDegree - c1.inDegree;
+    return res;
+  }
+
+}
+
+
+private int maxID;
 private ArrayList<Commit> allCommits; // it points to the same-name array in the GitMiner that contains this MetaGraph
 ArrayList<Dag> dags;
 
@@ -236,6 +248,7 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
     size = in.readInt();
     for (i = 0; i < size; i++) {
       e = new MetaEdge(in.readInt());
+      e.layer = in.readInt();
       e.first = allCommits.get(in.readInt());
       e.last = allCommits.get(in.readInt());
       j = in.readInt();
@@ -277,6 +290,7 @@ public void writeExternal(ObjectOutput out) throws IOException {
     while (ite.hasNext()) {
       me = ite.next();
       out.writeInt(me.ID);
+      out.writeInt(me.layer);
       out.writeInt(Collections.binarySearch(allCommits, me.first));
       out.writeInt(Collections.binarySearch(allCommits, me.last));
       out.writeInt(me.getWeight());

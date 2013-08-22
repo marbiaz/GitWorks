@@ -23,8 +23,10 @@ import java.io.IOException;
 import java.io.Writer;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 
 
@@ -178,6 +180,69 @@ boolean union(Dag d) {
 }
 
 
+// it gives the commits in bf order, with ties decided by
+// comparing commits with Metagraph.NodeDegreeComparator
+Commit[] bfVisit() {
+  int i, curSize, layer = 0, size = 0, next = 0,
+      tot = nodes.size() + roots.size() + leaves.size();
+  boolean done;
+  Commit c;
+  MetaGraph.NodeDegreeComparator nodeComp = new MetaGraph.NodeDegreeComparator();
+  Commit[] res = new Commit[tot];
+  ArrayList<Commit> prev = new ArrayList<Commit>();
+  ArrayList<Commit> cur = new ArrayList<Commit>();
+  ArrayList<MetaEdge> mar;
+  HashMap<Commit, ArrayList<MetaEdge>> pending = new HashMap<Commit, ArrayList<MetaEdge>>();
+  prev.addAll(roots);
+  cur.addAll(roots);
+  for (Commit r : roots) {
+    res[next++] = r;
+  }
+  Arrays.sort(res, size, next, nodeComp);
+  while (prev.size() < tot) {
+    layer++;
+    curSize = next;
+    for (i = size; i < curSize; i++) {
+      c = res[i];
+      for (MetaEdge e : getOutEdges(c)) {
+        done = true;
+        for (MetaEdge me : getInEdges(e.last)) {
+          if (Collections.binarySearch(prev, me.first) < 0) {
+            done = false;
+            break;
+          }
+        }
+        if (done) {
+          e.layer = layer;
+          mar = pending.remove(e.last);
+          if (mar != null) {
+            for (MetaEdge mes : mar)
+              mes.layer = layer;
+          }
+          if (Collections.binarySearch(cur, e.last) < 0) {
+            res[next++] = e.last;
+            GitWorks.addUnique(cur, e.last);
+          }
+        } else {
+          mar = pending.get(e.last);
+          if (mar == null) {
+            mar = new ArrayList<MetaEdge>();
+            pending.put(e.last, mar);
+          }
+          mar.add(e);
+        }
+      }
+    }
+    size = curSize;
+    Arrays.sort(res, size, next, nodeComp);
+    for (i = size; i < next; i++)
+      GitWorks.addUnique(prev, res[i]);
+  }
+//  bfPrintout(res);
+  return res;
+}
+
+
 // It returns a sub-dag taken from this object,
 // with only commits up to the given date (committing date is considered).
 // Pay attention to the fact that the pointers to the original metaedges in the commits are NOT
@@ -261,40 +326,45 @@ double checkTimestamps() {
 
 boolean checkup(boolean verify) {
   boolean res = true;
+  int prev = 0, tot = getNumCommits();
   metaEdges.trimToSize();
   leaves.trimToSize();
   nodes.trimToSize();
   roots.trimToSize();
-  if (!verify)
+  if (!verify || tot == roots.size())
     return res;
-  int tot = getNumCommits();
   ArrayList<Commit> terminals = new ArrayList<Commit>(metaEdges.size());
   ArrayList<Commit> internals = new ArrayList<Commit>(tot);
   for (MetaEdge me : metaEdges) {
+    if (me.ID == prev) {
+      System.err.println("Dag checkup : ERROR : duplicated meta-edge ID (" + me.ID + ").");
+      res = false;
+    }
+    prev = me.ID;
     if (me.getWeight() > 0)
       for (Commit c : me.getInternals()) {
         internals.add(c);
         if (Collections.binarySearch(c.edges, me.ID) < 0) {
           System.err.println("Dag checkup : ERROR : internal commit " + c.id.getName()
-              + " lacks pointer to edge " + me.ID + " !");
+              + " lacks pointer to edge " + me.ID + " .");
           res = false;
         }
         if (c.edges.size() != 1) {
           System.err.println("Dag checkup : ERROR : internal commit " + c.id.getName()
-              + " points to " + c.edges.size() + " edges!");
+              + " points to " + c.edges.size() + " edges.");
           res = false;
         }
       }
     GitWorks.addUnique(terminals, me.first);
     if (Collections.binarySearch(me.first.edges, me.ID) < 0) {
       System.err.println("Dag checkup : ERROR : terminal commit " + me.first.id.getName()
-          + " lacks pointer to edge " + me.ID + " !");
+          + " lacks pointer to edge " + me.ID + " .");
       res = false;
     }
     GitWorks.addUnique(terminals, me.last);
     if (Collections.binarySearch(me.last.edges, me.ID) < 0) {
       System.err.println("Dag checkup : ERROR : terminal commit " + me.last.id.getName()
-          + " lacks pointer to edge " + me.ID + " !");
+          + " lacks pointer to edge " + me.ID + " .");
       res = false;
     }
     // System.out.println(me.toString());
@@ -311,7 +381,7 @@ boolean checkup(boolean verify) {
     c2 = cit.next();
     if (c1.equals(c2)) {
       System.err.println("Dag checkup : ERROR : duplicate internal commit ("
-          + c1.id.getName() + ") " + "!");
+          + c1.id.getName() + ").");
       res = false;
     }
     c1 = c2;
@@ -319,7 +389,7 @@ boolean checkup(boolean verify) {
   for (Commit c : terminals) {
     if (Collections.binarySearch(internals, c) >= 0) {
       System.err.println("Dag checkup : ERROR : commit " + c.id.getName()
-          + " is both internal and terminal!");
+          + " is both internal and terminal.");
       res = false;
     }
     if (Collections.binarySearch(leaves, c) < 0 && Collections.binarySearch(nodes, c) < 0
@@ -330,28 +400,32 @@ boolean checkup(boolean verify) {
     }
   }
   if (roots.isEmpty()) {
-    System.err.println("Dag checkup : ERROR : Root is not set!");
+    System.err.println("Dag checkup : ERROR : Root is not set.");
     res = false;
   } else {
     for (Commit c : roots) {
       if (c.inDegree != 0) {
-        System.err.println("Dag checkup : ERROR : Wrong root (" + c.id.name() + ")!");
+        System.err.println("Dag checkup : ERROR : Wrong root (" + c.id.name() + ").");
         res = false;
       } else if (Collections.binarySearch(terminals, c) < 0) {
         System.err.println("Dag checkup : ERROR : root " + c.id.name()
-            + " is not listed as terminal node!");
+            + " is not listed as terminal node.");
+        res = false;
+      }
+      if (Collections.binarySearch(leaves, c) >= 0) {
+        System.err.println("Dag checkup : ERROR : root listed as leaf (" + c.id.getName() + ").");
         res = false;
       }
     }
     if (leaves.isEmpty() && tot != roots.size()) {
-        System.err.println("Dag checkup : ERROR : missing leaves!");
+        System.err.println("Dag checkup : ERROR : missing leaves.");
         res = false;
     }
   }
   for (Commit c : leaves) {
     if (Collections.binarySearch(terminals, c) < 0) {
       System.err.println("Dag checkup : ERROR : leaf " + c.id.name()
-          + " is not listed as terminal node!");
+          + " is not listed as terminal node.");
       res = false;
     }
   }
@@ -361,9 +435,31 @@ boolean checkup(boolean verify) {
           + " is missing in one of its edges.");
       res = false;
     }
+    if (Collections.binarySearch(leaves, c) >= 0) {
+      System.err.println("Dag checkup : ERROR : node listed as leaf (" + c.id.getName() + ").");
+      res = false;
+    }
+    if (Collections.binarySearch(roots, c) >= 0) {
+      System.err.println("Dag checkup : ERROR : node listed as root (" + c.id.getName() + ").");
+      res = false;
+    }
+  }
+  if (!res) {
+//    System.err.println("Leaves :");
+//    GitWorks.printAny(leaves, "\n", System.err);
+//    System.err.println("Edges :");
+//    GitWorks.printAny(metaEdges, "\n", System.err);
+    System.err.println("Roots :");
+    GitWorks.printAny(roots, "\n============================\n", System.err);
   }
   System.gc();
   return res;
+}
+
+
+public String toString() {
+  return roots.size() + " roots, " + leaves.size() + " leaves, "
+      + nodes.size() + " nodes, " + getNumMetaEdges() + " metaedges.";
 }
 
 
@@ -390,6 +486,7 @@ void exportToGexf(String name) { // XXX
   Attribute attExtremal = nAttrList.createAttribute("2", AttributeType.BOOLEAN, "extremal")
       .setDefaultValue("false");
   Attribute attWeight = eAttrList.createAttribute("3", AttributeType.INTEGER, "meta-weight");
+  Attribute attLayer = eAttrList.createAttribute("4", AttributeType.INTEGER, "layer");
 
   MyNode node;
   ArrayList<MyNode> cache = new ArrayList<MyNode>(nodes.size() + roots.size() + leaves.size());
@@ -442,7 +539,8 @@ void exportToGexf(String name) { // XXX
       e.setEdgeType(EdgeType.DIRECTED).setWeight(0.0f);
     }
     e.setWeight(e.getWeight() + (float)me.getWeight())
-        .getAttributeValues().addValue(attWeight, "" + e.getWeight());
+        .getAttributeValues().addValue(attWeight, "" + e.getWeight())
+            .addValue(attLayer, "" + me.layer);
   }
 
   StaxGraphWriter graphWriter = new StaxGraphWriter();

@@ -10,6 +10,7 @@ int ID;
 private ArrayList<Commit> internals;
 Commit first; // ancestor commit (oldest in this meta edge)
 Commit last; // latest commit in this meta edge
+int layer;
 
 
 int getWeight() {
@@ -20,6 +21,7 @@ int getWeight() {
 public MetaEdge(int id) {
   ID = id;
   internals = null;
+  layer = 0;
 }
 
 
