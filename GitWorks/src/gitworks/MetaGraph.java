@@ -218,17 +218,26 @@ boolean checkup() {
 
 @Override
 public String toString() {
+  int i = 1;
+  String res = "", out[];
   if (dags.isEmpty())
     return "not been defined yet.";
+  else
+    out = new String[dags.size() + 1];
   int roots = 0, leaves = 0, nodes = 0, edges = 0;
   for (Dag d : dags) {
     roots += d.roots.size();
     leaves += d.leaves.size();
     nodes += d.nodes.size();
     edges += d.getNumMetaEdges();
+    out[i] = "\tDag " + i + " : " + d.toString();
+    i++;
   }
-  return "" + dags.size() + " dags, " + roots + " roots, " + leaves + " leaves, "
-      + nodes + " nodes, " + edges + " metaedges.";
+  out[0] = dags.size() + " dags, " + roots + " roots, " + leaves + " leaves, "
+      + nodes + " nodes, " + edges + " metaedges, distributed as follows:\n";
+  for (String s : out)
+    res += s;
+  return res;
 }
 
 
