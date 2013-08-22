@@ -30,12 +30,16 @@ static class NodeDegreeComparator implements java.util.Comparator<Commit> {
 private int maxID;
 private ArrayList<Commit> allCommits; // it points to the same-name array in the GitMiner that contains this MetaGraph
 ArrayList<Dag> dags;
+long since;
+long until;
 
 
 public MetaGraph(ArrayList<Commit> all) {
   maxID = 0;
   allCommits = all;
   dags = new ArrayList<Dag>();
+  since = 0;
+  until = 0;
 }
 
 
@@ -133,6 +137,7 @@ void addHead(Commit c) {
   Commit[] p, cur;
   MetaEdge me;
   ArrayList<Commit[]> next = new ArrayList<Commit[]>();
+  long tStamp;
   ObjectId[] ps = c.getParents();
   Dag d = new Dag();
   // if a branch HEAD points the first commit of the repo, just return
@@ -143,6 +148,9 @@ void addHead(Commit c) {
           return;
     }
     GitWorks.addUnique(d.roots, c);
+    tStamp = c.getCommittingInfo().getWhen().getTime();
+    if (since > tStamp)
+      since = tStamp;
     dags.add(d);
     return; 
   }
@@ -170,6 +178,9 @@ void addHead(Commit c) {
             }
         }
         GitWorks.addUnique(d.roots, p[0]);
+        tStamp = c.getCommittingInfo().getWhen().getTime();
+        if (since > tStamp)
+          since = tStamp;
       } else
         GitWorks.addUnique(d.nodes, p[0]);
       d.addEdge(me);
@@ -183,8 +194,12 @@ void addHead(Commit c) {
 
 
 void addLeaf(Commit c) {
+  long tStamp;
   if (c.inDegree > 0 && c.outDegree == 0) {
     GitWorks.addUnique(getDag(c.edges.get(0)).leaves, c);
+    tStamp = c.getCommittingInfo().getWhen().getTime();
+    if (until < tStamp)
+      until = tStamp;
   }
 }
 
@@ -246,6 +261,8 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
   MetaEdge e;
   int i, j, z, size, dagsNum = in.readInt();
   if (dagsNum == 0) return;
+  since = in.readLong();
+  until = in.readLong();
   maxID = in.readInt();
   for (int k = 0; k < dagsNum; k++) {
     Dag d = new Dag();
@@ -287,6 +304,8 @@ public void writeExternal(ObjectOutput out) throws IOException {
     out.flush();
     return;
   }
+  out.writeLong(since);
+  out.writeLong(until);
   out.writeInt(maxID);
   for (Dag d : dags) {
     out.writeInt(d.roots.size());
