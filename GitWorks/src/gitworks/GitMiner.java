@@ -564,29 +564,22 @@ private void getCommitsInB(RevWalk walk, boolean only) throws MissingObjectExcep
 
 // sort branch heads by number of touched commit, to minimize the length of the recursive calls
 boolean buildMetaGraph() {
-  Commit c;
   Entry<Commit, ArrayList<Commit>> e;
   Iterator<Entry<Commit, ArrayList<Commit>>> setIt = comInB.entrySet().iterator();
   int sorted[], size = comInB.keySet().size();
   Integer cNum[] = new Integer[size];
   Commit[] commits = new Commit[size];
+  Commit[] sortedCommits = new Commit[size];
   for (int i = 0; i < size; i++) {
     e = setIt.next();
     commits[i] = e.getKey();
     cNum[i] = e.getValue().size();
   }
   sorted = IndexedSortable.sortedPermutation(cNum, false);
-  metaGraph = new MetaGraph(allCommits);
-
   for (int i = 0; i < size; i++) {
-    c = commits[sorted[i]];
-    if (c.edges.isEmpty()) { // was not found in previous iterations
-      metaGraph.addHead(c);
-    }
+    sortedCommits[i] = commits[sorted[i]];
   }
-  for (Commit h : commits) {
-    metaGraph.addLeaf(h);
-  }
+  metaGraph = MetaGraph.createMetaGraph(allCommits, sortedCommits);
   return metaGraph.checkup();
 }
 

@@ -43,6 +43,20 @@ public MetaGraph(ArrayList<Commit> all) {
 }
 
 
+static MetaGraph createMetaGraph(ArrayList<Commit> allComs, Commit[] heads) {
+  MetaGraph res = new MetaGraph(allComs);
+  for (Commit c : heads) {
+    if (c.edges.isEmpty()) { // was not found in previous iterations
+      res.addHead(c);
+    }
+  }
+  for (Commit h : heads) {
+    res.addLeaf(h);
+  }
+  return res;
+}
+
+
 private Dag getDag(int edgeId) {
   for (Dag d : dags)
     if (d.getEdge(edgeId) != null)
