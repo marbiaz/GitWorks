@@ -65,6 +65,48 @@ private Dag getDag(int edgeId) {
 }
 
 
+Dag getOldestDag() {
+  int i, oIndx = 0;
+  java.util.Date cur, oldest = new java.util.Date(Long.MAX_VALUE);
+  for(i = 0; i < dags.size(); i++) {
+    for (Commit c : dags.get(i).roots) {
+      cur = c.getCommittingInfo().getWhen();
+      if (cur.before(oldest)) {
+        oldest = cur;
+        oIndx = i;
+      }
+    }
+  }
+  return dags.get(oIndx);
+}
+
+
+Dag getLargestDag() {
+  int i, bi = 0, cur, best = 0;
+  for (i = 0; i < dags.size(); i++) {
+    cur = dags.get(i).getNumCommits();
+    if (cur > best) {
+      best = cur;
+      bi = i;
+    }
+  }
+  return dags.get(bi);
+}
+
+
+Dag getDensierDag() {
+  int i, bi = 0, cur, best = 0;
+  for (i = 0; i < dags.size(); i++) {
+    cur = dags.get(i).getNumMetaEdges();
+    if (cur > best) {
+      best = cur;
+      bi = i;
+    }
+  }
+  return dags.get(bi);
+}
+
+
 private void absorbeEdge(Dag d, Commit c, MetaEdge me) {
   MetaEdge curMe = d.removeEdge(c.edges.remove(0));
   Commit c2;
