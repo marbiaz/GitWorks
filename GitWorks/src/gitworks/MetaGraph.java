@@ -28,7 +28,7 @@ static class NodeDegreeComparator implements java.util.Comparator<Commit> {
 
 
 private int maxID;
-private ArrayList<Commit> allCommits; // it points to the same-name array in the GitMiner that contains this MetaGraph
+private ArrayList<Commit> allCommits;
 ArrayList<Dag> dags;
 long since;
 long until;
@@ -253,19 +253,23 @@ public String toString() {
     return "not been defined yet.";
   else
     out = new String[dags.size() + 1];
-  int roots = 0, leaves = 0, nodes = 0, edges = 0;
+  int roots = 0, leaves = 0, nodes = 0, edges = 0, tot = 0;
   for (Dag d : dags) {
     roots += d.roots.size();
     leaves += d.leaves.size();
     nodes += d.nodes.size();
     edges += d.getNumMetaEdges();
+    tot += d.getNumCommits();
     out[i] = "\tDag " + i + " : " + d.toString();
     i++;
   }
-  out[0] = dags.size() + " dags, " + roots + " roots, " + leaves + " leaves, "
-      + nodes + " nodes, " + edges + " metaedges, distributed as follows:\n";
-  for (String s : out)
-    res += s;
+  out[0] = dags.size() + " dag" + (dags.size() > 1 ? "s, " : ", ") + roots + " roots, " + leaves + " leaves, "
+      + nodes + " nodes, " + edges + " meta-edges for " + tot + " total commits" + (dags.size() > 1 ? ", distributed as follows:\n" : ".");
+  if (out.length > 2)
+    for (String s : out)
+      res += s;
+  else
+    res = out[0];
   return res;
 }
 
