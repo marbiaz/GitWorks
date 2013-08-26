@@ -47,6 +47,17 @@ Commit(RevCommit c) {
 }
 
 
+Commit(Commit c) {
+  id = c.id;
+  data = c.data;
+  branches = c.branches;
+  heads = c.heads;
+  edges = new ArrayList<Integer>();
+  inDegree = 0;
+  outDegree = 0;
+}
+
+
 void addBranches(ArrayList<BranchRef> b) {
   branches.addAll(b);
   Collections.sort(branches);
