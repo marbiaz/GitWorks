@@ -98,8 +98,6 @@ public static enum CommitRank {
   }
 }
 
-// Timestamp of the oldest commit
-public long oldestTstamp;
 // For each commit, its rank (as defined by CommitRank)
 public int[] commitRank;
 // For each fork : for each rank, the list of commits belonging to that rank
@@ -189,14 +187,14 @@ private void computeMore() {
     authorRankRatio[i] = (1.0 * authorsInRank[i].size()) / allAuthors.length;
   }
 
-  oldestTstamp = computeTimeLines();
+  computeTimeLines();
 }
 
 
-private long computeTimeLines() {
-  final long week = 1000 * 3600 * 24 * 7;
+private void computeTimeLines() {
+  final long week = 1000L * 3600L * 24L * 7L;
   int cur, i;
-  long max = 0;
+  long max = 0L;
   long min = Long.MAX_VALUE;
   for (long l : commitTimeLine) {
     max = Math.max(max, l);
@@ -213,7 +211,6 @@ private long computeTimeLines() {
     aggregateTimeLines[cur]++;
     extendedTimeLines[i] = cur;
   }
-  return min;
 }
 
 /************  end complex features  ************/
