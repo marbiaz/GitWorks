@@ -38,7 +38,7 @@ public MetaGraph(ArrayList<Commit> all) {
   maxID = 0;
   allCommits = all;
   dags = new ArrayList<Dag>();
-  since = 0;
+  since = Long.MAX_VALUE;
   until = 0;
 }
 
