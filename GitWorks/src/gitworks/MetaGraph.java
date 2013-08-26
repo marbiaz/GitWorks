@@ -146,26 +146,39 @@ private void splitEdge(Dag d, Commit c, int newID) {
 }
 
 
+private Commit[] nextGen(Commit c) {
+  Commit pc;
+  Commit[] res;
+  ArrayList<Commit> parents = new ArrayList<Commit>();
+  for (ObjectId p : c.getParents()) {
+    pc = GitWorks.getElement(allCommits, p);
+    if (pc != null)
+      parents.add(pc);
+  }
+  res = new Commit[parents.size() + 1];
+  res[0] = c;
+  for(int i = 1; i < res.length; i++)
+    res[i] = parents.get(i - 1);
+  return res;
+}
+
+
 private Commit[] addCommit(Dag d, Commit c, MetaEdge me) {
-  ObjectId[] parents;
-  Commit co, res[] = null;
+  Commit[] parents;
+  Commit res[] = null;
   c.outDegree++;
   if (c.edges.isEmpty()) { // c has never been considered before
-    parents = c.getParents();
-    c.inDegree = parents.length;
+    parents = nextGen(c);
+    c.inDegree = parents.length - 1;
     if (c.inDegree == 0 || c.inDegree > 1)
       me.first = c; // first commit of the repo or merge commit
     else
       me.addInternal(c);
     if (c.inDegree == 1) { // simple commit: chain it with its parent
       GitWorks.addUnique(c.edges, me.ID);
-      co = GitWorks.getElement(allCommits, parents[0]);
-      return addCommit(d, co, me);
+      return addCommit(d, parents[1], me);
     } else { // return the commit and its list of parents
-      res = new Commit[c.inDegree + 1];
-      res[0] = c;
-      for (int i = 0; i < parents.length; i++)
-        res[i + 1] = GitWorks.getElement(allCommits, parents[i]);
+      res = parents;
     }
   } else { // c has already been considered in previous calls
     Dag d1 = getDag(c.edges.get(0));
@@ -188,17 +201,17 @@ private Commit[] addCommit(Dag d, Commit c, MetaEdge me) {
 }
 
 
-// must NOT be called more then once for the came commit!
-void addHead(Commit c) {
+// must NOT be called more than once for the same commit!
+private void addHead(Commit c) {
   Commit[] p, cur;
-  MetaEdge me;
+  MetaEdge me; Commit co;
   ArrayList<Commit[]> next = new ArrayList<Commit[]>();
   long tStamp;
-  ObjectId[] ps = c.getParents();
+  p = nextGen(c);
   Dag d = new Dag();
-  // if a branch HEAD points the first commit of the repo, just return
-  if (ps.length == 0) {
-    if(!dags.isEmpty()) {
+  // if c points the first commit of the repo, just return
+  if (p.length == 1) {
+    if (!dags.isEmpty()) {
       for (Dag d1 : dags)
         if (Collections.binarySearch(d1.roots, c) >= 0)
           return;
@@ -207,22 +220,20 @@ void addHead(Commit c) {
     tStamp = c.getCommittingInfo().getWhen().getTime();
     if (since > tStamp)
       since = tStamp;
+    if (until < tStamp)
+      until = tStamp;
     dags.add(d);
     return; 
   }
-  p = new Commit[ps.length + 1];
-  p[0] = c;
-  for (int i = 0; i < ps.length; i++)
-    p[i + 1] = GitWorks.getElement(allCommits, ps[i]);
   next.add(p);
   do {
     cur = next.remove(0);
-    c = cur[0];
-    c.inDegree = cur.length - 1;
+    co = cur[0];
+    co.inDegree = cur.length - 1;
     for (int i = 1; i < cur.length; i++) {
       me = new MetaEdge(++maxID);
-      me.last = c;
-      GitWorks.addUnique(c.edges, me.ID);
+      me.last = co;
+      GitWorks.addUnique(co.edges, me.ID);
       p = addCommit(d, cur[i], me);
       if (p[0].inDegree == 0) {
         if(!dags.isEmpty()) {
@@ -234,11 +245,14 @@ void addHead(Commit c) {
             }
         }
         GitWorks.addUnique(d.roots, p[0]);
-        tStamp = c.getCommittingInfo().getWhen().getTime();
-        if (since > tStamp)
-          since = tStamp;
-      } else
+      } else {
         GitWorks.addUnique(d.nodes, p[0]);
+      }
+      tStamp = p[0].getCommittingInfo().getWhen().getTime();
+      if (since > tStamp)
+        since = tStamp;
+      if (until < tStamp)
+        until = tStamp;
       d.addEdge(me);
       if (p.length > 1) {
         next.add(p);
@@ -249,13 +263,15 @@ void addHead(Commit c) {
 }
 
 
-void addLeaf(Commit c) {
+private void addLeaf(Commit c) {
   long tStamp;
   if (c.inDegree > 0 && c.outDegree == 0) {
     GitWorks.addUnique(getDag(c.edges.get(0)).leaves, c);
     tStamp = c.getCommittingInfo().getWhen().getTime();
     if (until < tStamp)
       until = tStamp;
+    if (since > tStamp)
+        since = tStamp;
   }
 }
 

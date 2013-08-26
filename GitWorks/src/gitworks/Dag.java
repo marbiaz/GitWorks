@@ -243,56 +243,153 @@ Commit[] bfVisit() {
 }
 
 
-// It returns a sub-dag taken from this object,
-// with only commits up to the given date (committing date is considered).
-// Pay attention to the fact that the pointers to the original metaedges in the commits are NOT
-// modified!
-Dag buildSubDag(Date maxAge) {
-  int i;
-  Dag res = new Dag();
-  MetaEdge e;
-  Date dFirst, dLast;
-  for (Commit c : roots) {
-    if (c.getCommittingInfo().getWhen().compareTo(maxAge) < 0) {
-      GitWorks.addUnique(res.roots, c);
+void bfPrintout(Commit[] commits) {
+  int prev = 0, cur;
+  for (Commit c : commits) {
+    cur = 0;
+    for (MetaEdge me : metaEdges) {
+      if (me.last.equals(c)) {
+        System.err.print(me.ID + " : " + me.first.id.getName() + " -> " + me.last.id.getName() + " : "+ me.layer);
+        if (me.layer < prev)
+          System.err.print(" Dag : ERROR : bf-visit layer order is wrong.");
+        prev = me.layer;
+        if (cur == 0) cur = me.layer;
+        else if (me.layer != cur)
+          System.err.print(" Dag : ERROR : bf-visit layers differ within the same group.");
+        System.err.println();
+      }
     }
+    System.err.println();
   }
-  for (Commit c : leaves) {
-    if (c.getCommittingInfo().getWhen().compareTo(maxAge) <= 0) {
-      GitWorks.addUnique(res.leaves, c);
+}
+
+
+// It returns a sub-graph taken from this object,
+// with only commits within the given date range (committing date is considered).
+MetaGraph buildSubGraph(Date minAge, Date maxAge) {
+  int i;
+  Date dFirst, dLast;
+  Commit leaf, first, c, co;
+  boolean firstIn, lastIn;
+  ArrayList<Commit> heads = new ArrayList<Commit>(leaves.size() * 2);
+  ArrayList<Commit> allCommits = new ArrayList<Commit>(getNumCommits());
+  ArrayList<MetaEdge> topCut = new ArrayList<MetaEdge>();
+  ArrayList<MetaEdge> middleCut = new ArrayList<MetaEdge>();
+  ArrayList<MetaEdge> bottomCut = new ArrayList<MetaEdge>();
+  ArrayList<MetaEdge> oddCut = new ArrayList<MetaEdge>();
+  if (minAge == null)
+    minAge = new Date(0L);
+  if (maxAge == null)
+    maxAge = new Date(Long.MAX_VALUE);
+
+  if (metaEdges.size() == 0) {
+    for (Commit cc : roots) {
+      dFirst = cc.getCommittingInfo().getWhen();
+      if (dFirst.compareTo(maxAge) <= 0 && dFirst.compareTo(minAge) >= 0) {
+        co = new Commit(cc);
+        GitWorks.addUnique(allCommits, co);
+        GitWorks.addUnique(heads, co);
+      }
     }
   }
   for (MetaEdge me : metaEdges) {
     dFirst = me.first.getCommittingInfo().getWhen();
     dLast = me.last.getCommittingInfo().getWhen();
-    if (dFirst.compareTo(maxAge) < 0) {
-      if (dLast.compareTo(maxAge) <= 0) {
-        if (GitWorks.getElement(res.leaves, me.last) == null)
-          GitWorks.addUnique(res.nodes, me.last);
-        if (GitWorks.getElement(res.roots, me.first) == null)
-          GitWorks.addUnique(res.nodes, me.first);
-        GitWorks.addUnique(res.metaEdges, me);
-      } else if (me.getWeight() > 0
-          && me.getInternals().get(me.getWeight() - 1).getCommittingInfo().getWhen()
-              .compareTo(maxAge) <= 0) {
-        e = new MetaEdge(me.ID); // subgraph will contain a part of the original edge
-        e.first = me.first;
-        for (i = 0; i < me.getWeight(); i++) {
-          if (me.getInternals().get(i).getCommittingInfo().getWhen()
-              .compareTo(maxAge) <= 0) break;
-        }
-        e.last = me.getInternals().get(i++);
-        for (; i < me.getWeight(); i++) {
-          e.addInternal(me.getInternals().get(i));
-        }
-        GitWorks.addUnique(res.leaves, e.last);
-        if (GitWorks.getElement(res.roots, e.first) == null)
-          GitWorks.addUnique(res.nodes, e.first);
-        GitWorks.addUnique(res.metaEdges, e);
+    firstIn = dFirst.compareTo(maxAge) <= 0 && dFirst.compareTo(minAge) >= 0;
+    lastIn = dLast.compareTo(maxAge) <= 0 && dLast.compareTo(minAge) >= 0;
+    if (firstIn && lastIn) {
+      middleCut.add(me);
+    } else if (firstIn && !lastIn) {
+      topCut.add(me);
+    } else if (!firstIn && lastIn) {
+      bottomCut.add(me);
+    } else if (dFirst.compareTo(minAge) < 0 && dLast.compareTo(maxAge) > 0) {
+      oddCut.add(me);
+    }
+  }
+
+  for (MetaEdge me : middleCut) {
+    co = new Commit(me.first);
+    GitWorks.addUnique(allCommits, co);
+    co = new Commit(me.last);
+    co = allCommits.get(GitWorks.addUnique(allCommits, co));
+    if (Collections.binarySearch(leaves, me.last) >= 0)
+      GitWorks.addUnique(heads, co);
+    if (me.getWeight() > 0) {
+      for (Commit cc : me.getInternals()) {
+        co = new Commit(cc);
+        GitWorks.addUnique(allCommits, co);
       }
     }
   }
-  return res;
+
+  for (MetaEdge me : bottomCut) {
+    first = null;
+    ArrayList<Commit> coms;
+    if (me.getWeight() > 0) {
+      coms = me.getInternals();
+      for (i = coms.size() - 1; i >= 0; i--) {
+        c = coms.get(i);
+        if (first == null && c.getCommittingInfo().getWhen().compareTo(minAge) >= 0) {
+          first = new Commit(c);
+          GitWorks.addUnique(allCommits, first);
+        } else if (first != null) {
+          co = new Commit(c);
+          GitWorks.addUnique(allCommits, co);
+        }
+      }
+    }
+    co = new Commit(me.last);
+    co = allCommits.get(GitWorks.addUnique(allCommits, co));
+    if (Collections.binarySearch(leaves, me.last) >= 0)
+      GitWorks.addUnique(heads, co);
+  }
+
+  for (MetaEdge me : topCut) {
+    leaf = null;
+    if (me.getWeight() > 0) {
+      for (Commit cc : me.getInternals()) {
+        dLast = cc.getCommittingInfo().getWhen();
+        if (leaf == null && dLast.compareTo(maxAge) <= 0) {
+          leaf = new Commit(cc);
+          GitWorks.addUnique(allCommits, leaf);
+        } else if (leaf != null) {
+          co = new Commit(cc);
+          GitWorks.addUnique(allCommits, co);
+        }
+      }
+    }
+    co = new Commit(me.first);
+    co = allCommits.get(GitWorks.addUnique(allCommits, co));
+    if (leaf == null) GitWorks.addUnique(heads, co);
+    else GitWorks.addUnique(heads, leaf);
+  }
+
+  for (MetaEdge me : oddCut) {
+    leaf = null;
+    if (me.getWeight() > 0) {
+      for (Commit cc : me.getInternals()) {
+        dFirst = cc.getCommittingInfo().getWhen();
+        firstIn = dFirst.compareTo(maxAge) <= 0 && dFirst.compareTo(minAge) >= 0;
+        if (firstIn) {
+          if (leaf == null) {
+            leaf = new Commit(cc);
+            GitWorks.addUnique(allCommits, leaf);
+          } else {
+            co = new Commit(cc);
+            GitWorks.addUnique(allCommits, co);
+          }
+        }
+      }
+    }
+    if (leaf != null) GitWorks.addUnique(heads, leaf);
+  }
+
+  allCommits.trimToSize();
+  if (allCommits.size() > 0 && heads.size() == 0)
+    System.err.println("Dag : ERROR : buildSubMetaGraph inconsistency.");
+  return allCommits.size() == 0 ? null :
+    MetaGraph.createMetaGraph(allCommits, heads.toArray(new Commit[0]));
 }
 
 
@@ -331,9 +428,11 @@ boolean checkup(boolean verify) {
   leaves.trimToSize();
   nodes.trimToSize();
   roots.trimToSize();
-  if (!verify || tot == roots.size())
+  if (!verify)
     return res;
-  ArrayList<Commit> terminals = new ArrayList<Commit>(metaEdges.size());
+  if (tot == roots.size())
+    return metaEdges.size() == 0;
+  ArrayList<Commit> terminals = new ArrayList<Commit>(leaves.size() + nodes.size() + roots.size());
   ArrayList<Commit> internals = new ArrayList<Commit>(tot);
   for (MetaEdge me : metaEdges) {
     if (me.ID == prev) {
@@ -370,9 +469,20 @@ boolean checkup(boolean verify) {
     // System.out.println(me.toString());
   }
   // System.out.flush();
-  for (Commit c : roots) // count detached roots as terminals
-    if (c.outDegree == 0)
-      GitWorks.addUnique(terminals, c);
+  if (roots.size() > 1 && metaEdges.size() == 0) {
+    System.err.println("Dag checkup : ERROR : multiple detached root commits.");
+    res = false;
+  }
+  if (metaEdges.size() > 0) {
+    for (Commit c : roots) {
+      if (c.outDegree == 0) {
+        System.err.println("Dag checkup : ERROR : detached root commit " + c.id.getName()
+            + " should no be here.");
+        res = false;
+      }
+    }
+  }
+
   Collections.sort(internals);
   Iterator<Commit> cit = internals.iterator();
   Commit c1 = null, c2;
@@ -444,14 +554,14 @@ boolean checkup(boolean verify) {
       res = false;
     }
   }
-  if (!res) {
+//  if (!res) {
 //    System.err.println("Leaves :");
 //    GitWorks.printAny(leaves, "\n", System.err);
 //    System.err.println("Edges :");
 //    GitWorks.printAny(metaEdges, "\n", System.err);
-    System.err.println("Roots :");
-    GitWorks.printAny(roots, "\n============================\n", System.err);
-  }
+//    System.err.println("Roots :");
+//    GitWorks.printAny(roots, "\n============================\n", System.err);
+//  }
   System.gc();
   return res;
 }
@@ -459,7 +569,8 @@ boolean checkup(boolean verify) {
 
 public String toString() {
   return roots.size() + " roots, " + leaves.size() + " leaves, "
-      + nodes.size() + " nodes, " + getNumMetaEdges() + " metaedges.";
+      + nodes.size() + " nodes, " + getNumMetaEdges() + " metaedges for "
+      + getNumCommits() + " total commits.";
 }
 
 
@@ -485,8 +596,9 @@ void exportToGexf(String name) { // XXX
       .setDefaultValue("0");
   Attribute attExtremal = nAttrList.createAttribute("2", AttributeType.BOOLEAN, "extremal")
       .setDefaultValue("false");
-  Attribute attWeight = eAttrList.createAttribute("3", AttributeType.INTEGER, "meta-weight");
-  Attribute attLayer = eAttrList.createAttribute("4", AttributeType.INTEGER, "layer");
+  Attribute attTstamp = nAttrList.createAttribute("3", AttributeType.LONG, "timestamp");
+  Attribute attWeight = eAttrList.createAttribute("4", AttributeType.INTEGER, "meta-weight");
+  Attribute attLayer = eAttrList.createAttribute("5", AttributeType.INTEGER, "layer");
 
   MyNode node;
   ArrayList<MyNode> cache = new ArrayList<MyNode>(nodes.size() + roots.size() + leaves.size());
@@ -497,7 +609,8 @@ void exportToGexf(String name) { // XXX
         .getAttributeValues()
             .addValue(attBranches, "" + c.branches.size())
             .addValue(attHeads, "" + (c.isHead() ? c.heads.size() : 0))
-            .addValue(attExtremal, "false");
+            .addValue(attExtremal, "false")
+            .addValue(attTstamp, "" + c.getCommittingInfo().getWhen().getTime());
     cache.add(node);
   }
   for (Commit c : leaves) {
@@ -507,7 +620,8 @@ void exportToGexf(String name) { // XXX
         .getAttributeValues()
             .addValue(attBranches, "" + c.branches.size())
             .addValue(attHeads, "" + (c.isHead() ? c.heads.size() : 0)) // possibly not head if subgraph
-            .addValue(attExtremal, "true");
+            .addValue(attExtremal, "true")
+            .addValue(attTstamp, "" + c.getCommittingInfo().getWhen().getTime());
     cache.add(node);
   }
   for (Commit c : roots) {
@@ -517,7 +631,8 @@ void exportToGexf(String name) { // XXX
         .getAttributeValues()
             .addValue(attBranches, "" + c.branches.size())
             .addValue(attHeads, "" + (c.isHead() ? c.heads.size() : 0))
-            .addValue(attExtremal, "true");
+            .addValue(attExtremal, "true")
+            .addValue(attTstamp, "" + c.getCommittingInfo().getWhen().getTime());
     cache.add(node);
   }
 
