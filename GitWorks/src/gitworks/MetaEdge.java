@@ -55,7 +55,7 @@ public int compareTo(Object o) {
 
 @Override
 public boolean equals(Object o) {
-    return this.compareTo((MetaEdge)o) == 0;
+    return this.compareTo(o) == 0;
 }
 
 }
