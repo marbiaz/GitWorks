@@ -389,7 +389,7 @@ MetaGraph buildSubGraph(Date minAge, Date maxAge) {
   if (allCommits.size() > 0 && heads.size() == 0)
     System.err.println("Dag : ERROR : buildSubMetaGraph inconsistency.");
   return allCommits.size() == 0 ? null :
-    MetaGraph.createMetaGraph(allCommits, heads.toArray(new Commit[0]));
+    MetaGraph.createMetaGraph(allCommits, heads);
 }
 
 

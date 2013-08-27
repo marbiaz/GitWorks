@@ -569,7 +569,7 @@ boolean buildMetaGraph() {
   int sorted[], size = comInB.keySet().size();
   Integer cNum[] = new Integer[size];
   Commit[] commits = new Commit[size];
-  Commit[] sortedCommits = new Commit[size];
+  ArrayList<Commit> sortedCommits = new ArrayList<Commit>(size);
   for (int i = 0; i < size; i++) {
     e = setIt.next();
     commits[i] = e.getKey();
@@ -577,7 +577,7 @@ boolean buildMetaGraph() {
   }
   sorted = IndexedSortable.sortedPermutation(cNum, false);
   for (int i = 0; i < size; i++) {
-    sortedCommits[i] = commits[sorted[i]];
+    sortedCommits.add(commits[sorted[i]]);
   }
   metaGraph = MetaGraph.createMetaGraph(allCommits, sortedCommits);
   return metaGraph.checkup();

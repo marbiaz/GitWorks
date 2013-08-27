@@ -43,7 +43,7 @@ public MetaGraph(ArrayList<Commit> all) {
 }
 
 
-static MetaGraph createMetaGraph(ArrayList<Commit> allComs, Commit[] heads) {
+static MetaGraph createMetaGraph(ArrayList<Commit> allComs, ArrayList<Commit> heads) {
   MetaGraph res = new MetaGraph(allComs);
   for (Commit c : heads) {
     if (c.edges.isEmpty()) { // was not found in previous iterations
