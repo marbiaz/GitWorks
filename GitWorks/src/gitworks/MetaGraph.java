@@ -236,7 +236,7 @@ private void addHead(Commit c) {
       GitWorks.addUnique(co.edges, me.ID);
       p = addCommit(d, cur[i], me);
       if (p[0].inDegree == 0) {
-        if(!dags.isEmpty()) {
+        if (!dags.isEmpty()) {
           for (Dag d1 : dags)
             if (Collections.binarySearch(d1.roots, p[0]) >= 0) {
               d.union(d1);

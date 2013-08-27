@@ -579,7 +579,7 @@ void exportToGexf(String name) { // XXX
 
   gexf.getMetadata()
       .setLastModified(new java.util.Date(System.currentTimeMillis()))
-      .setCreator("Marco")
+      .setCreator("gitworks")
       .setDescription("Commit meta-graph");
 
   Graph graph = gexf.getGraph();
