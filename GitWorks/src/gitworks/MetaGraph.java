@@ -39,19 +39,27 @@ public MetaGraph(ArrayList<Commit> all) {
   allCommits = all;
   dags = new ArrayList<Dag>();
   since = Long.MAX_VALUE;
-  until = 0;
+  until = 0L;
 }
 
 
 static MetaGraph createMetaGraph(ArrayList<Commit> allComs, ArrayList<Commit> heads) {
   MetaGraph res = new MetaGraph(allComs);
+  long tStamp;
   for (Commit c : heads) {
     if (c.edges.isEmpty()) { // was not found in previous iterations
       res.addHead(c);
     }
   }
-  for (Commit h : heads) {
-    res.addLeaf(h);
+  for (Commit c : heads) {
+    if (c.inDegree > 0 && c.outDegree == 0) {
+      GitWorks.addUnique(res.getDag(c.edges.get(0)).leaves, c);
+      tStamp = c.getCommittingInfo().getWhen().getTime();
+      if (res.until < tStamp)
+        res.until = tStamp;
+      if (res.since > tStamp)
+        res.since = tStamp;
+    }
   }
   return res;
 }
@@ -260,19 +268,6 @@ private void addHead(Commit c) {
     }
   } while (!next.isEmpty());
   dags.add(d);
-}
-
-
-private void addLeaf(Commit c) {
-  long tStamp;
-  if (c.inDegree > 0 && c.outDegree == 0) {
-    GitWorks.addUnique(getDag(c.edges.get(0)).leaves, c);
-    tStamp = c.getCommittingInfo().getWhen().getTime();
-    if (until < tStamp)
-      until = tStamp;
-    if (since > tStamp)
-        since = tStamp;
-  }
 }
 
 
