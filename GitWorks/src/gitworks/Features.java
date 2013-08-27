@@ -295,7 +295,7 @@ void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
   int acRes, fIndex, k;
   boolean inRoot;
   Commit co;
-  String[] repos;
+  ArrayList<String> repos;
   ArrayList<Integer> vipF = new ArrayList<Integer>(gm.allCommits.size());
   while (cIt.hasNext()) {
     co = cIt.next();
@@ -303,7 +303,7 @@ void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
     commitAuthor[i] = Collections.binarySearch(gm.allAuthors, co.getAuthoringInfo());
     commitTimeLine[i] = co.getCommittingInfo().getWhen().getTime();
     repos = co.getRepos();
-    inRoot = Arrays.binarySearch(repos, allForks[rootIndex]) >= 0;
+    inRoot = Collections.binarySearch(repos, allForks[rootIndex]) >= 0;
 
     for (String s : repos) {
       fIndex = Arrays.binarySearch(allForks, s);
@@ -316,7 +316,7 @@ void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
         vipF.add(fIndex);
       }
     }
-    commitDiffusion[i] = repos.length;
+    commitDiffusion[i] = repos.size();
     acCommitDiffusion[i] = acRes;
     vipForkForC[i] = new int[vipF.size()];
     j = 0;

@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 
@@ -81,11 +80,11 @@ boolean isHead() {
 
 
 int repoCount() {
-  return getRepos().length;
+  return getRepos().size();
 }
 
 
-String[] getRepos() {
+ArrayList<String> getRepos() {
   ArrayList<String> res = new ArrayList<String>();
   String curr, prev;
   Iterator<BranchRef> brIt = branches.iterator();
@@ -98,13 +97,13 @@ String[] getRepos() {
       prev = curr;
     }
   }
-  return res.toArray(new String[0]);
+  return res;
 }
 
 
 boolean isInRepo(String repo) {
-  String[] repos = getRepos();
-  return Arrays.binarySearch(repos, repo) >= 0;
+  ArrayList<String> repos = getRepos();
+  return Collections.binarySearch(repos, repo) >= 0;
 }
 
 
