@@ -18,8 +18,8 @@ static class NodeDegreeComparator implements java.util.Comparator<Commit> {
 
   @Override
   public int compare(Commit c1, Commit c2) {
-    int res;
-    res = c2.outDegree - c1.outDegree;
+    int res = (c2.outDegree + c2.inDegree) - (c1.outDegree + c1.inDegree);
+    if (res == 0) res = c2.outDegree - c1.outDegree;
     if (res == 0) res = c2.inDegree - c1.inDegree;
     return res;
   }
