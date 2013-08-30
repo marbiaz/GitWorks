@@ -58,7 +58,6 @@ static String pwd; // set according to the current pwd
 
 static String[] ids = null; // list of root repos to be considered to build the fork trees and perform analysis.
 static ForkList projects;
-static GitMiner[] gitMiners;
 static FeatureList features;
 
 static BufferedReader in = null;
@@ -247,6 +246,8 @@ public static void main(String[] args) throws Exception {
 
   ForkEntry fe;
   Features feat;
+  GitMiner gitMiner;
+  ArrayList<MetaGraph> mgs = new ArrayList<MetaGraph>();
 
   if (args.length < 4) {
     System.err
@@ -280,21 +281,20 @@ public static void main(String[] args) throws Exception {
     importData(projects, trees_out_dir + "dumpFiles/" + "forkListDump");
     // computeAggregates(null, projects, 1); // reset all projects aggregates
   }
+  ArrayList<ForkEntry> forkTrees = projects.getRoots();
+  features = new FeatureList(projects.howManyTrees());
 
   /************** build and analyze fork trees ****************/
 
-  gitMiners = new GitMiner[1];
-  features = new FeatureList(projects.howManyTrees());
-  for (int i = 0, j = 0; !resultsOnly && i < projects.size() && (ids == null || j < ids.length); i++) {
+  for (int i = 0, j = 0; !resultsOnly && i < forkTrees.size() && (ids == null || j < ids.length); i++) {
     if (ids != null)
       fe = GitWorks.getElement(projects, ids[j++]);
     else
-      fe = projects.get(i);
-    if (!fe.isRoot()) continue;
+      fe = forkTrees.get(i);
     try {
       feat = new Features();
       features.addFeatures(feat);
-      gitMiners[0] = new GitMiner();
+      gitMiner = new GitMiner();
       if (!newAnalysis && compuFeatures)
         Runtime.getRuntime().exec(pwd + "/loadDumps.sh " + getSafeName(fe)).waitFor();
       if (newAnalysis) {
@@ -303,24 +303,24 @@ public static void main(String[] args) throws Exception {
           if (anew) purgeMissingForks(projects, fe);
           computeAggregates(new String[] { fe.getId() }, projects, Integer.MAX_VALUE);
         }
-        gitMiners[0].analyzeForkTree(fe);
+        gitMiner.analyzeForkTree(fe);
         if (anew) Runtime.getRuntime().exec(pwd + "/cleanup.sh " + getSafeName(fe)).waitFor();
-        if (!gitMiners[0].buildMetaGraph()) {
+        if (!gitMiner.buildMetaGraph()) {
           System.err.println("ERROR : Metagraph checkup failed!!!");
-          gitMiners[0].deleteMetaGraph();
+          gitMiner.deleteMetaGraph();
         } else {
-          for (Dag d : gitMiners[0].metaGraph.dags) {
+          for (Dag d : gitMiner.metaGraph.dags) {
             d.bfVisit();
           }
         }
-        System.out.println(gitMiners[0].getInfo()); System.out.flush();
-        exportData(gitMiners[0], trees_out_dir + "dumpFiles/" + gitMiners[0].name + ".gm"); // + "_" + gitMiners[i].id
+        exportData(gitMiner, trees_out_dir + "dumpFiles/" + gitMiner.name + ".gm"); // + "_" + gitMiner.id
+        System.out.println(gitMiner.getInfo()); System.out.flush();
       } else if (compuFeatures) { // otherwise, no need to load gitMiner's data
-        importData(gitMiners[0], trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".gm"); // + "_*"
-        // System.out.println(gitMiners[0].getInfo()); System.out.flush();
+        importData(gitMiner, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".gm"); // + "_*"
+        // System.out.println(gitMiner.getInfo()); System.out.flush();
       }
       if (compuFeatures) {
-        feat.setFeatures(projects, fe, gitMiners[0]);
+        feat.setFeatures(projects, fe, gitMiner);
         exportData(feat, trees_out_dir + "dumpFiles/" + feat.name + ".feat");
       } else {
         importData(feat, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".feat");
@@ -329,11 +329,11 @@ public static void main(String[] args) throws Exception {
         Runtime.getRuntime().exec(pwd + "/backupDumps.sh " + getSafeName(fe)).waitFor();
 
       // XXX tests
-      if (!(newAnalysis || compuFeatures))
-        importData(gitMiners[0], trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".gm");
-      waitForUser();
-      testMetaGraph(gitMiners[0]);
-      testSubGraphs(gitMiners[0]);
+//      if (!(newAnalysis || compuFeatures))
+//        importData(gitMiner, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".gm");
+//      waitForUser();
+//      testMetaGraph(gitMiner);
+//      testSubGraphs(gitMiner);
     }
     catch (Exception e) {
       System.err.println("ERROR : computation of " + getSafeName(fe)
@@ -341,7 +341,7 @@ public static void main(String[] args) throws Exception {
       e.printStackTrace();
     }
     finally {
-      gitMiners[0] = null;
+      gitMiner = null;
       feat = null;
       System.gc();
     }
@@ -352,29 +352,44 @@ public static void main(String[] args) throws Exception {
   if (compuFeatures && !resultsOnly) {
     exportData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
   }
+
+  /*********************** compute results ************************/
+
   if (resultsOnly) {
     importData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
-    if (ids != null) {
-      FeatureList feats = new FeatureList(ids.length);
-      ForkEntry f;
-      Features ft;
-      for (int i = 0; i < ids.length; i++) {
-        f = GitWorks.getElement(projects, ids[i]);
-        ft = GitWorks.getElement(features, getSafeName(f));
-        feats.addFeatures(ft);
-      }
-      features = feats;
+    waitForUser();
+    FeatureList feats = new FeatureList(ids == null ? forkTrees.size() : ids.length);
+    Features ft;
+    for (int i = 0, j = 0; i < forkTrees.size() && (ids == null || j < ids.length); i++) {
+      if (ids != null)
+        fe = GitWorks.getElement(projects, ids[j++]);
+      else
+        fe = forkTrees.get(i);
+      ft = GitWorks.getElement(features, getSafeName(fe));
+      feats.addFeatures(ft);
+      Runtime.getRuntime().exec(pwd + "/loadDumps.sh " + getSafeName(fe)).waitFor();
+      gitMiner = new GitMiner();
+      importData(gitMiner, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".gm");
+      Runtime.getRuntime().exec(pwd + "/backupDumps.sh " + getSafeName(fe)).waitFor();
+      mgs.add(gitMiner.metaGraph);
+      gitMiner = null;
+      ft = null;
+      System.gc();
     }
+    features = null;
+    System.gc();
+    features = feats;
   }
   // Results.createDataFiles(features);
   // Results.createCircosFiles(features); // XXX
-  // printAny(features, "\n", System.err);
+  Results.computeStats(mgs, features);
+
   System.err.println("\n# Computation ended at " + (new java.util.Date()).toString());
   System.exit(0);
 }
 
 
-private static void testMetaGraph(GitMiner gm) {
+static void testMetaGraph(GitMiner gm) {
   gm.deleteMetaGraph();
   if (!gm.buildMetaGraph()) {
     System.err.print("ERROR : Metagraph checkup failed! It appears to have\n\t"
@@ -391,7 +406,7 @@ private static void testMetaGraph(GitMiner gm) {
 }
 
 
-private static void testSubGraphs(GitMiner gm) {
+static void testSubGraphs(GitMiner gm) {
   long since, until;
   since = gm.metaGraph.since; // ((gm.metaGraph.until - gm.metaGraph.since) / 8L) // gm.metaGraph.since; // 1287424351000L
   until = ((gm.metaGraph.until - gm.metaGraph.since) / 4L) + gm.metaGraph.since; // 1287679024000L // // since // (1000L * 3600L * 24L * 31L)
