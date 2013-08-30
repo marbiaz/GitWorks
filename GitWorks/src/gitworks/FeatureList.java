@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 
 
@@ -16,8 +17,64 @@ FeatureList(int size) {
 }
 
 
+/**
+ * This method does nothing and must never be used.
+ * @return Always false.
+ */
+@Deprecated
+public boolean add(Features f) {return false;}
+
+
+/**
+ * This method does nothing and must never be used.
+ */
+@Deprecated
+public void add(int index, Features f) {}
+
+
+/**
+ * This method does nothing and must never be used.
+ * @return Always false.
+ */
+@Deprecated
+public boolean addAll(int index, java.util.Collection<? extends Features> c) {return false;}
+
+
+/**
+ * This method does nothing and must never be used.
+ * @return Always null.
+ */
+@Deprecated
+public Features set(int index, Features f) {return null;}
+
+
+/**
+ * This method does nothing and must never be used.
+ * @return Always null.
+ */
+@Deprecated
+public Features set(int index, java.util.Collection<? extends Features> c) {return null;}
+
+
+/**
+ * Adds the elements of the argument list discarding duplicates.
+ * @param c Collection of Features to be added.
+ * @return Always true.
+ */
+public boolean addAll(java.util.Collection<? extends Features> c) {
+  for (Features f : c)
+    addFeatures(f);
+  return true;
+}
+
+
 int addFeatures(Features f) {
-  return GitWorks.addUnique(this, f);
+  int i = Collections.binarySearch(this, f);
+  if (i < 0) {
+    i = -i - 1;
+    super.add(i, f);
+  }
+  return i;
 }
 
 
@@ -29,7 +86,7 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
   for (int i = 0; i < size; i++) {
     f = new Features();
     f.readExternal(in);
-    this.add(f);
+    super.add(f);
   }
 }
 

@@ -14,8 +14,8 @@ import java.util.Iterator;
  */
 public class ForkEntry implements Comparable<Object>, Externalizable {
 
-private  String owner;
-private  String name;
+private String owner;
+private String name;
 private long since;
 private long age;
 private int watchers = -1;
@@ -332,7 +332,7 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
       fe = new ForkEntry();
       fe.parent = this;
       fe.readExternal(in);
-      forks.add(fe);
+      forks.addEntry(fe);
     }
   }
 }

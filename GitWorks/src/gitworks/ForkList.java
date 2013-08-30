@@ -30,11 +30,99 @@ public void setTreeCounter() {
 }
 
 
+ArrayList<ForkEntry> getRoots() {
+  ArrayList<ForkEntry> res = new ArrayList<ForkEntry>(trees);
+  Iterator<ForkEntry> it = iterator();
+  ForkEntry fe;
+  while (it.hasNext()) {
+    fe = it.next();
+    if (fe.isRoot())
+      res.add(fe);
+  }
+  return res;
+}
+
+
+/**
+ * This method does nothing and must never be used.
+ * @return Always false.
+ */
+@Deprecated
+public boolean add(ForkEntry f) {return false;}
+
+
+/**
+ * This method does nothing and must never be used.
+ */
+@Deprecated
+public void add(int index, ForkEntry f) {}
+
+
+/**
+ * This method does nothing and must never be used.
+ * @return Always false.
+ */
+@Deprecated
+public boolean addAll(int index, java.util.Collection<? extends ForkEntry> c) {return false;}
+
+
+/**
+ * This method does nothing and must never be used.
+ * @return Always null.
+ */
+@Deprecated
+public ForkEntry remove(int index) {return null;}
+
+
+/**
+ * This method does nothing and must never be used.
+ * @return Always false.
+ */
+@Deprecated
+public boolean remove(Object o) {return false;}
+
+
+/**
+ * This method does nothing and must never be used.
+ * @return Always false.
+ */
+@Deprecated
+public boolean removeAll(java.util.Collection<?> c) {return false;}
+
+
+/**
+ * This method does nothing and must never be used.
+ * @return Always null.
+ */
+@Deprecated
+public ForkEntry set(int index, java.util.Collection<? extends ForkEntry> c) {return null;}
+
+
+/**
+ * This method does nothing and must never be used.
+ * @return Always null.
+ */
+@Deprecated
+public ForkEntry set(int index, ForkEntry f) {return null;}
+
+
+/**
+ * Adds the elements of the argument list discarding duplicates.
+ * @param c Collection of ForkEntry to be added.
+ * @return Always true.
+ */
+public boolean addAll(java.util.Collection<? extends ForkEntry> f) {
+  for (ForkEntry fe : f)
+    addEntry(fe);
+  return true;
+}
+
+
 // return the result of binarySearch !!
 int addEntry(ForkEntry e) {
   int i = Collections.binarySearch(this, e);
   if (i < 0) {
-    add(-i - 1, e);
+    super.add(-i - 1, e);
     if (e.isRoot()) trees++;
   }
   return i;
@@ -47,7 +135,7 @@ ForkEntry remove(ForkEntry f) {
   if (i < 0) {
     return null;
   }
-  ForkEntry res =  remove(i);
+  ForkEntry res = super.remove(i);
   if (res.isRoot()) trees--;
   return res;
 }
@@ -89,7 +177,7 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
   for (int i = 0; i < trees; i++) {
     fe = new ForkEntry();
     fe.readExternal(in);
-    add(fe);
+    super.add(fe);
   }
   try {
     addMetaEntries();
