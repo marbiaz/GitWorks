@@ -293,7 +293,6 @@ public static void main(String[] args) throws Exception {
       fe = forkTrees.get(i);
     try {
       feat = new Features();
-      features.addFeatures(feat);
       gitMiner = new GitMiner();
       if (!newAnalysis && compuFeatures)
         Runtime.getRuntime().exec(pwd + "/loadDumps.sh " + getSafeName(fe)).waitFor();
@@ -321,6 +320,7 @@ public static void main(String[] args) throws Exception {
       }
       if (compuFeatures) {
         feat.setFeatures(projects, fe, gitMiner);
+        features.addFeatures(feat);
         exportData(feat, trees_out_dir + "dumpFiles/" + feat.name + ".feat");
       } else {
         importData(feat, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".feat");
@@ -355,10 +355,19 @@ public static void main(String[] args) throws Exception {
 
   /*********************** compute results ************************/
 
-  if (resultsOnly) {
+  if (!resultsOnly) {
+//    for (int i = 0, j = 0; i < forkTrees.size() && (ids == null || j < ids.length); i++) {
+//      fe = forkTrees.get(i);
+//      feat = new Features();
+//      Runtime.getRuntime().exec(pwd + "/loadDumps.sh " + getSafeName(fe)).waitFor();
+//      importData(feat, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".feat");
+//      features.addFeatures(feat);
+//    }
+//    exportData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
+    // waitForUser("");
     importData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
-    waitForUser();
-    FeatureList feats = new FeatureList(ids == null ? forkTrees.size() : ids.length);
+    FeatureList feats = null;
+    if (ids != null) feats = new FeatureList(ids == null ? forkTrees.size() : ids.length);
     Features ft;
     for (int i = 0, j = 0; i < forkTrees.size() && (ids == null || j < ids.length); i++) {
       if (ids != null)
@@ -366,7 +375,7 @@ public static void main(String[] args) throws Exception {
       else
         fe = forkTrees.get(i);
       ft = GitWorks.getElement(features, getSafeName(fe));
-      feats.addFeatures(ft);
+      if (ids != null) feats.addFeatures(ft);
       Runtime.getRuntime().exec(pwd + "/loadDumps.sh " + getSafeName(fe)).waitFor();
       gitMiner = new GitMiner();
       importData(gitMiner, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".gm");
@@ -376,9 +385,11 @@ public static void main(String[] args) throws Exception {
       ft = null;
       System.gc();
     }
-    features = null;
-    System.gc();
-    features = feats;
+    if (ids != null) {
+      features = null;
+      System.gc();
+      features = feats;
+    }
   }
   // Results.createDataFiles(features);
   // Results.createCircosFiles(features); // XXX
