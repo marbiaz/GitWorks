@@ -331,7 +331,7 @@ public static void main(String[] args) throws Exception {
       // XXX tests
 //      if (!(newAnalysis || compuFeatures))
 //        importData(gitMiner, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".gm");
-//      waitForUser();
+      // waitForUser("Starting the tests");
 //      testMetaGraph(gitMiner);
 //      testSubGraphs(gitMiner);
     }
@@ -579,12 +579,20 @@ static public void printAny(Object data, String trailer, PrintStream out) {
 }
 
 
-public static void waitForUser() throws IOException {
-  if (in == null) in = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));
+public static void waitForUser(String toprint) {
   String r = "";
-  while (!r.equals("y")) {
-    System.out.print("May I go on, sir ? ");
-    r = in.readLine().trim();
+  System.err.println(toprint);
+  try {
+    if (in == null) {
+      in = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));
+    }
+    while (!r.equals("y")) {
+      System.out.print("May I go on, sir ? ");
+      r = in.readLine().trim();
+    }
+  }
+  catch (Exception e) {
+    e.printStackTrace();
   }
 }
 
