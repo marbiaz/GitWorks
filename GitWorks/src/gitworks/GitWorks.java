@@ -29,6 +29,8 @@ import java.util.Map.Entry;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import org.apache.commons.math3.random.MersenneTwister;
+
 
 public class GitWorks {
 
@@ -61,7 +63,7 @@ static ForkList projects;
 static FeatureList features;
 
 static BufferedReader in = null;
-
+static MersenneTwister rand = null;
 
 static void dfsVisit(int depth, ForkEntry f, DfsOperator t, Object o) throws Exception {
   if (t == null) {
@@ -535,6 +537,26 @@ public static <T> T getElement(List list, Comparable target) {
     return (T)list.get(i);
   } else
     return null;
+}
+
+
+/**
+ * It shuffles the first 'size' elements of the provided array.
+ * @param a
+ *          Array to shuffle
+ * @param size
+ *          Number of elements to shuffle, starting from the first.
+ */
+public static <T> void shuffle(T[] a, int size) {
+  T temp;
+  int ran;
+  if (rand == null) rand = new MersenneTwister();
+  for (int i = size - 1; i > 0; i--) {
+    ran = rand.nextInt(i + 1);
+    temp = a[ran];
+    a[ran] = a[i];
+    a[i] = temp;
+  }
 }
 
 
