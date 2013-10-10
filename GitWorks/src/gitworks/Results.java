@@ -13,10 +13,13 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 
-//import org.apache.commons.math3.exception.MathIllegalArgumentException;
-//import org.apache.commons.math3.stat.correlation.SpearmansCorrelation;
-//import org.apache.commons.math3.stat.inference.MannWhitneyUTest;
-//import org.apache.commons.math3.stat.inference.WilcoxonSignedRankTest;
+import org.apache.commons.math3.distribution.NormalDistribution;
+import org.apache.commons.math3.stat.Frequency;
+import org.apache.commons.math3.stat.correlation.SpearmansCorrelation;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import org.apache.commons.math3.stat.inference.MannWhitneyUTest;
+import org.apache.commons.math3.util.FastMath;
+
 import circos.CircosData;
 import circos.DIdeogram;
 import circos.DLink;
@@ -231,5 +234,274 @@ public static void createCircosFiles(FeatureList fl) throws InterruptedException
   }
 }
 
+
+static private boolean haveSameDistribution(double[] val1, double[] val2) {
+  int min = 0, i, t;
+  // GTest test = new GTest();
+  // WilcoxonSignedRankTest test = new WilcoxonSignedRankTest();
+  MannWhitneyUTest test = new MannWhitneyUTest();
+  double[] v2Freq = null;
+  double[] v1Freq = null;
+  Comparable<?> v1[], v2[];
+  java.util.Map.Entry<Comparable<?>, Long> co;
+  Iterator<java.util.Map.Entry<Comparable<?>, Long>> cit;
+  DescriptiveStatistics ds = new DescriptiveStatistics();
+  Frequency v1f = new Frequency(), v2f = new Frequency();
+  for (double d : val1) {
+    ds.addValue(d);
+    if (d >= 2.0) v1f.addValue(d);
+  }
+  v1 = new Comparable[v1f.getUniqueCount()];
+  v1Freq = new double[v1.length];
+  i = 0;
+  cit = v1f.entrySetIterator();
+  while (cit.hasNext()) {
+    co = cit.next();
+    v1[i] = co.getKey();
+    v1Freq[i++] = co.getValue();
+  }
+  if (val2 == null) {
+    v2 = new Comparable<?>[v1.length];
+    v2Freq = new double[v1.length];
+    NormalDistribution gd = new NormalDistribution(ds.getMean(), ds.getStandardDeviation());
+    t = 0;
+    do {
+      t++;
+      val2 = gd.sample(val1.length * 2);
+      if (v2f.getUniqueCount() > 0)
+        System.err.println("Sampled " + v2f.getUniqueCount() + " / " + v1.length);
+      for (double d : val2) // if (d >= 2.0)
+        v2f.addValue(FastMath.round(d));
+    }
+    while (v2f.getUniqueCount() < v1.length);
+    i = 0;
+    cit = v2f.entrySetIterator();
+    while (i < v1.length) {
+      co = cit.next();
+      v2[i] = co.getKey();
+      v2Freq[i++] = t > 1 ? FastMath.max(co.getValue() / t, 1) : co.getValue();
+    }
+  } else {
+    for (double d : val2) // if (d >= 2.0)
+      v2f.addValue(d);
+    v2 = new Comparable[v2f.getUniqueCount()];
+    v2Freq = new double[v2.length];
+    i = 0;
+    cit = v2f.entrySetIterator();
+    while (cit.hasNext()) {
+      co = cit.next();
+      v2[i] = co.getKey();
+      v2Freq[i++] = co.getValue();
+    }
+    if (v1.length != v2.length) {
+      min = FastMath.min(v1.length, v2.length);
+      // shuffle the larger array
+      if (v1.length < v2.length) {
+        GitWorks.shuffle(v2, v2.length);
+        i = 0;
+        for (Comparable<?> c : v2)
+          v2Freq[i++] = v2f.getCount(c);
+      } else {
+        GitWorks.shuffle(v1, v1.length);
+        i = 0;
+        for (Comparable<?> c : v1)
+          v1Freq[i++] = v1f.getCount(c);
+      }
+    }
+  }
+  if (min == 0) {
+    min = v1.length;
+  }
+
+  Number[][][] data = new Number[2][][];
+  data[0] = new Number[2][v1.length];
+  data[1] = new Number[2][v2.length];
+  for (i = 0; i < v1.length; i++) {
+    data[0][0][i] = ((Double)v1[i]).intValue();
+    data[0][1][i] = v1Freq[i];
+  }
+  for (i = 0; i < v2.length; i++) {
+    data[1][0][i] = ((Number)v2[i]).intValue();
+    data[1][1][i] = v2Freq[i];
+  }
+  jfreechart.XYSeriesChart chart = new jfreechart.XYSeriesChart(data, new String[] {
+      "Degree distributions", "data points", "freq"});
+  chart.plotWindow();
+  if (min < 5)
+    System.err.println("Results : WARNING : Test not meaningful with only " + min
+        + " distinct values.");
+  // return !test.gTest(Arrays.copyOfRange(v2Freq, 0, min), Arrays.copyOfRange(v1Freq, 0, min),
+  // 0.05);
+  double p;
+  // p = test.wilcoxonSignedRankTest(Arrays.copyOfRange(v2Freq, 0, min),
+  // Arrays.copyOfRange(v1Freq, 0, min), false);
+  p = test.mannWhitneyUTest(Arrays.copyOfRange(v2Freq, 0, min), Arrays.copyOfRange(v1Freq, 0, min));
+  System.err.println("Results : INFO : p-value = " + p);
+  System.err.flush();
+  return p < 0.05;
+}
+
+
+static private ArrayList<Commit> selectMeaningful(Dag d) {
+  ArrayList<Commit> res = new ArrayList<Commit>(d.nodes.size() + d.leaves.size() + d.roots.size());
+  res.addAll(d.nodes);
+  for (Commit c : d.leaves) {
+    if (c.inDegree > 1) GitWorks.addUnique(res, c);
+  }
+  for (Commit c : d.roots) {
+    if (c.outDegree > 1) GitWorks.addUnique(res, c);
+  }
+  return res;
+}
+
+
+static void computeDistros(ArrayList<MetaGraph> mgs, FeatureList fl) {
+  // compute correlation among couples within the same groups.
+  int i, j, k, min;
+  ArrayList<Commit> coms;
+  double[] deg1, deg2, input[];
+  MetaGraph mg1, mg2;
+  Dag d;
+  ArrayList<MetaGraph> normal = new ArrayList<MetaGraph>();
+  ArrayList<MetaGraph> non_normal = new ArrayList<MetaGraph>();
+  SpearmansCorrelation sc = new SpearmansCorrelation();
+//  NormalDistribution gd = new NormalDistribution(6, 6);
+//  deg1 = gd.sample(1000);
+//  for (i = 0; i < deg1.length; i++)
+//    deg1[i] = FastMath.round(deg1[i]);
+
+  for (MetaGraph mg : mgs) {
+    d = mg.getDensierDag();
+    coms = selectMeaningful(d);
+    deg1 = new double[coms.size()];
+    i = 0;
+    for (Commit c : coms)
+      deg1[i++] = (double)(c.inDegree + c.outDegree);
+    if (haveSameDistribution(deg1, null))
+      normal.add(mg);
+    else
+      non_normal.add(mg);
+  }
+  // GitWorks.printAny(normal, "NORMALS ABOVE\n", System.out);
+  // GitWorks.printAny(non_normal, "NON NORMALS ABOVE\n", System.out);
+
+  for (i = 0; i < non_normal.size() - 1; i++) {
+    mg1 = non_normal.get(i);
+    d = mg1.getDensierDag();
+    System.err.println("Got the dag for " + mg1);
+    System.err.flush();
+    coms = selectMeaningful(d);
+    System.err.println("Got its meaningful commits as well.");
+    System.err.flush();
+    deg1 = new double[coms.size()];
+    k = 0;
+    for (Commit c : coms)
+      deg1[k++] = (double)(c.inDegree + c.outDegree);
+    for (j = i + 1; j < non_normal.size(); j++) {
+      mg2 = non_normal.get(j);
+      d = mg2.getDensierDag();
+      System.err.println("Got the dag for " + mg2);
+      System.err.flush();
+      coms = selectMeaningful(d);
+      System.err.println("Got its meaningful commits as well.");
+      System.err.flush();
+      deg2 = new double[coms.size()];
+      k = 0;
+      for (Commit c : coms)
+        deg2[k++] = (double)(c.inDegree + c.outDegree);
+      if (haveSameDistribution(deg1, deg2))
+        System.err.println("YES!!");
+      else
+        System.err.println("NO!!");
+
+      // System.out.println("Correlation: " + sc.);
+    }
+  }
+}
+
+
+static final int totCommits = 0;
+
+static final int totNodes = 1;
+
+static final int numLeaves = 2;
+
+static final int maxInDegree = 3;
+
+static final int maxOutDegree = 4;
+
+static final int medInDegree = 5;
+
+static final int medOutDegree = 6;
+
+static final int maxDegree = 7;
+
+static final int medDegree = 8;
+
+
+
+static void computeStats(ArrayList<MetaGraph> mgs, FeatureList fl) {// XXX
+  MetaGraph mgNext;
+  Features f, sf;
+  Dag d;
+  ArrayList<Commit> coms, allComs;
+//  DescriptiveStatistics ds = new DescriptiveStatistics();
+  ArrayList<int[][]> counters = new ArrayList<int[][]>(mgs.size());
+  int i, j, n = 10;
+  long curTstamp;
+  int[] counter[], inDegs, outDegs, degs, comIndx;
+  Iterator<Features> fIt = fl.iterator();
+  for (MetaGraph mg : mgs) {
+    counter = new int[9][n];
+    f = fIt.next();
+    allComs = mg.allCommits;
+    for (i = 1; i <= n; i++) {
+//      ds.clear();
+      curTstamp = i * (mg.until - mg.since) / n + mg.since;
+      mgNext = mg.getDensierDag().buildSubGraph(null, new java.util.Date(curTstamp));
+      d = mgNext.getOldestDag();
+      coms = selectMeaningful(d);
+      counter[i][Results.totCommits] = d.getNumCommits(); // == mgNext.allCommits.size() XXX
+      counter[i][Results.totNodes] = coms.size();
+      counter[i][Results.numLeaves] = d.leaves.size();
+      inDegs = new int[coms.size()];// int[d.leaves.size() + d.nodes.size() + d.roots.size()];
+      outDegs = new int[coms.size()];//int[d.leaves.size() + d.nodes.size() + d.roots.size()];
+      degs = new int[coms.size()];// int[d.leaves.size() + d.nodes.size() + d.roots.size()];
+      comIndx = new int[counter[i][Results.totCommits]];
+      j = 0;
+      // for (Commit c : d.roots) {
+      // inDegs[j] = c.inDegree;
+      // outDegs[j] = c.outDegree;
+      // degs[j++] = c.outDegree + c.inDegree;
+      // }
+      // for (Commit c : d.nodes) {
+      // inDegs[j] = c.inDegree;
+      // outDegs[j] = c.outDegree;
+      // degs[j++] = c.outDegree + c.inDegree;
+      // }
+      for (Commit c : coms) {// for (Commit c : d.leaves) {
+        inDegs[j] = c.inDegree;
+        outDegs[j] = c.outDegree;
+        degs[j++] = c.outDegree + c.inDegree;
+      }
+      Arrays.sort(inDegs);
+      Arrays.sort(outDegs);
+      Arrays.sort(degs);
+      counter[i][Results.maxInDegree] = inDegs[inDegs.length - 1];
+      counter[i][Results.medInDegree] = inDegs[inDegs.length / 2];
+      counter[i][Results.maxOutDegree] = outDegs[outDegs.length - 1];
+      counter[i][Results.medOutDegree] = outDegs[outDegs.length / 2];
+      counter[i][Results.maxDegree] = degs[degs.length - 1];
+      counter[i][Results.medDegree] = degs[degs.length / 2];
+      j = 0;
+      for (Commit c : mgNext.allCommits) {
+        comIndx[j++] = Collections.binarySearch(allComs, c);
+      }
+      // TODO use comIndx to pick commit features from f ...
+
+    }
+    counters.add(counter);
+  }
+}
 
 }

@@ -28,7 +28,8 @@ static class NodeDegreeComparator implements java.util.Comparator<Commit> {
 
 
 private int maxID;
-private ArrayList<Commit> allCommits;
+
+ArrayList<Commit> allCommits;
 ArrayList<Dag> dags;
 long since;
 long until;
