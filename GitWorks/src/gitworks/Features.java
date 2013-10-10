@@ -116,8 +116,21 @@ ArrayList<Integer>[][][] cLinkMap;
 ArrayList<Integer>[][][] aLinkMap;
 
 
+void deleteExtra() {
+  commitRank = null;
+  vipCommitForF = null;
+  commitRankRatio = null;
+  authorRankRatio = null;
+  aggregateTimeLines = null;
+  extendedTimeLines = null;
+  cLinkMap = null;
+  aLinkMap = null;
+  System.gc();
+}
+
+
 @SuppressWarnings({"unchecked"})
-private void computeMore() {
+void computeExtra() {
   commitRank = new int[acCommitDiffusion.length];
   vipCommitForF = new ArrayList[allForks.length][CommitRank.values().length];
   commitRankRatio = new double[CommitRank.values().length];
@@ -384,7 +397,6 @@ void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
   }
   name = allForks[rootIndex];
 
-  computeMore();
 }
 
 
@@ -475,8 +487,6 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
   nGenerations = in.readInt();
   maxGenSize = in.readInt();
   nForks = in.readInt();
-
-  computeMore();
 }
 
 
