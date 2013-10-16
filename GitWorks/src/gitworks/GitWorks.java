@@ -357,7 +357,7 @@ public static void main(String[] args) throws Exception {
 
   /*********************** compute results ************************/
 
-  if (!resultsOnly) {
+  if (resultsOnly) {
 //    for (int i = 0, j = 0; i < forkTrees.size() && (ids == null || j < ids.length); i++) {
 //      fe = forkTrees.get(i);
 //      feat = new Features();
