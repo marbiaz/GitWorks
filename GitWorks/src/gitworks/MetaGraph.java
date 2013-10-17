@@ -62,6 +62,8 @@ static MetaGraph createMetaGraph(ArrayList<Commit> allComs, ArrayList<Commit> he
         res.since = tStamp;
     }
   }
+  for (Dag d : res.dags)
+    d.bfVisit();
   return res;
 }
 
