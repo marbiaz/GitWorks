@@ -44,6 +44,69 @@ public MetaGraph(ArrayList<Commit> all) {
 }
 
 
+/**
+ * Create a meta-graph composing the given set of edges in a proper set of dags. No check is
+ * performed on the arguments. Thus, being they not correct and consistent with each other, the
+ * resulting meta-graph will be uncorrect.
+ * 
+ * @param allEdges
+ * @param allComs
+ * @param heads
+ * @return
+ */
+static MetaGraph createMetaGraph(ArrayList<MetaEdge> allEdges, ArrayList<Commit> allComs,
+    ArrayList<Commit> heads) {
+  long tStamp;
+  Dag d, d1;
+  Commit co;
+  MetaEdge me;
+  ArrayList<Commit> cur = new ArrayList<Commit>();
+  MetaGraph res = new MetaGraph(allComs);
+  for (Commit c : heads) {
+    d = new Dag();
+    cur.add(c);
+    d1 = null;
+    do {
+      co = cur.remove(0);
+      for (int e : co.edges) {
+        me = GitWorks.getElement(allEdges, e);
+        if (co.equals(me.first)) continue;
+        if (d1 == null) d1 = res.getDag(e);
+        if (d1 != null && d1 != d) {
+          d1.union(d);
+          d = d1;
+          break;
+        } else {
+          GitWorks.addUnique(cur, me.first);
+          d.addEdge(me);
+          res.maxID = Math.max(res.maxID, me.ID);
+        }
+      }
+      if (co.inDegree > 0 && co.outDegree == 0) {
+        GitWorks.addUnique(d.leaves, co);
+      } else if (co.inDegree == 0) {
+        GitWorks.addUnique(d.roots, co);
+      } else {
+        GitWorks.addUnique(d.nodes, co);
+      }
+      tStamp = co.getCommittingInfo().getWhen().getTime();
+      if (res.until < tStamp) res.until = tStamp;
+      if (res.since > tStamp) res.since = tStamp;
+    } while (!cur.isEmpty());
+    if (d1 == null) res.dags.add(d);
+  }
+  // res.checkup();
+  return res;
+}
+
+
+/**
+ * Create a meta-graph containing the given commits.
+ * 
+ * @param allComs
+ * @param heads
+ * @return
+ */
 static MetaGraph createMetaGraph(ArrayList<Commit> allComs, ArrayList<Commit> heads) {
   MetaGraph res = new MetaGraph(allComs);
   long tStamp;

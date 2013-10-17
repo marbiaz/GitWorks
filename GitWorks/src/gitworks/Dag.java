@@ -264,9 +264,20 @@ void bfPrintout(Commit[] commits) {
 }
 
 
-// It returns a sub-graph taken from this object,
-// with only commits within the given date range (committing date is considered).
-MetaGraph buildSubGraph(Date minAge, Date maxAge) {
+/**
+ * It returns a new metagraph containing only commits within the given date range (committing date
+ * is considered). The result is built from scratch, thus all commits are duplicated and all edges
+ * are created anew (so they do not keep the original ID or layer, etc.). Note: the result may not
+ * contain all original edges within the given interval, since commits that are terminal (first/last
+ * of their edges) in the original dag may not be terminal in the resulting graph, due to the time
+ * range contraint which may exclude some, but not all edges for given terminal commits. To obtain
+ * an exact subset of the original dag, use {@link #buildSubGraph(Date, Date)}.
+ * 
+ * @param minAge
+ * @param maxAge
+ * @return
+ */
+MetaGraph buildNewMetaGraph(Date minAge, Date maxAge) {
   int i;
   Date dFirst, dLast;
   Commit leaf, first, c, co;
@@ -361,8 +372,10 @@ MetaGraph buildSubGraph(Date minAge, Date maxAge) {
     }
     co = new Commit(me.first);
     co = allCommits.get(GitWorks.addUnique(allCommits, co));
-    if (leaf == null) GitWorks.addUnique(heads, co);
-    else GitWorks.addUnique(heads, leaf);
+    if (leaf == null)
+      GitWorks.addUnique(heads, co);
+    else
+      GitWorks.addUnique(heads, leaf);
   }
 
   for (MetaEdge me : oddCut) {
@@ -388,8 +401,206 @@ MetaGraph buildSubGraph(Date minAge, Date maxAge) {
   allCommits.trimToSize();
   if (allCommits.size() > 0 && heads.size() == 0)
     System.err.println("Dag : ERROR : buildSubMetaGraph inconsistency.");
-  return allCommits.size() == 0 ? null :
-    MetaGraph.createMetaGraph(allCommits, heads);
+  return allCommits.size() == 0 ? null : MetaGraph.createMetaGraph(allCommits, heads);
+}
+
+
+/**
+ * It returns a sub-graph taken from this object, with only edges within the given date range
+ * (committing date is considered). All eligible edges are preserved and the memory footprint is
+ * minimized by referencing the original internal commits. New edges take the ID and the layer of
+ * the original ones which they derive from. The result is actually the portion of the original dag
+ * within the given time interval. Note: the result is NOT equal to a metagraph built from scratch
+ * with all commits in the given time range (see {@link #buildNewMetaGraph(Date, Date)}).
+ */
+MetaGraph buildSubGraph(Date minAge, Date maxAge) {
+  int i;
+  MetaEdge newme;
+  Date dFirst, dLast;
+  Commit leaf, first, c, co;
+  boolean firstIn, lastIn;
+  ArrayList<Commit> heads = new ArrayList<Commit>(leaves.size() * 2);
+  ArrayList<Commit> allCommits = new ArrayList<Commit>(getNumCommits());
+  ArrayList<MetaEdge> topCut = new ArrayList<MetaEdge>();
+  ArrayList<MetaEdge> middleCut = new ArrayList<MetaEdge>();
+  ArrayList<MetaEdge> bottomCut = new ArrayList<MetaEdge>();
+  ArrayList<MetaEdge> oddCut = new ArrayList<MetaEdge>();
+  ArrayList<MetaEdge> edges = new ArrayList<MetaEdge>(metaEdges.size());
+  if (minAge == null)
+    minAge = new Date(0L);
+  if (maxAge == null)
+    maxAge = new Date(Long.MAX_VALUE);
+
+  if (metaEdges.size() == 0) {
+    if (roots.size() > 1) {
+      System.err.println("Dag : ERROR : dag with more than one disconnected component (roots).");
+      System.exit(2);
+    } else if (roots.size() > 0) {
+      c = roots.get(0);
+      dFirst = c.getCommittingInfo().getWhen();
+      if (dFirst.compareTo(maxAge) <= 0 && dFirst.compareTo(minAge) >= 0) {
+        GitWorks.addUnique(allCommits, c);
+      }
+    }
+  }
+  for (MetaEdge me : metaEdges) {
+    dFirst = me.first.getCommittingInfo().getWhen();
+    dLast = me.last.getCommittingInfo().getWhen();
+    firstIn = dFirst.compareTo(maxAge) <= 0 && dFirst.compareTo(minAge) >= 0;
+    lastIn = dLast.compareTo(maxAge) <= 0 && dLast.compareTo(minAge) >= 0;
+    if (firstIn && lastIn) {
+      middleCut.add(me);
+    } else if (firstIn && !lastIn) {
+      topCut.add(me);
+    } else if (!firstIn && lastIn) {
+      bottomCut.add(me);
+    } else if (dFirst.compareTo(minAge) < 0 && dLast.compareTo(maxAge) > 0) {
+      oddCut.add(me);
+    }
+  }
+
+  for (MetaEdge me : middleCut) {
+    newme = new MetaEdge(me);
+    co = new Commit(me.first);
+    co = allCommits.get(GitWorks.addUnique(allCommits, co));
+    newme.first = co;
+    co.outDegree++;
+    GitWorks.addUnique(co.edges, newme.ID);
+    co = new Commit(me.last);
+    co = allCommits.get(GitWorks.addUnique(allCommits, co));
+    newme.last = co;
+    co.inDegree++;
+    GitWorks.addUnique(co.edges, newme.ID);
+    if (Collections.binarySearch(leaves, me.last) >= 0)
+      GitWorks.addUnique(heads, co);
+    if (me.getWeight() > 0) {
+      for (Commit cc : me.getInternals()) {
+        GitWorks.addUnique(allCommits, cc);
+        newme.addInternal(cc);
+      }
+    }
+    GitWorks.addUnique(edges, newme);
+  }
+
+  for (MetaEdge me : bottomCut) {
+    first = null;
+    newme = new MetaEdge(me);
+    ArrayList<Commit> coms;
+    if (me.getWeight() > 0) {
+      coms = me.getInternals();
+      for (i = coms.size() - 1; i >= 0 && first == null; i--) {
+        c = coms.get(i);
+        if (c.getCommittingInfo().getWhen().compareTo(minAge) >= 0) {
+          first = new Commit(c);
+          newme.first = first;
+          first.outDegree++;
+          GitWorks.addUnique(first.edges, newme.ID);
+          GitWorks.addUnique(allCommits, first);
+        }
+      }
+      for (int j = 0; j < i; j++) {
+        c = coms.get(j);
+        newme.addInternal(c);
+        GitWorks.addUnique(allCommits, c);
+      }
+    }
+    co = new Commit(me.last);
+    co = allCommits.get(GitWorks.addUnique(allCommits, co));
+    newme.last = co;
+    if (first != null) {
+      co.inDegree++;
+      GitWorks.addUnique(edges, newme);
+      GitWorks.addUnique(co.edges, newme.ID);
+    }
+    if (Collections.binarySearch(leaves, me.last) >= 0)
+      GitWorks.addUnique(heads, co);
+  }
+
+  for (MetaEdge me : topCut) {
+    leaf = null;
+    newme = new MetaEdge(me);
+    if (me.getWeight() > 0) {
+      for (Commit cc : me.getInternals()) {
+        dLast = cc.getCommittingInfo().getWhen();
+        if (leaf == null && dLast.compareTo(maxAge) <= 0) {
+          leaf = new Commit(cc);
+          newme.last = leaf;
+          leaf.inDegree++;
+          GitWorks.addUnique(leaf.edges, newme.ID);
+          GitWorks.addUnique(allCommits, leaf);
+        } else if (leaf != null) {
+          newme.addInternal(cc);
+          GitWorks.addUnique(allCommits, cc);
+        }
+      }
+    }
+    co = new Commit(me.first);
+    co = allCommits.get(GitWorks.addUnique(allCommits, co));
+    newme.first = co;
+    if (leaf != null) {
+      co.outDegree++;
+      GitWorks.addUnique(edges, newme);
+      GitWorks.addUnique(co.edges, newme.ID);
+    }
+    if (leaf == null) GitWorks.addUnique(heads, co);
+    else GitWorks.addUnique(heads, leaf);
+  }
+
+  for (MetaEdge me : oddCut) {
+    leaf = null;
+    co = null;
+    newme = new MetaEdge(me);
+    if (me.getWeight() > 0) {
+      for (Commit cc : me.getInternals()) {
+        dFirst = cc.getCommittingInfo().getWhen();
+        firstIn = dFirst.compareTo(maxAge) <= 0 && dFirst.compareTo(minAge) >= 0;
+        if (firstIn) {
+          if (leaf == null) {
+            leaf = new Commit(cc);
+            newme.last = leaf;
+            GitWorks.addUnique(allCommits, leaf);
+          } else {
+            co = new Commit(cc);
+            GitWorks.addUnique(allCommits, cc);
+            newme.addInternal(cc);
+          }
+        }
+      }
+      if (co != null) {
+        allCommits.remove(Collections.binarySearch(allCommits, co)); // remove equal cc
+        GitWorks.addUnique(allCommits, co);
+        newme.getInternals().remove(newme.getInternals().size() - 1); // remove equal cc
+        newme.first = co;
+      }
+    }
+    if (leaf != null) GitWorks.addUnique(heads, leaf);
+    if (newme.first != null && newme.last != null) {
+      newme.first.outDegree++;
+      newme.last.inDegree++;
+      GitWorks.addUnique(newme.first.edges, newme.ID);
+      GitWorks.addUnique(newme.last.edges, newme.ID);
+      GitWorks.addUnique(edges, newme);
+    }
+  }
+
+  allCommits.trimToSize();
+  edges.trimToSize();
+  if (allCommits.size() > 0 && heads.size() == 0)
+    System.err.println("Dag : ERROR : buildSubMetaGraph inconsistency.");
+  if (allCommits.size() == 0) return null;
+  if (edges.size() == 0) {
+    MetaGraph res = new MetaGraph(allCommits);
+    for (Commit cc : allCommits) {
+      dFirst = cc.getCommittingInfo().getWhen();
+      res.since = Math.min(dFirst.getTime(), res.since);
+      res.until = Math.max(dFirst.getTime(), res.until);
+      Dag d = new Dag();
+      d.roots.add(cc);
+      res.dags.add(d);
+    }
+    return res;
+  }
+  return MetaGraph.createMetaGraph(edges, allCommits, heads);
 }
 
 

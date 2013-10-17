@@ -25,6 +25,15 @@ public MetaEdge(int id) {
 }
 
 
+MetaEdge(MetaEdge me) {
+  ID = me.ID;
+  layer = me.layer;
+  first = null;
+  last = null;
+  internals = null;
+}
+
+
 void addInternal(Commit c) {
   if (internals == null)
     internals = new ArrayList<Commit>();
