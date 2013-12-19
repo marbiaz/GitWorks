@@ -61,9 +61,9 @@ static String pwd; // set according to the current pwd
 static String[] ids = null; // list of root repos to be considered to build the fork trees and perform analysis.
 static ForkList projects;
 static FeatureList features;
-
 static BufferedReader in = null;
-static MersenneTwister rand = null;
+static MersenneTwister rand = new MersenneTwister(123456789);
+
 
 static void dfsVisit(int depth, ForkEntry f, DfsOperator t, Object o) throws Exception {
   if (t == null) {
@@ -250,6 +250,7 @@ public static void main(String[] args) throws Exception {
   Features feat;
   GitMiner gitMiner;
   ArrayList<MetaGraph> mgs = new ArrayList<MetaGraph>();
+  ArrayList<Features> feats = new ArrayList<Features>();
 
   if (args.length < 4) {
     System.err
@@ -371,6 +372,11 @@ public static void main(String[] args) throws Exception {
     FeatureList feats = null;
     if (ids != null) feats = new FeatureList(ids == null ? forkTrees.size() : ids.length);
     Features ft;
+    Commit co;
+    MetaGraph mg;
+    int n, count = 0;
+    ArrayList<Commit> heads = new ArrayList<Commit>();
+    ArrayList<Commit> allComs = new ArrayList<Commit>();
     for (int i = 0, j = 0; i < forkTrees.size() && (ids == null || j < ids.length); i++) {
       if (ids != null)
         fe = GitWorks.getElement(projects, ids[j++]);
@@ -382,20 +388,28 @@ public static void main(String[] args) throws Exception {
       gitMiner = new GitMiner();
       importData(gitMiner, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".gm");
       Runtime.getRuntime().exec(pwd + "/backupDumps.sh " + getSafeName(fe)).waitFor();
-      mgs.add(gitMiner.metaGraph);
+
+      heads.clear();
+      allComs.clear();
+      // System.err.print("Creating mainline metagraph ...");
+      // System.err.flush();
+      for (Commit c : gitMiner.comInF.get(ft.allForks[ft.rootIndex])) {
+        co = new Commit(c);
+        GitWorks.addUnique(allComs, co);
+        if (co.isHead()) heads.add(co);
+      }
+      mg = MetaGraph.createMetaGraph(allComs, heads);
+        mgs.add(mg);
       gitMiner = null;
       ft = null;
       System.gc();
     }
-    if (ids != null) {
-      features = null;
-      System.gc();
-      features = feats;
-    }
+    features = null;
+    // System.gc();
   }
   // Results.createDataFiles(features);
   // Results.createCircosFiles(features); // XXX
-  Results.computeStats(mgs, features);
+  Results.metagraphStats(mgs, feats);
 
   System.err.println("\n# Computation ended at " + (new java.util.Date()).toString());
   System.exit(0);
@@ -550,7 +564,6 @@ public static <T> T getElement(List list, Comparable target) {
 public static <T> void shuffle(T[] a, int size) {
   T temp;
   int ran;
-  if (rand == null) rand = new MersenneTwister();
   for (int i = size - 1; i > 0; i--) {
     ran = rand.nextInt(i + 1);
     temp = a[ran];
@@ -583,7 +596,7 @@ static public void printAny(Object data, String trailer, PrintStream out) {
     while (ecit.hasNext()) { // && i++ < 3
       ec = (Map.Entry)ecit.next();
       printAny(ec.getKey(), " :\n", out);
-      printAny(ec.getValue(), "\n------------------------------", out);
+      printAny(ec.getValue(), "\n------------------------------\n", out);
     }
   } else if (data instanceof List) {
     List<Object> a = (List<Object>)data;
