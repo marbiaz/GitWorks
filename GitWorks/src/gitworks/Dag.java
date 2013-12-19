@@ -97,6 +97,9 @@ private ArrayList<MetaEdge> metaEdges; // graph's edges
 private int[] layerSizes;
 private int diameter;
 private int maxWidth;
+ArrayList<Commit> mergeCommits;
+ArrayList<Commit> branchCommits;
+ArrayList<Commit> coolCommits;
 
 
 public Dag() {
@@ -104,6 +107,9 @@ public Dag() {
   leaves = new ArrayList<Commit>();
   nodes = new ArrayList<Commit>();
   roots = new ArrayList<Commit>();
+  mergeCommits = null;
+  branchCommits = null;
+  coolCommits = null;
   layerSizes = null;
   diameter = 0;
   maxWidth = 0;
@@ -223,6 +229,38 @@ int[] getLayerSizes() {
   int[] res = new int[layerSizes.length];
   System.arraycopy(layerSizes, 0, res, 0, res.length);
   return res;
+}
+
+
+int[] getSummaryStats() {
+  boolean merge, branch;
+  if (mergeCommits == null) {
+    mergeCommits = new ArrayList<Commit>();
+    branchCommits = new ArrayList<Commit>();
+    coolCommits = new ArrayList<Commit>();
+    ArrayList<Commit> allIn;
+    allIn = new ArrayList<Commit>(leaves.size() + roots.size() + nodes.size());
+    allIn.addAll(leaves);
+    allIn.addAll(nodes);
+    allIn.addAll(roots);
+    for (Commit c : allIn) {
+      if (getInEdges(c).size() > 1)
+        merge = true;
+      else
+        merge = false;
+      if (getOutEdges(c).size() > 1)
+        branch = true;
+      else
+        branch = false;
+      if (merge && branch)
+        coolCommits.add(c);
+      else if (merge)
+        mergeCommits.add(c);
+      else if (branch) branchCommits.add(c);
+    }
+  }
+  return new int[] {roots.size(), nodes.size(), leaves.size(), getNumMetaEdges(),
+      branchCommits.size(), mergeCommits.size(), coolCommits.size()};
 }
 
 

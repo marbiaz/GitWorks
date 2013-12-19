@@ -86,6 +86,20 @@ MetaEdge getEdge(int id) {
 }
 
 
+int[] getSummaryStats() {
+  int[] dRes, res = new int[7];
+  Arrays.fill(res, 0);
+  int i;
+  for (Dag d : dags) {
+    dRes = d.getSummaryStats();
+    i = 0;
+    for (int r : dRes)
+      res[i++] += r;
+  }
+  return res;
+}
+
+
 int[] getLayerSizes() {
   if (layerSizes != null) return layerSizes;
   int[][] m = new int[dags.size()][];
