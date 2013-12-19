@@ -233,7 +233,7 @@ public int getRootIndex() {
 }
 
 
-public int[] getCommits(int fIndex) {
+public int[] getForkCommits(int fIndex) {
   return forkCommit[fIndex];
 }
 
