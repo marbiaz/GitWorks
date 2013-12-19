@@ -20,6 +20,24 @@ public int compareTo(IndexedSortable is) {
 }
 
 
+static public int[] sortedPermutation(double[] original, boolean descending) {
+  Double copy[] = new Double[original.length];
+  int i = 0;
+  for (double d : original)
+    copy[i++] = d;
+  return sortedPermutation(copy, descending);
+}
+
+
+static public int[] sortedPermutation(int[] original, boolean descending) {
+  Integer copy[] = new Integer[original.length];
+  int i = 0;
+  for (int d : original)
+    copy[i++] = d;
+  return sortedPermutation(copy, descending);
+}
+
+
 static public int[] sortedPermutation(@SuppressWarnings("rawtypes") Comparable[] original, boolean descending) {
   int[] res = new int[original.length];
   IndexedSortable[] data = new IndexedSortable[original.length];

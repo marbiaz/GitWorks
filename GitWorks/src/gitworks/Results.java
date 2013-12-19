@@ -88,12 +88,10 @@ private static CircosData getIAuthorsInMainline(Features f, int min) {
     cur = sorting[i];
     val = aFreq.remove(iAuthors[iCommits[cur]]);// =
                                                 // f.authorsImpactPerF[iAuthors[iCommits[cur]]][f.rootIndex][1]
-                                                // XXX
     if (val == null) continue; // || val <= min XXX
     di = new DIdeogram(f.allAuthors[iAuthors[iCommits[cur]]], val, 0);
     res.addToSetB(di);
-    res.getLinks().add(new DLink(main, di, di.getValue())); // adding like this keeps the order in
-                                                            // res.links
+    res.getLinks().add(new DLink(main, di, di.getValue())); // keep the order in res.links
     // if (uCommits[cur] > 0) di.setScatter(uCommits[cur]); //res.addScatter(di, uCommits[cur]);
   }
 
@@ -160,8 +158,7 @@ private static CircosData getICommitsToMainline(Features f, int min) {
     if (iCommits[cur] <= min || cur == f.rootIndex) continue;
     di = new DIdeogram(f.allForks[cur], iCommits[cur], iAuthors[cur].size());
     res.addToSetB(di);
-    res.getLinks().add(new DLink(main, di, di.getValue())); // adding like this keeps the order in
-                                                            // res.links
+    res.getLinks().add(new DLink(main, di, di.getValue())); // keep the order in res.links
     if (uCommits[cur] > 0) di.setScatter(uCommits[cur]); // res.addScatter(di, uCommits[cur]);
   }
   return res;
@@ -251,6 +248,7 @@ static private boolean haveSameDistribution(double[] val1, double[] val2) {
     ds.addValue(d);
     if (d >= 2.0) v1f.addValue(d);
   }
+  System.err.println("unique count = " + v1f.getUniqueCount()); // XXX
   v1 = new Comparable[v1f.getUniqueCount()];
   v1Freq = new double[v1.length];
   i = 0;
@@ -270,7 +268,8 @@ static private boolean haveSameDistribution(double[] val1, double[] val2) {
       val2 = gd.sample(val1.length * 2);
       if (v2f.getUniqueCount() > 0)
         System.err.println("Sampled " + v2f.getUniqueCount() + " / " + v1.length);
-      for (double d : val2) // if (d >= 2.0)
+      for (double d : val2)
+        // if (d >= 2.0)
         v2f.addValue(FastMath.round(d));
     }
     while (v2f.getUniqueCount() < v1.length);
@@ -282,7 +281,8 @@ static private boolean haveSameDistribution(double[] val1, double[] val2) {
       v2Freq[i++] = t > 1 ? FastMath.max(co.getValue() / t, 1) : co.getValue();
     }
   } else {
-    for (double d : val2) // if (d >= 2.0)
+    for (double d : val2)
+      // if (d >= 2.0)
       v2f.addValue(d);
     v2 = new Comparable[v2f.getUniqueCount()];
     v2Freq = new double[v2.length];
@@ -357,18 +357,17 @@ static private ArrayList<Commit> selectMeaningful(Dag d) {
 
 static void computeDistros(ArrayList<MetaGraph> mgs, FeatureList fl) {
   // compute correlation among couples within the same groups.
-  int i, j, k, min;
+  int i, j, k;
   ArrayList<Commit> coms;
-  double[] deg1, deg2, input[];
+  double[] deg1, deg2;
   MetaGraph mg1, mg2;
   Dag d;
   ArrayList<MetaGraph> normal = new ArrayList<MetaGraph>();
   ArrayList<MetaGraph> non_normal = new ArrayList<MetaGraph>();
-  SpearmansCorrelation sc = new SpearmansCorrelation();
-//  NormalDistribution gd = new NormalDistribution(6, 6);
-//  deg1 = gd.sample(1000);
-//  for (i = 0; i < deg1.length; i++)
-//    deg1[i] = FastMath.round(deg1[i]);
+  // NormalDistribution gd = new NormalDistribution(6, 6);
+  // deg1 = gd.sample(1000);
+  // for (i = 0; i < deg1.length; i++)
+  // deg1[i] = FastMath.round(deg1[i]);
 
   for (MetaGraph mg : mgs) {
     d = mg.getDensierDag();
@@ -413,95 +412,110 @@ static void computeDistros(ArrayList<MetaGraph> mgs, FeatureList fl) {
         System.err.println("YES!!");
       else
         System.err.println("NO!!");
-
-      // System.out.println("Correlation: " + sc.);
     }
   }
 }
 
+static final String[] resultNames = {"totCommits", "totNodes", "numLeaves", "maxInDegree",
+    "maxOutDegree", "medInDegree", "medOutDegree", "maxDegree", "medDegree", "maxDiff", "medDiff"};
 
 static final int totCommits = 0;
-
 static final int totNodes = 1;
-
 static final int numLeaves = 2;
-
 static final int maxInDegree = 3;
-
 static final int maxOutDegree = 4;
-
 static final int medInDegree = 5;
-
 static final int medOutDegree = 6;
-
 static final int maxDegree = 7;
-
 static final int medDegree = 8;
+static final int maxDiff = 9;
+static final int medDiff = 10;
+static final int ages = 5;
 
 
 
-static void computeStats(ArrayList<MetaGraph> mgs, FeatureList fl) {// XXX
+static void computeStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
   MetaGraph mgNext;
-  Features f, sf;
+  Features f;
   Dag d;
+  XYSeriesChart chart;
   ArrayList<Commit> coms, allComs;
-//  DescriptiveStatistics ds = new DescriptiveStatistics();
-  ArrayList<int[][]> counters = new ArrayList<int[][]>(mgs.size());
-  int i, j, n = 10;
-  long curTstamp;
-  int[] counter[], inDegs, outDegs, degs, comIndx;
+  // DescriptiveStatistics ds = new DescriptiveStatistics();
+  ArrayList<Number[][]> counters = new ArrayList<Number[][]>(mgs.size());
+  int i, j;
+  long curTstamp, prevTstamp;
+  double[] comDiff;
+  int[] inDegs, outDegs, degs, comIndx, comRank, comAuthor;
+  Number[][] counter;
   Iterator<Features> fIt = fl.iterator();
   for (MetaGraph mg : mgs) {
-    counter = new int[9][n];
+    counter = new Number[Results.resultNames.length][Results.ages];
     f = fIt.next();
+    f.computeExtra();
     allComs = mg.allCommits;
-    for (i = 1; i <= n; i++) {
-//      ds.clear();
-      curTstamp = i * (mg.until - mg.since) / n + mg.since;
-      mgNext = mg.getDensierDag().buildSubGraph(null, new java.util.Date(curTstamp));
-      d = mgNext.getOldestDag();
+    curTstamp = prevTstamp = mg.since - 1;
+    for (i = 0; i < Results.ages; i++) {
+      // ds.clear();
+      prevTstamp = curTstamp + 1; // XXX to get subsequent disjoint
+                                  // (VS incrementally inclusive) subgraphs
+      curTstamp = i * (mg.until - mg.since) / Results.ages + mg.since;
+      mgNext = mg.getDensierDag().buildSubGraph(new java.util.Date(prevTstamp),
+          new java.util.Date(curTstamp));
+      d = mgNext.getOldestDag(); // XXX
+      d.exportToGexf(f.name + "." + (i + 1) + "-" + Results.ages);
       coms = selectMeaningful(d);
-      counter[i][Results.totCommits] = d.getNumCommits(); // == mgNext.allCommits.size() XXX
-      counter[i][Results.totNodes] = coms.size();
-      counter[i][Results.numLeaves] = d.leaves.size();
-      inDegs = new int[coms.size()];// int[d.leaves.size() + d.nodes.size() + d.roots.size()];
-      outDegs = new int[coms.size()];//int[d.leaves.size() + d.nodes.size() + d.roots.size()];
-      degs = new int[coms.size()];// int[d.leaves.size() + d.nodes.size() + d.roots.size()];
-      comIndx = new int[counter[i][Results.totCommits]];
+      if (coms.isEmpty()) {
+        for (Number[] n : counter)
+          n[i] = 0;
+        System.err.println("Skipping uninteresting dag (" + f.name + "." + (i + 1) + "-"
+            + Results.ages + ").");
+        continue;
+      }
+      counter[Results.totCommits][i] = ((double)d.getNumCommits()) / mg.allCommits.size();
+      counter[Results.totNodes][i] = ((double)coms.size())
+          / (d.leaves.size() + d.nodes.size() + d.roots.size());
+      counter[Results.numLeaves][i] = ((double)d.leaves.size())
+          / (d.leaves.size() + d.nodes.size() + d.roots.size());
+      inDegs = new int[coms.size()];
+      outDegs = new int[coms.size()];
+      degs = new int[coms.size()];
+      comIndx = new int[coms.size()];
+      comDiff = new double[coms.size()];
+      comRank = new int[coms.size()];
+      comAuthor = new int[coms.size()];
       j = 0;
-      // for (Commit c : d.roots) {
-      // inDegs[j] = c.inDegree;
-      // outDegs[j] = c.outDegree;
-      // degs[j++] = c.outDegree + c.inDegree;
-      // }
-      // for (Commit c : d.nodes) {
-      // inDegs[j] = c.inDegree;
-      // outDegs[j] = c.outDegree;
-      // degs[j++] = c.outDegree + c.inDegree;
-      // }
-      for (Commit c : coms) {// for (Commit c : d.leaves) {
+      for (Commit c : coms) {
         inDegs[j] = c.inDegree;
         outDegs[j] = c.outDegree;
-        degs[j++] = c.outDegree + c.inDegree;
+        degs[j] = c.outDegree + c.inDegree;
+        comIndx[j] = Collections.binarySearch(allComs, c);
+        comDiff[j] = ((double)f.acCommitDiffusion[comIndx[j]]) / f.commitDiffusion[comIndx[j]];
+        comRank[j] = f.commitRank[comIndx[j]]; // TODO
+        comAuthor[j] = f.commitAuthor[comIndx[j]]; // TODO
+        j++;
       }
       Arrays.sort(inDegs);
       Arrays.sort(outDegs);
       Arrays.sort(degs);
-      counter[i][Results.maxInDegree] = inDegs[inDegs.length - 1];
-      counter[i][Results.medInDegree] = inDegs[inDegs.length / 2];
-      counter[i][Results.maxOutDegree] = outDegs[outDegs.length - 1];
-      counter[i][Results.medOutDegree] = outDegs[outDegs.length / 2];
-      counter[i][Results.maxDegree] = degs[degs.length - 1];
-      counter[i][Results.medDegree] = degs[degs.length / 2];
-      j = 0;
-      for (Commit c : mgNext.allCommits) {
-        comIndx[j++] = Collections.binarySearch(allComs, c);
-      }
-      // TODO use comIndx to pick commit features from f ...
-
+      Arrays.sort(comDiff);
+      counter[Results.maxInDegree][i] = inDegs[inDegs.length - 1];
+      counter[Results.medInDegree][i] = inDegs[inDegs.length / 2];
+      counter[Results.maxOutDegree][i] = outDegs[outDegs.length - 1];
+      counter[Results.medOutDegree][i] = outDegs[outDegs.length / 2];
+      counter[Results.maxDegree][i] = degs[degs.length - 1];
+      counter[Results.medDegree][i] = degs[degs.length / 2];
+      counter[Results.maxDiff][i] = comDiff[comDiff.length - 1];
+      counter[Results.medDiff][i] = comDiff[comDiff.length / 2];
     }
     counters.add(counter);
+    f.deleteExtra();
+    chart = new XYSeriesChart(new String[] {f.name, "Ages", "Values"});
+    for (i = 0; i < Results.resultNames.length; i++) {
+      chart.addDataset(resultNames[i], null, counter[i]);
+    }
+    chart.plotWindow();
   }
+
 }
 
 }

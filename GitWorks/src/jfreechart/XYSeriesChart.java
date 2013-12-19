@@ -24,34 +24,91 @@ public class XYSeriesChart extends JFrame {
 
 XYSeriesCollection series;
 JFreeChart XYLineChart;
+double minx;
+double maxx;
+
+
+public XYSeriesChart(String[] labels) {
+  init(labels);
+}
+
 
 public XYSeriesChart(Number[][][] data, String[] labels) {
-  series = new XYSeriesCollection();
-  XYSeries dataset;
-  int j, i = 0;
-  double minx = Double.MAX_VALUE, maxx = Double.MIN_VALUE;
+  init(labels);
+  int i = 0;
   for (Number[][] nums : data) {
-    dataset = new XYSeries("Dataset #" + (++i));
-    for (j = 0; j < nums[0].length; j++) {
-      dataset.add(nums[0][j], nums[1][j]);
-      minx = Math.min(minx, nums[0][j].doubleValue());
-      maxx = Math.max(maxx, nums[0][j].doubleValue());
-      //System.out.println(nums[0][j] + " " + nums[1][j]);
-    }//System.out.println();System.out.println();
-    series.addSeries(dataset);
+    addDataset("Dataset #" + (++i), nums[0], nums[1]);
   }
-  XYLineChart = ChartFactory.createXYLineChart(labels[0], labels[1],
-      labels[2], series, PlotOrientation.VERTICAL, true, true, false);
-//  // Control Number Range for X Axis
+}
+
+
+private void init(String[] labels) {
+  minx = Double.MAX_VALUE;
+  maxx = Double.MIN_VALUE;
+  series = new XYSeriesCollection();
+  XYLineChart = ChartFactory.createXYLineChart(labels[0], labels[1], labels[2], series,
+      PlotOrientation.VERTICAL, true, true, false);
+}
+
+
+public void addDataset(String name, double[] xaxis, double[] yaxis) {
+  Number[] x = new Number[xaxis.length];
+  Number[] y = new Number[yaxis.length];
+  int i = 0;
+  for (double d : xaxis)
+    x[i++] = d;
+  i = 0;
+  for (double d : yaxis)
+    y[i++] = d;
+  addDataset(name, x, y);
+}
+
+
+public void addDataset(String name, int[] xaxis, int[] yaxis) {
+  Number[] x = new Number[xaxis.length];
+  Number[] y = new Number[yaxis.length];
+  int i = 0;
+  for (int d : xaxis)
+    x[i++] = d;
+  i = 0;
+  for (int d : yaxis)
+    y[i++] = d;
+  addDataset(name, x, y);
+}
+
+
+public void addDataset(String name, Number[] xaxis, Number[] yaxis) {
+  XYSeries dataset = new XYSeries(name);
+  if (xaxis == null) {
+    xaxis = new Integer[yaxis.length];
+    for (int i = 0; i < xaxis.length; i++)
+      xaxis[i] = i + 1;
+  }
+  if (yaxis == null) {
+    yaxis = new Integer[xaxis.length];
+    for (int i = 0; i < yaxis.length; i++)
+      yaxis[i] = i + 1;
+  }
+  for (int j = 0; j < xaxis.length; j++) {
+    dataset.add(xaxis[j], yaxis[j]);
+    minx = Math.min(minx, xaxis[j].doubleValue());
+    maxx = Math.max(maxx, xaxis[j].doubleValue());
+    // System.out.println(xaxis[j] + " " + yaxis[j]);
+  }// System.out.println();System.out.println();
+  series.addSeries(dataset);
+}
+
+
+private void setXRange() {
   XYPlot xyPlot = XYLineChart.getXYPlot();
-  NumberAxis domainAxis = (NumberAxis) xyPlot.getDomainAxis();
-  domainAxis.setRange(minx, maxx);
+  NumberAxis domainAxis = (NumberAxis)xyPlot.getDomainAxis();
+  domainAxis.setRange(minx - 1, maxx + 1);
   domainAxis.setTickUnit(new NumberTickUnit(1));
 }
 
 
 public void plotFile() {
-
+  setXRange();
   try {
     int width = 640;
     int height = 480;
@@ -64,7 +121,7 @@ public void plotFile() {
 
 
 public void plotWindow() {
-
+  setXRange();
   try {
     setTitle(XYLineChart.getTitle().getText());
     setSize(640, 480);
