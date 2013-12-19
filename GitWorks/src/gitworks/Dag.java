@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 
 public class Dag {
@@ -185,6 +186,28 @@ int getDiameter() {
 int getMaxWidth() {
   if (maxWidth == 0) computeLayerSizes();
   return maxWidth;
+}
+
+
+void getInternalCommitStats(DescriptiveStatistics ds) {
+  for (MetaEdge me : metaEdges)
+    ds.addValue((double)me.getWeight());
+}
+
+
+void getMetaEdgeAuthorStats(DescriptiveStatistics ds) {
+  for (MetaEdge me : metaEdges)
+    ds.addValue((double)me.getNumAuthors());
+}
+
+
+DescriptiveStatistics getLayerStats() {
+  DescriptiveStatistics ds = new DescriptiveStatistics();
+  if (layerSizes == null) computeLayerSizes();
+  if (layerSizes != null)
+    for (int s : layerSizes)
+      ds.addValue((double)s);
+  return ds;
 }
 
 

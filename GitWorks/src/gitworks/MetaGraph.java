@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.eclipse.jgit.lib.ObjectId;
 
 
@@ -97,6 +98,32 @@ int[] getSummaryStats() {
       res[i++] += r;
   }
   return res;
+}
+
+
+DescriptiveStatistics getInternalCommitStats() {
+  DescriptiveStatistics ds = new DescriptiveStatistics();
+  for (Dag d : dags)
+    d.getInternalCommitStats(ds);
+  return ds;
+}
+
+
+DescriptiveStatistics getMetaEdgeAuthorStats() {
+  DescriptiveStatistics ds = new DescriptiveStatistics();
+  for (Dag d : dags)
+    d.getMetaEdgeAuthorStats(ds);
+  return ds;
+}
+
+
+DescriptiveStatistics getLayerStats() {
+  DescriptiveStatistics ds = new DescriptiveStatistics();
+  if (layerSizes == null) getLayerSizes();
+  if (layerSizes != null)
+    for (int s : getLayerSizes())
+      ds.addValue((double)s);
+  return ds;
 }
 
 
