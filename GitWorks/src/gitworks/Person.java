@@ -54,7 +54,7 @@ public int compareTo(Object o) {
   } else if (o instanceof PersonIdent) {
     oID = ((PersonIdent)o).getEmailAddress();
   }
-  return email.compareTo(oID);
+  return getUniqueID().compareTo(oID);
 }
 
 
