@@ -6,7 +6,9 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Iterator;
 
 import org.eclipse.jgit.lib.ObjectId;
@@ -33,6 +35,9 @@ ArrayList<Commit> allCommits;
 ArrayList<Dag> dags;
 long since;
 long until;
+private int diameter; // the number of metaedges in the longest path from the oldest root
+private int maxWidth; // the largest number of metaedges belonging to the same layer
+private int[] layerSizes; // how many metaedges per layer
 
 
 private MetaGraph() {
@@ -53,6 +58,24 @@ public MetaGraph(ArrayList<Commit> all) {
   dags = new ArrayList<Dag>();
   since = Long.MAX_VALUE;
   until = 0L;
+  diameter = 0;
+  maxWidth = 0;
+  layerSizes = null;
+}
+
+
+int getDiameter() {
+  if (diameter == 0) getLayerSizes();
+  return diameter;
+}
+
+
+int getMaxWidth() {
+  if (maxWidth == 0) getLayerSizes();
+  return maxWidth;
+}
+
+
 MetaEdge getEdge(int id) {
   MetaEdge res = null;
   for (Dag d : dags) {
@@ -63,6 +86,30 @@ MetaEdge getEdge(int id) {
 }
 
 
+int[] getLayerSizes() {
+  if (layerSizes != null) return layerSizes;
+  int[][] m = new int[dags.size()][];
+  int i = 0;
+  diameter = 0;
+  maxWidth = 0;
+  for (Dag d : dags) {
+    m[i] = d.getLayerSizes();
+    diameter = Math.max(diameter, d.getDiameter());
+    maxWidth = Math.max(maxWidth, d.getMaxWidth());
+    i++;
+  }
+  if (diameter == 0) return null;
+  layerSizes = new int[diameter];
+  Arrays.fill(layerSizes, 0);
+  for (int[] vals : m) {
+    if (vals == null) continue;
+    i = 0;
+    for (int v : vals) {
+      layerSizes[i] += v;
+      i++;
+    }
+  }
+  return layerSizes;
 }
 
 

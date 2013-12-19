@@ -21,13 +21,14 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+
 
 
 public class Dag {
@@ -89,10 +90,13 @@ public boolean equals(Object o) {
 
 }
 
-ArrayList<Commit> nodes; // every nodes in the graph but root and leaves
+ArrayList<Commit> nodes; // every node in the graph but roots and leaves
 ArrayList<Commit> leaves; // nodes with no child
 ArrayList<Commit> roots; // nodes with no parent
 private ArrayList<MetaEdge> metaEdges; // graph's edges
+private int[] layerSizes;
+private int diameter;
+private int maxWidth;
 
 
 public Dag() {
@@ -100,6 +104,9 @@ public Dag() {
   leaves = new ArrayList<Commit>();
   nodes = new ArrayList<Commit>();
   roots = new ArrayList<Commit>();
+  layerSizes = null;
+  diameter = 0;
+  maxWidth = 0;
 }
 
 
@@ -159,6 +166,62 @@ ArrayList<MetaEdge> getInEdges(Commit c) {
       GitWorks.addUnique(res, me); // sorted list
     }
   }
+  return res;
+}
+
+
+int getDiameter() {
+  if (diameter == 0) computeLayerSizes();
+  return diameter;
+}
+
+
+int getMaxWidth() {
+  if (maxWidth == 0) computeLayerSizes();
+  return maxWidth;
+}
+
+
+private void computeLayerSizes() {
+  if (metaEdges.size() == 0) return;
+  ArrayList<MetaEdge> allEdges = new ArrayList<MetaEdge>();
+  allEdges.addAll(metaEdges);
+  Collections.sort(allEdges, new Comparator<MetaEdge>() {
+
+    @Override
+    public int compare(MetaEdge m1, MetaEdge m2) {
+      return m1.layer - m2.layer;
+    }
+  });
+  diameter = allEdges.get(allEdges.size() - 1).layer;
+  layerSizes = new int[diameter];
+
+  int j = 0, i = 0, n = 0, cur = allEdges.get(0).layer;
+  maxWidth = 0;
+  for (MetaEdge m : allEdges) {
+    j++;
+    if (m.layer == cur) {
+      n++;
+      if (j == allEdges.size()) {
+        layerSizes[i] = n;
+        maxWidth = Math.max(layerSizes[i], maxWidth);
+      }
+    } else {
+      cur = m.layer;
+      layerSizes[i] = n;
+      maxWidth = Math.max(layerSizes[i], maxWidth);
+      n = 1;
+      i++;
+    }
+  }
+}
+
+
+int[] getLayerSizes() {
+  if (layerSizes == null) computeLayerSizes();
+  if (layerSizes == null) return null;
+  int[] res = new int[layerSizes.length];
+  System.arraycopy(layerSizes, 0, res, 0, res.length);
   return res;
 }
 
@@ -238,7 +301,6 @@ Commit[] bfVisit() {
     for (i = size; i < next; i++)
       GitWorks.addUnique(prev, res[i]);
   }
-//  bfPrintout(res);
   return res;
 }
 
@@ -288,10 +350,8 @@ MetaGraph buildNewMetaGraph(Date minAge, Date maxAge) {
   ArrayList<MetaEdge> middleCut = new ArrayList<MetaEdge>();
   ArrayList<MetaEdge> bottomCut = new ArrayList<MetaEdge>();
   ArrayList<MetaEdge> oddCut = new ArrayList<MetaEdge>();
-  if (minAge == null)
-    minAge = new Date(0L);
-  if (maxAge == null)
-    maxAge = new Date(Long.MAX_VALUE);
+  if (minAge == null) minAge = new Date(0L);
+  if (maxAge == null) maxAge = new Date(Long.MAX_VALUE);
 
   if (metaEdges.size() == 0) {
     for (Commit cc : roots) {
@@ -324,8 +384,7 @@ MetaGraph buildNewMetaGraph(Date minAge, Date maxAge) {
     GitWorks.addUnique(allCommits, co);
     co = new Commit(me.last);
     co = allCommits.get(GitWorks.addUnique(allCommits, co));
-    if (Collections.binarySearch(leaves, me.last) >= 0)
-      GitWorks.addUnique(heads, co);
+    if (Collections.binarySearch(leaves, me.last) >= 0) GitWorks.addUnique(heads, co);
     if (me.getWeight() > 0) {
       for (Commit cc : me.getInternals()) {
         co = new Commit(cc);
@@ -352,8 +411,7 @@ MetaGraph buildNewMetaGraph(Date minAge, Date maxAge) {
     }
     co = new Commit(me.last);
     co = allCommits.get(GitWorks.addUnique(allCommits, co));
-    if (Collections.binarySearch(leaves, me.last) >= 0)
-      GitWorks.addUnique(heads, co);
+    if (Collections.binarySearch(leaves, me.last) >= 0) GitWorks.addUnique(heads, co);
   }
 
   for (MetaEdge me : topCut) {
