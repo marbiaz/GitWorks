@@ -46,6 +46,16 @@ ArrayList<Commit> getInternals() {
 }
 
 
+int getNumAuthors() {
+  ArrayList<String> res = new ArrayList<String>();
+  GitWorks.addUnique(res, first.getAuthoringInfo().getEmailAddress());
+  GitWorks.addUnique(res, last.getAuthoringInfo().getEmailAddress());
+  if (internals != null) for (Commit c : internals)
+    GitWorks.addUnique(res, c.getAuthoringInfo().getEmailAddress());
+  return res.size();
+}
+
+
 public String toString() {
   return "ID = " + ID + " ; first = " + first.id.getName().substring(0, 6)
       + " ; last = " + last.id.getName().substring(0, 6) + " ; weight = " + getWeight();
