@@ -41,7 +41,7 @@ public static boolean anew = true; // (re-)create a forktree anew
 static boolean compuForkTrees = false; // if true compute fork trees anew ; if false use serialized forkList
 static boolean newAnalysis = false; // if true perform a full gitMiner analysis ; if false use serialized gitMiner data
 static boolean compuFeatures = false; // if true compute features from gitMiner data; if false, use serialized features
-static boolean resultsOnly = false; // only compute results from serialized features
+static boolean resultsOnly = true; // only compute results from serialized features
 
 public static String prefix = "JGIT_"; // to be prepended to any jgit-generated output file name
 public static String field_sep = "    "; // field separator in input datafile's lines
@@ -281,11 +281,11 @@ public static void main(String[] args) throws Exception {
     // projects.printForkTrees(System.out); // from this, lists of repos to retrieve can be made
   } else {
     projects = new ForkList();
-    importData(projects, trees_out_dir + "dumpFiles/" + "forkListDump");
+    importData(projects, trees_out_dir + "dumpFiles/" + "OSS.forkListDump"); // XXX
     // computeAggregates(null, projects, 1); // reset all projects aggregates
   }
   ArrayList<ForkEntry> forkTrees = projects.getRoots();
-  features = new FeatureList(projects.howManyTrees());
+  features = new FeatureList(projects.howManyTrees() + 1);
 
   /************** build and analyze fork trees ****************/
 
@@ -369,8 +369,6 @@ public static void main(String[] args) throws Exception {
 //    exportData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
     // waitForUser("");
     importData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
-    FeatureList feats = null;
-    if (ids != null) feats = new FeatureList(ids == null ? forkTrees.size() : ids.length);
     Features ft;
     Commit co;
     MetaGraph mg;
@@ -382,12 +380,33 @@ public static void main(String[] args) throws Exception {
         fe = GitWorks.getElement(projects, ids[j++]);
       else
         fe = forkTrees.get(i);
+      // System.err.print("Getting " + getSafeName(fe) + "...");
+      // System.err.flush();
       ft = GitWorks.getElement(features, getSafeName(fe));
-      if (ids != null) feats.addFeatures(ft);
-      Runtime.getRuntime().exec(pwd + "/loadDumps.sh " + getSafeName(fe)).waitFor();
+      // Runtime.getRuntime().exec(pwd + "/loadDumps.sh " + getSafeName(fe)).waitFor(); XXX
       gitMiner = new GitMiner();
       importData(gitMiner, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".gm");
-      Runtime.getRuntime().exec(pwd + "/backupDumps.sh " + getSafeName(fe)).waitFor();
+      // Runtime.getRuntime().exec(pwd + "/backupDumps.sh " + getSafeName(fe)).waitFor(); XXX
+      if (ft == null && gitMiner.name.equals("ajaxorg__A-T__ace")) { // XXX
+        ft = new Features();
+        ft.setFeatures(projects, fe, gitMiner);
+      }
+      // System.err.println(" done.");
+      // System.err.flush();
+      // {
+      // int[] stats = gitMiner.metaGraph.getStats();
+      // if (stats[3] >= 30) {
+      // mgs.add(gitMiner.metaGraph);
+      // feats.add(ft);
+      // System.err.println("Taking repo # " + (++count) + " : " + ft.name + " which has "
+      // + gitMiner.metaGraph.dags.size() + " dags, " + stats[3] + " metaedges, " + stats[0]
+      // + " roots, " + stats[1] + " nodes and " + stats[2] + " leaves");
+      // System.err.println("\t of which " + stats[3] + " are branch nodes, " + stats[4]
+      // + " are merge nodes and " + stats[5] + " are both.");
+      // } else {
+      // // System.err.println("Discarding " + ft.name + " which has " + n + " metaedges.");
+      // }
+      // }
 
       heads.clear();
       allComs.clear();
@@ -399,7 +418,21 @@ public static void main(String[] args) throws Exception {
         if (co.isHead()) heads.add(co);
       }
       mg = MetaGraph.createMetaGraph(allComs, heads);
+      // System.err.println(" done.");
+      // System.err.flush();
+      int[] stats = mg.getSummaryStats();
+      if (stats[3] >= 30) {
         mgs.add(mg);
+        feats.add(ft);
+        System.err.println("Taking repo # " + (++count) + " : " + ft.name + " which has "
+            + mg.dags.size() + " dags, " + stats[3] + " metaedges, " + stats[0] + " roots, "
+            + stats[1] + " nodes and " + stats[2] + " leaves");
+        System.err.println("\t of which " + stats[4] + " are branch nodes, " + stats[5]
+            + " are merge nodes and " + stats[6] + " are both.");
+      } else {
+        // System.err.println("Discarding " + ft.name + " which has " + n + " metaedges.");
+      }
+
       gitMiner = null;
       ft = null;
       System.gc();
