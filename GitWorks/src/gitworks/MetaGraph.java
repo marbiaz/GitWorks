@@ -35,12 +35,34 @@ long since;
 long until;
 
 
+private MetaGraph() {
+  maxID = 0;
+  allCommits = new ArrayList<Commit>();
+  dags = new ArrayList<Dag>();
+  since = Long.MAX_VALUE;
+  until = 0L;
+  diameter = 0;
+  maxWidth = 0;
+  layerSizes = null;
+}
+
+
 public MetaGraph(ArrayList<Commit> all) {
   maxID = 0;
   allCommits = all;
   dags = new ArrayList<Dag>();
   since = Long.MAX_VALUE;
   until = 0L;
+MetaEdge getEdge(int id) {
+  MetaEdge res = null;
+  for (Dag d : dags) {
+    res = d.getEdge(id);
+    if (res != null) break;
+  }
+  return res;
+}
+
+
 }
 
 
@@ -136,6 +158,31 @@ private Dag getDag(int edgeId) {
     if (d.getEdge(edgeId) != null)
       return d;
   return null;
+}
+
+
+/**
+ * See comments for Dag.buildSubGraph .
+ * 
+ * @param minAge
+ * @param maxAge
+ * @return
+ */
+MetaGraph buildSubGraph(Date minAge, Date maxAge) {
+  MetaGraph res, subs[] = new MetaGraph[dags.size()];
+  for (int i = 0; i < dags.size(); i++) {
+    subs[i] = dags.get(i).buildSubGraph(minAge, maxAge);
+  }
+  res = new MetaGraph();
+  for (MetaGraph m : subs) {
+    maxID = Math.max(maxID, m.maxID);
+    since = Math.min(since, m.since);
+    until = Math.max(until, m.until);
+    dags.addAll(m.dags);
+    allCommits.addAll(m.allCommits);
+  }
+  Collections.sort(allCommits);
+  return res;
 }
 
 
