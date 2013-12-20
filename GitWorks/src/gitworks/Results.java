@@ -494,18 +494,10 @@ static void printLatexTable(ArrayList<ArrayList<Motif>> motifs) {
 static void printoutMotifAggStats(String[] repos, String[] motifs, double[][][] stats) {
   PrintWriter pOut = null;
   int i = 0, j;
-  String[] colHeader = new String[stats[GitWorks.rand.nextInt(repos.length)][0].length];
-  colHeader[0] = "mo_num_nodes";
-  colHeader[1] = "mo_num_edges";
-  colHeader[2] = "mo_z-score";
-  for (int k = 3; k < colHeader.length;)
-    for (String me : metricsNames)
-      for (String st : aggregatesNames)
-        colHeader[k++] = me + st;
   try {
     for (String n : repos) {
       try {
-        pOut = new PrintWriter(new FileWriter(GitWorks.pwd + "/gdata/" + n + ".aggregates.gdata",
+        pOut = new PrintWriter(new FileWriter(GitWorks.pwd + "/gdata/" + n + ".allmotifs.agg.gdata",
             false));
         pOut.print("motif_name");
         for (String s : colHeader)
@@ -532,7 +524,7 @@ static void printoutMotifAggStats(String[] repos, String[] motifs, double[][][] 
     j = 0;
     for (String m : motifs) {
       try {
-        pOut = new PrintWriter(new FileWriter(GitWorks.pwd + "/gdata/" + m + ".aggregates.gdata",
+        pOut = new PrintWriter(new FileWriter(GitWorks.pwd + "/gdata/" + m + ".allrepos.agg.gdata",
             false));
         pOut.print("repo_name");
         for (String s : colHeader)
@@ -588,7 +580,16 @@ static void metagraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
   String[] repoNames = new String[mgs.size()];
   String[] motifNames = null;
   double[][][] stats = new double[mgs.size()][][];
-
+  if (colHeader == null) {
+    colHeader = new String[3 + metricsNames.length * aggregatesNames.length];
+    colHeader[0] = "mo_num_nodes";
+    colHeader[1] = "mo_num_edges";
+    colHeader[2] = "mo_z-score";
+    for (int k = 3; k < colHeader.length;)
+      for (String me : metricsNames)
+        for (String st : aggregatesNames)
+          colHeader[k++] = me + st;
+  }
   try {
     for (MetaGraph mg : mgs) {
       f = fIt.next();
@@ -654,6 +655,9 @@ static String[] metricsNames = new String[] { // "mo_num_nodes", "mo_num_edges",
 static String[] aggregatesNames = new String[] {"_min", "_25p", "_med", "_75p", "_max", "_avg",
     "_stdev"};
 
+static String[] colHeader = null;
+
+
 static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean printout) {
   // 3 + (6 + 3) metrics to aggregate x 7 aggregates XXX
   double[][] res = new double[motifs.size()][66];
@@ -666,6 +670,7 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
   }
   Motif mo;
   int j = -1, nodes, edges;
+  double zScore;
   PrintWriter pout = null;
   try {
     ds[6] = mg.getInternalCommitStats(); // XXX
@@ -681,19 +686,20 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
         if (printout) {
           pout = new PrintWriter(new FileWriter(GitWorks.pwd + "/gdata/" + mo.name + ".gdata",
               false));
-          // pout.print("#");
+          pout.print("mo_num_nodes\tmo_num_edges\tmo_z-score");
           for (String s : metricsNames)
             pout.print("\t" + s);
           pout.println();
         }
         nodes = mo.numNodes;
         edges = mo.numEdges;
+        zScore = mo.zScore;
         for (MotifOccurrence ma : mo.occurrences) {
           if (printout)
-            pout.println(ma.mNodes.length + "\t" + ma.mEdges.size() + "\t" + ma.minLayer + "\t"
-                + ma.maxLayer + "\t" + ma.totEdges + "\t" + ma.numParallels + "\t" + ma.weight
-                + "\t" + ma.numAuthors + "\t" + ds[6].getMean() + "\t" + ds[7].getMean() + "\t"
-                + ds[8].getMean());
+            pout.println(ma.mNodes.length + "\t" + ma.mEdges.size() + "\t" + zScore + "\t"
+                + ma.minLayer + "\t" + ma.maxLayer + "\t" + ma.totEdges + "\t" + ma.numParallels
+                + "\t" + ma.weight + "\t" + ma.numAuthors + "\t" + ds[6].getMean() + "\t"
+                + ds[7].getMean() + "\t" + ds[8].getMean());
           ds[0].addValue(ma.minLayer); // XXX
           ds[1].addValue(ma.maxLayer);
           ds[2].addValue(ma.totEdges);
@@ -703,7 +709,7 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
         }
         res[j][0] = nodes;
         res[j][1] = edges;
-        res[j][2] = mo.zScore;
+        res[j][2] = zScore;
         for (int i = 0; i < ds.length; i++) {
           res[j][3 + i * 7 + 0] = ds[i].getMin();
           res[j][3 + i * 7 + 1] = ds[i].getPercentile(25);
