@@ -55,9 +55,7 @@ MotifOccurrence(ArrayList<MetaEdge> edges, HashMap<String, ArrayList<MetaEdge>> 
     GitWorks.addUnique(nodes, m.last);
     t = twins.get(m.first.id.getName() + m.last.id.getName());
     if (t != null) {
-      parallels.put(t.get(0), t.toArray(new MetaEdge[0]));
-      mEdges.remove(m); // FIXME not necessary after fix in makeSimpleGraph
-      mEdges.add(t.get(0)); // FIXME not necessary after fix in makeSimpleGraph
+      parallels.put(m, t.toArray(new MetaEdge[0]));
       // numParallels += t.size() - 1; XXX how many parallel edges not in mEdges
     }
   }

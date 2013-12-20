@@ -566,7 +566,7 @@ static private Motif twins2motif(String name, HashMap<MetaEdge, MetaEdge[]> twin
 
 // motifs, z-scores and twins
 static void metagraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
-  // DirectedSparseGraph<Commit, MetaEdge> g;
+  DirectedSparseGraph<Commit, MetaEdge> g;
   Iterator<Features> fIt = fl.iterator();
   Features f;
   HashMap<String, ArrayList<MetaEdge>> twins;
@@ -602,7 +602,7 @@ static void metagraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
         nEdges += d.getNumMetaEdges();
       }
       twins = new HashMap<String, ArrayList<MetaEdge>>(nEdges);
-      // g = makeSimpleGraph(mg, twins);
+      g = makeSimpleGraph(mg, twins);
       parallels = new HashMap<MetaEdge, MetaEdge[]>(twins.keySet().size());
       for (ArrayList<MetaEdge> m : twins.values())
         parallels.put(m.get(0), m.toArray(new MetaEdge[0]));
