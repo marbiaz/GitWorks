@@ -636,7 +636,7 @@ static void metagraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
     printoutMotifAggStats(repoNames, motifNames, stats);
     // printLatexTable(rMotifs);
     // motifsFeatsCorrelation(mgs, fl, rMotifs);
-    // footPrint(mgs, fl);
+    footPrint(mgs, fl);
   }
   catch (Exception e1) {
     e1.printStackTrace();
@@ -845,14 +845,27 @@ static void footPrint(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
       x[i] = k;
       if (i % 2 == 0) k++;
     }
-    i = -1;
-    for (double size : lSizes) {
-      vals[++i] = (max / 2) - (size / 2);
-      vals[++i] = (max / 2) + (size / 2);
+    PrintWriter pOut = null;
+    try {
+      pOut = new PrintWriter(new FileWriter(GitWorks.pwd + "/gdata/"
+          + f.name.split(GitWorks.safe_sep)[1] + ".footprint.gdata"));
+      i = -1;
+      for (double size : lSizes) {
+        vals[++i] = (max / 2) - (size / 2);
+        vals[++i] = (max / 2) + (size / 2);
+        pOut.println("" + ((max / 2) - (size / 2)) + "\t" + ((max / 2) + (size / 2)));
+      }
+      chart.addDataset(f.name + "_" + c, x, vals);
+      pOut.flush();
     }
-    chart.addDataset(f.name + "_" + c, x, vals);
+    catch (IOException ioe) {
+      ioe.printStackTrace();
+    }
+    finally {
+      if (pOut != null) pOut.close();
+    }
   }
-  chart.plotWindow();
+  // chart.plotWindow();
 }
 
 
