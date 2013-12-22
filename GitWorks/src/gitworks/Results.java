@@ -788,15 +788,16 @@ static DirectedSparseGraph<Commit, MetaEdge> makeSimpleGraph(MetaGraph mg,
 
 
 static void motifsFeatsCorrelation(ArrayList<MetaGraph> mgs, ArrayList<Features> fl,
-    ArrayList<HashMap<String, Motif>> rMotifs) {
+    ArrayList<ArrayList<Motif>> rMotifs) {
   double[] numMotifs = new double[mgs.size()];
-  int[] motifRank;
-  String[] motifNames = {"butterfly", "cons2tris", "div2tris", "rombo", "square", "tri", "wings"};
+  int motifRank[], i = 0, k;
+  String[] motifNames = new String[rMotifs.get(0).size()];
+  for (Motif m : rMotifs.get(0))
+    motifNames[i++] = m.name;
   String[] featNames = {"# authors", "# commits", "# forks"};
   double[][] featVals = new double[featNames.length][mgs.size()];
   int[][] featRanks = new int[featNames.length][];
   SpearmansCorrelation sc;
-  int i;
   Features f;
   Iterator<Features> fIt = fl.iterator();
   i = 0;
@@ -810,12 +811,13 @@ static void motifsFeatsCorrelation(ArrayList<MetaGraph> mgs, ArrayList<Features>
   featRanks[0] = IndexedSortable.sortedPermutation(featVals[0], false);
   featRanks[1] = IndexedSortable.sortedPermutation(featVals[1], false);
   featRanks[2] = IndexedSortable.sortedPermutation(featVals[2], false);
+  k = 0;
   for (String mn : motifNames) {
     i = 0;
     XYSeriesChart chart = new XYSeriesChart(new String[] {mn, " # motif", "# measure"});
-    for (HashMap<String, Motif> hm : rMotifs) {
+    for (ArrayList<Motif> hm : rMotifs) {
       // System.out.println(f.name);
-      numMotifs[i++] = hm.get(mn).occurrences.size();
+      numMotifs[i++] = hm.get(k).occurrences.size();
     }
     motifRank = IndexedSortable.sortedPermutation(numMotifs, false);
     for (int j = 0; j < featNames.length; j++) {
@@ -823,6 +825,7 @@ static void motifsFeatsCorrelation(ArrayList<MetaGraph> mgs, ArrayList<Features>
       System.out.print(mn + " & " + featNames[j] + " : " + sc.correlation(numMotifs, featVals[j]));
       chart.addDataset(featNames[j], motifRank, featRanks[j]);
     }
+    k++;
     chart.plotWindow();
   }
 }
