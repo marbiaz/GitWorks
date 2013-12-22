@@ -653,9 +653,8 @@ static String[] metricsNames = new String[] {
 static String[] aggregatesNames = new String[] {"_min", "_25p", "_med", "_75p", "_max", "_avg",
     "_stdev"};
 
-static String[] singleValuesNames = new String[] {"mo_num_occur", "\tmo_num_nodes",
-    "\tmo_num_edges", "\tmo_z-score",
-    "\tmg_diameter"};
+static String[] singleValuesNames = new String[] {"mo_num_occur", "mo_num_nodes", "mo_num_edges",
+    "mo_z-score", "mg_diameter"};
 
 static String[] colHeader = null;
 
@@ -671,7 +670,7 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
     ds[i] = new DescriptiveStatistics();
   }
   Motif mo;
-  int j = -1, nodes, edges, occur;
+  int i, j = -1, nodes, edges, occur;
   double zScore;
   PrintWriter pout = null;
   try {
@@ -681,15 +680,18 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
     while (moIt.hasNext()) {
       mo = moIt.next();
       try {
-        for (int i = 0; i < 6; i++) { // XXX
+        for (i = 0; i < 6; i++) { // XXX
           ds[i].clear();
         }
         j++;
         if (printout) {
           pout = new PrintWriter(new FileWriter(GitWorks.pwd + "/gdata/" + mo.name + ".gdata",
               false));
-          for (String s : singleValuesNames)
-            pout.print(s);
+          i = 0;
+          for (String s : singleValuesNames) {
+            pout.print((i > 0 ? "\t" : "") + s);
+            i++;
+          }
           for (String s : metricsNames)
             pout.print("\t" + s);
           pout.println();
@@ -717,7 +719,7 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
         res[j][2] = edges;
         res[j][3] = zScore;
         res[j][4] = mg.getDiameter();
-        for (int i = 0; i < ds.length; i++) {
+        for (i = 0; i < ds.length; i++) {
           res[j][5 + i * 7 + 0] = ds[i].getMin();
           res[j][5 + i * 7 + 1] = ds[i].getPercentile(25);
           res[j][5 + i * 7 + 2] = ds[i].getPercentile(50);
