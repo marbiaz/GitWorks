@@ -575,23 +575,18 @@ static void metagraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
   ArrayList<HashMap<MetaEdge, MetaEdge[]>> pTwins = new ArrayList<HashMap<MetaEdge, MetaEdge[]>>(
       fl.size());
   ArrayList<ArrayList<Motif>> rMotifs = new ArrayList<ArrayList<Motif>>(fl.size());
-  int nEdges, i = 0;
+  int nEdges, k, i = 0;
   Motif par;
   String[] repoNames = new String[mgs.size()];
   String[] motifNames = null;
   double[][][] stats = new double[mgs.size()][][];
   if (colHeader == null) {
     colHeader = new String[singleValuesNames.length + metricsNames.length * aggregatesNames.length];
-    for (int k = 0; k < singleValuesNames.length; k++) {
+    for (k = 0; k < singleValuesNames.length; k++)
       colHeader[k] = singleValuesNames[k];
-      colHeader[k] = singleValuesNames[k];
-      colHeader[k] = singleValuesNames[k];
-      colHeader[k] = singleValuesNames[k];
-    }
-    for (int k = singleValuesNames.length; k < colHeader.length;)
-      for (String me : metricsNames)
-        for (String st : aggregatesNames)
-          colHeader[k++] = me + st;
+    for (String me : metricsNames)
+      for (String st : aggregatesNames)
+        colHeader[k++] = me + st;
   }
   try {
     for (MetaGraph mg : mgs) {
@@ -658,15 +653,16 @@ static String[] metricsNames = new String[] {
 static String[] aggregatesNames = new String[] {"_min", "_25p", "_med", "_75p", "_max", "_avg",
     "_stdev"};
 
-static String[] singleValuesNames = new String[] {"mo_num_nodes", "\tmo_num_edges", "\tmo_z-score",
+static String[] singleValuesNames = new String[] {"mo_num_occur", "\tmo_num_nodes",
+    "\tmo_num_edges", "\tmo_z-score",
     "\tmg_diameter"};
 
 static String[] colHeader = null;
 
 
 static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean printout) {
-  // 4 + (6 + 3) metrics to aggregate x 7 aggregates XXX
-  double[][] res = new double[motifs.size()][67];
+  // 5 + (6 + 3) metrics to aggregate x 7 aggregates XXX
+  double[][] res = new double[motifs.size()][68];
   for (double[] row : res)
     Arrays.fill(row, 0.0);
   Iterator<Motif> moIt = motifs.iterator();
@@ -675,7 +671,7 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
     ds[i] = new DescriptiveStatistics();
   }
   Motif mo;
-  int j = -1, nodes, edges;
+  int j = -1, nodes, edges, occur;
   double zScore;
   PrintWriter pout = null;
   try {
@@ -701,9 +697,11 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
         nodes = mo.numNodes;
         edges = mo.numEdges;
         zScore = mo.zScore;
+        occur = mo.occurrences.size();
         for (MotifOccurrence ma : mo.occurrences) {
           if (printout)
-            pout.println(ma.mNodes.length + "\t" + ma.mEdges.size() + "\t" + zScore + "\t" + mg.getDiameter()
+            pout.println(occur + "\t" + ma.mNodes.length + "\t" + ma.mEdges.size() + "\t" + zScore
+                + "\t" + mg.getDiameter()
                 + "\t" + ma.minLayer + "\t" + ma.maxLayer + "\t" + ma.totEdges + "\t" + ma.numParallels
                 + "\t" + ma.weight + "\t" + ma.numAuthors + "\t" + ds[6].getMean() + "\t"
                 + ds[7].getMean() + "\t" + ds[8].getMean());
@@ -714,18 +712,19 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
           ds[4].addValue(ma.weight);
           ds[5].addValue(ma.numAuthors);
         }
-        res[j][0] = nodes;
-        res[j][1] = edges;
-        res[j][2] = zScore;
-        res[j][3] = mg.getDiameter();
+        res[j][0] = occur;
+        res[j][1] = nodes;
+        res[j][2] = edges;
+        res[j][3] = zScore;
+        res[j][4] = mg.getDiameter();
         for (int i = 0; i < ds.length; i++) {
-          res[j][4 + i * 7 + 0] = ds[i].getMin();
-          res[j][4 + i * 7 + 1] = ds[i].getPercentile(25);
-          res[j][4 + i * 7 + 2] = ds[i].getPercentile(50);
-          res[j][4 + i * 7 + 3] = ds[i].getPercentile(75);
-          res[j][4 + i * 7 + 4] = ds[i].getMax();
-          res[j][4 + i * 7 + 5] = ds[i].getMean();
-          res[j][4 + i * 7 + 6] = ds[i].getStandardDeviation();
+          res[j][5 + i * 7 + 0] = ds[i].getMin();
+          res[j][5 + i * 7 + 1] = ds[i].getPercentile(25);
+          res[j][5 + i * 7 + 2] = ds[i].getPercentile(50);
+          res[j][5 + i * 7 + 3] = ds[i].getPercentile(75);
+          res[j][5 + i * 7 + 4] = ds[i].getMax();
+          res[j][5 + i * 7 + 5] = ds[i].getMean();
+          res[j][5 + i * 7 + 6] = ds[i].getStandardDeviation();
         }
         if (printout) {
           pout.flush();
