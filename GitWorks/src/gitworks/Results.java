@@ -801,7 +801,7 @@ static void motifsFeatsCorrelation(ArrayList<MetaGraph> mgs, ArrayList<Features>
   int motifRank[], i = 0, k;
   String[] motifNames = new String[rMotifs.get(0).size()];
   for (Motif m : rMotifs.get(0))
-    motifNames[i++] = m.name;
+    motifNames[i++] = m.name.split(GitWorks.safe_sep)[0];
   String[] featNames = {"# authors", "# commits", "# forks"};
   double[][] featVals = new double[featNames.length][mgs.size()];
   int[][] featRanks = new int[featNames.length][];
@@ -973,7 +973,7 @@ static void computeStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
       prevTstamp = curTstamp + 1; // XXX to get subsequent disjoint
                                   // (VS incrementally inclusive) subgraphs
       curTstamp = i * (mg.until - mg.since) / Results.ages + mg.since;
-      mgNext = mg.getDensierDag().buildSubGraph(new java.util.Date(prevTstamp),
+      mgNext = mg.buildSubGraph(new java.util.Date(prevTstamp),
           new java.util.Date(curTstamp));
       d = mgNext.getOldestDag(); // XXX
       d.exportToGexf(f.name + "." + (i + 1) + "-" + Results.ages);
