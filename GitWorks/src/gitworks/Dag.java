@@ -286,7 +286,7 @@ int[] getSummaryStats() {
     coolCommits.trimToSize();
   }
   return new int[] {roots.size(), nodes.size(), leaves.size(), getNumMetaEdges(),
-      branchCommits.size(), mergeCommits.size(), coolCommits.size()};
+      branchCommits.size(), mergeCommits.size(), coolCommits.size(), getNumCommits()};
 }
 
 

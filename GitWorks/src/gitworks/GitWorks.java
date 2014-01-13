@@ -426,11 +426,11 @@ public static void main(String[] args) throws Exception {
         feats.add(ft);
         System.err.println("Taking repo # " + (++count) + " : " + ft.name + " which has "
             + mg.dags.size() + " dags, " + stats[3] + " metaedges, " + stats[0] + " roots, "
-            + stats[1] + " nodes and " + stats[2] + " leaves");
-        System.err.println("\t of which " + stats[4] + " are branch nodes, " + stats[5]
+            + stats[1] + " nodes and " + stats[2] + " leaves, for a total of " + stats[7]
+            + " commits,\n\t of which " + stats[4] + " are branch nodes, " + stats[5]
             + " are merge nodes and " + stats[6] + " are both.");
       } else {
-        // System.err.println("Discarding " + ft.name + " which has " + n + " metaedges.");
+        System.err.println("Discarding " + ft.name + " which has " + stats[3] + " metaedges.");
       }
 
       gitMiner = null;
