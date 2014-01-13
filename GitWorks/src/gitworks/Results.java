@@ -456,10 +456,11 @@ static void printLatexTable(ArrayList<ArrayList<Motif>> motifs) {
     tableOut = new PrintWriter(new FileWriter(GitWorks.pwd + "/table.tex", true));
     while (moIt.hasNext()) {
       moa = moIt.next();
-      tableOut.write("\\verb'" + moa.get(0).name.split(GitWorks.safe_sep)[2] + "'");
+      tableOut.write("\\verb'" + moa.get(0).name.split(GitWorks.safe_sep)[1] + "'");
       for (Motif mo : moa) {
-        if (mo.name.split(GitWorks.safe_sep)[0].equals("conv2tris")) continue;
-        z = mo.cStats.get(5);
+        if (mo.name.split(GitWorks.safe_sep)[0].equals("conv2tris")
+            || mo.name.split(GitWorks.safe_sep)[0].equals("twins")) continue;
+        z = mo.zScore;
         if (z.isNaN())
           score = "$0.0$";
         else if (Double.NEGATIVE_INFINITY == z)
@@ -468,7 +469,7 @@ static void printLatexTable(ArrayList<ArrayList<Motif>> motifs) {
           score = "\\textbf{$+\\infty$}";
         else
           score = (Math.abs(z) > 2 ? "\\textbf{" : "") + "$"
-              + z.toString().substring(0, z.toString().indexOf(".") + 3) + "$"
+              + String.format("%.3f", z) + "$"
               + (Math.abs(z) > 2 ? "}" : "");
         tableOut.write(" & $" + mo.occurrences.size() + "$ & "// $" + mo.cStats.get(1) + "$ "& "
             + score);
@@ -476,7 +477,7 @@ static void printLatexTable(ArrayList<ArrayList<Motif>> motifs) {
       tableOut.write(" \\\\\n");
     }
     tableOut.write("" + "\\hline" + "\n" + "\\end{tabular}" + "\n" + "\\caption{Motifs scores}"
-        + "\n" + "\\end{table}" + "\n");
+        + "\n" + "\\end{table}" + "\n\\twocolumn\n\n");
     tableOut.flush();
     Runtime.getRuntime().exec(
             "cp -f " + GitWorks.pwd + "/table.tex "
