@@ -5,6 +5,7 @@ package gitworks;
 
 
 import edu.uci.ics.jung.graph.DirectedSparseGraph;
+import edu.uci.ics.jung.graph.Graph;
 import gitworks.Features.CommitRank;
 
 import java.io.BufferedReader;
@@ -565,6 +566,14 @@ static private Motif twins2motif(String name, HashMap<String, ArrayList<MetaEdge
 }
 
 
+static private void computeMotifs(String repoName, Graph<Commit, MetaEdge> g)
+    throws InterruptedException, IOException {
+  exportGraph(repoName, g);
+  Runtime.getRuntime().exec(GitWorks.pwd + "/gitMotifs.sh " + repoName + " &>>gitMotifs.log")
+      .waitFor();
+}
+
+
 // motifs, z-scores and twins
 static void metagraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
   DirectedSparseGraph<Commit, MetaEdge> g;
@@ -603,9 +612,7 @@ static void metagraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
       // parallels.put(m.get(0), m.toArray(new MetaEdge[0]));
       par = twins2motif(f.name, twins);
       try {
-        // exportGraph(f.name, g);
-        // Runtime.getRuntime().exec(GitWorks.pwd + "/gitMotifs.sh " + f.name + " &>>gitMotifs.log")
-        // .waitFor();
+        // computeMotifs(f.name, g); // XXX
         motifs = importMotifs(f.name, mg, twins);
         motifs.add(par);
         rMotifs.add(motifs);
@@ -927,8 +934,8 @@ private static ArrayList<Motif> importMotifs(String name, MetaGraph mg,
 }
 
 
-static void exportGraph(String name, DirectedSparseGraph<Commit, MetaEdge> g) throws IOException {
-  File gFile = new File(GitWorks.pwd + "/" + name + ".graph");
+static void exportGraph(String name, Graph<Commit, MetaEdge> g) throws IOException {
+  File gFile = new File(GitWorks.pwd + "/motifs/" + name + ".graph");
   PrintWriter pout = new PrintWriter(new BufferedWriter(new FileWriter(gFile)));
   pout.println("nodes " + g.getVertexCount());
   for (Commit c : g.getVertices())
