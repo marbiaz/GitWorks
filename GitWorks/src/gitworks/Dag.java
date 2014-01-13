@@ -258,9 +258,9 @@ int[] getLayerSizes() {
 int[] getSummaryStats() {
   boolean merge, branch;
   if (mergeCommits == null) {
-    mergeCommits = new ArrayList<Commit>();
-    branchCommits = new ArrayList<Commit>();
-    coolCommits = new ArrayList<Commit>();
+    mergeCommits = new ArrayList<Commit>(nodes.size());
+    branchCommits = new ArrayList<Commit>(nodes.size());
+    coolCommits = new ArrayList<Commit>(nodes.size());
     ArrayList<Commit> allIn;
     allIn = new ArrayList<Commit>(leaves.size() + roots.size() + nodes.size());
     allIn.addAll(leaves);
@@ -281,6 +281,9 @@ int[] getSummaryStats() {
         mergeCommits.add(c);
       else if (branch) branchCommits.add(c);
     }
+    mergeCommits.trimToSize();
+    branchCommits.trimToSize();
+    coolCommits.trimToSize();
   }
   return new int[] {roots.size(), nodes.size(), leaves.size(), getNumMetaEdges(),
       branchCommits.size(), mergeCommits.size(), coolCommits.size()};
@@ -408,11 +411,11 @@ MetaGraph buildNewMetaGraph(Date minAge, Date maxAge) {
   ArrayList<Commit> heads = new ArrayList<Commit>(leaves.size() * 2);
   ArrayList<Commit> allCommits = new ArrayList<Commit>(getNumCommits());
   ArrayList<MetaEdge> topCut = new ArrayList<MetaEdge>();
-  ArrayList<MetaEdge> middleCut = new ArrayList<MetaEdge>();
+  ArrayList<MetaEdge> middleCut = new ArrayList<MetaEdge>(metaEdges.size());
   ArrayList<MetaEdge> bottomCut = new ArrayList<MetaEdge>();
   ArrayList<MetaEdge> oddCut = new ArrayList<MetaEdge>();
   if (minAge == null) minAge = new Date(0L);
-  if (maxAge == null) maxAge = new Date(Long.MAX_VALUE);
+  if (maxAge == null) maxAge = new Date(System.currentTimeMillis() + (1000 * 3600 * 24 * 7));
 
   if (metaEdges.size() == 0) {
     for (Commit cc : roots) {
@@ -532,7 +535,7 @@ MetaGraph buildNewMetaGraph(Date minAge, Date maxAge) {
  * within the given time interval. Note: the result is NOT equal to a metagraph built from scratch
  * with all commits in the given time range (see {@link #buildNewMetaGraph(Date, Date)}).
  */
-MetaGraph buildSubGraph(Date minAge, Date maxAge) {
+MetaGraph buildSubGraph(Date minAge, Date maxAge) { // FIXME
   int i;
   MetaEdge newme;
   Date dFirst, dLast;
@@ -548,7 +551,7 @@ MetaGraph buildSubGraph(Date minAge, Date maxAge) {
   if (minAge == null)
     minAge = new Date(0L);
   if (maxAge == null)
-    maxAge = new Date(Long.MAX_VALUE);
+    maxAge = new Date(System.currentTimeMillis() + (1000 * 3600 * 24 * 7));
 
   if (metaEdges.size() == 0) {
     if (roots.size() > 1) {

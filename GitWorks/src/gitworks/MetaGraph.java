@@ -88,7 +88,7 @@ MetaEdge getEdge(int id) {
 
 
 int[] getSummaryStats() {
-  int[] dRes, res = new int[7];
+  int[] dRes, res = new int[8];
   Arrays.fill(res, 0);
   int i;
   for (Dag d : dags) {
