@@ -155,6 +155,43 @@ int[] getLayerSizes() {
 
 
 /**
+ * Create a meta-graph from a given Dag. No duplication of fields is done, thus the returned
+ * meta-graph references the original objects.
+ */
+static MetaGraph createMetaGraph(Dag d) {
+  ArrayList<Commit> coms = new ArrayList<Commit>(d.getNumCommits());
+  Iterator<MetaEdge> mIt = d.getMetaEdges();
+  MetaEdge me;
+  int maxID = 0;
+  long since = Long.MAX_VALUE, until = 0L;
+  while (mIt.hasNext()) {
+    me = mIt.next();
+    maxID = Math.max(maxID, me.ID);
+    GitWorks.addUnique(coms, me.first);
+    since = Math.min(since, me.first.getCommittingInfo().getWhen().getTime());
+    GitWorks.addUnique(coms, me.last);
+    until = Math.max(until, me.last.getCommittingInfo().getWhen().getTime());
+    if (me.getWeight() > 0)
+      for (Commit c : me.getInternals())
+        GitWorks.addUnique(coms, c);
+  }
+  for (Commit c : d.roots)
+    GitWorks.addUnique(coms, c);
+
+  MetaGraph res = new MetaGraph(coms);
+  res.maxID = maxID;
+  res.dags.add(d);
+  res.since = since;
+  res.until = until;
+  res.layerSizes = d.getLayerSizes();
+  res.diameter = d.getDiameter();
+  res.maxWidth = d.getMaxWidth();
+
+  return res;
+}
+
+
+/**
  * Create a meta-graph composing the given set of edges in a proper set of dags. No check is
  * performed on the arguments. Thus, being they not correct and consistent with each other, the
  * resulting meta-graph will be uncorrect.

@@ -408,6 +408,7 @@ MetaGraph buildNewMetaGraph(Date minAge, Date maxAge) {
   Date dFirst, dLast;
   Commit leaf, first, c, co;
   boolean firstIn, lastIn;
+  if (minAge == null && maxAge == null) return MetaGraph.createMetaGraph(this);
   ArrayList<Commit> heads = new ArrayList<Commit>(leaves.size() * 2);
   ArrayList<Commit> allCommits = new ArrayList<Commit>(getNumCommits());
   ArrayList<MetaEdge> topCut = new ArrayList<MetaEdge>();
@@ -541,6 +542,7 @@ MetaGraph buildSubGraph(Date minAge, Date maxAge) { // FIXME
   Date dFirst, dLast;
   Commit leaf, first, c, co;
   boolean firstIn, lastIn;
+  if (minAge == null && maxAge == null) return MetaGraph.createMetaGraph(this);
   ArrayList<Commit> heads = new ArrayList<Commit>(leaves.size() * 2);
   ArrayList<Commit> allCommits = new ArrayList<Commit>(getNumCommits());
   ArrayList<MetaEdge> topCut = new ArrayList<MetaEdge>();
