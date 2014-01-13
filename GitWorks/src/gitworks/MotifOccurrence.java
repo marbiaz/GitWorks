@@ -20,19 +20,19 @@ int numAuthors;
 
 
 // only to make a motif out of parallel edges
-MotifOccurrence(MetaEdge[] parEdges) {
+MotifOccurrence(ArrayList<MetaEdge> parEdges) {
   mNodes = new Commit[2];
-  mNodes[0] = parEdges[0].first;
-  mNodes[1] = parEdges[0].last;
+  mNodes[0] = parEdges.get(0).first;
+  mNodes[1] = parEdges.get(0).last;
   Arrays.sort(mNodes);
-  mEdges = new ArrayList<MetaEdge>(parEdges.length);
+  mEdges = new ArrayList<MetaEdge>(parEdges.size());
   weight = 0;
   numAuthors = 0;
   for (MetaEdge m : parEdges) {
     GitWorks.addUnique(mEdges, m);
     weight += m.getWeight();
   }
-  minLayer = maxLayer = parEdges[0].layer;
+  minLayer = maxLayer = parEdges.get(0).layer;
   totEdges = mEdges.size();
   numParallels = 1;
   getNumAuthors();

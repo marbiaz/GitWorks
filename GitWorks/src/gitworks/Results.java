@@ -556,9 +556,9 @@ static void printoutMotifAggStats(String[] repos, String[] motifs, double[][][] 
 
 
 // silly way to simplify the computation of parallels stats
-static private Motif twins2motif(String name, HashMap<MetaEdge, MetaEdge[]> twins) {
+static private Motif twins2motif(String name, HashMap<String, ArrayList<MetaEdge>> twins) {
   Motif parallels = new Motif("twins" + GitWorks.safe_sep + name.split(GitWorks.safe_sep)[1], 2, 2);
-  for (MetaEdge[] t : twins.values())
+  for (ArrayList<MetaEdge> t : twins.values())
     parallels.addOccurrence(new MotifOccurrence(t));
   return parallels;
 }
@@ -570,10 +570,9 @@ static void metagraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
   Iterator<Features> fIt = fl.iterator();
   Features f;
   HashMap<String, ArrayList<MetaEdge>> twins;
-  HashMap<MetaEdge, MetaEdge[]> parallels;
+  // HashMap<MetaEdge, MetaEdge[]> parallels;
   ArrayList<Motif> motifs;
-  ArrayList<HashMap<MetaEdge, MetaEdge[]>> pTwins = new ArrayList<HashMap<MetaEdge, MetaEdge[]>>(
-      fl.size());
+//  ArrayList<HashMap<MetaEdge, MetaEdge[]>> pTwins = new ArrayList<HashMap<MetaEdge, MetaEdge[]>>(fl.size());
   ArrayList<ArrayList<Motif>> rMotifs = new ArrayList<ArrayList<Motif>>(fl.size());
   int nEdges, k, i = 0;
   Motif par;
@@ -598,10 +597,10 @@ static void metagraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
       }
       twins = new HashMap<String, ArrayList<MetaEdge>>(nEdges);
       g = makeSimpleGraph(mg, twins);
-      parallels = new HashMap<MetaEdge, MetaEdge[]>(twins.keySet().size());
-      for (ArrayList<MetaEdge> m : twins.values())
-        parallels.put(m.get(0), m.toArray(new MetaEdge[0]));
-      par = twins2motif(f.name, parallels);
+      // parallels = new HashMap<MetaEdge, MetaEdge[]>(twins.keySet().size());
+      // for (ArrayList<MetaEdge> m : twins.values())
+      // parallels.put(m.get(0), m.toArray(new MetaEdge[0]));
+      par = twins2motif(f.name, twins);
       try {
         // exportGraph(f.name, g);
         // Runtime.getRuntime().exec(GitWorks.pwd + "/gitMotifs.sh " + f.name + " &>>gitMotifs.log")
@@ -609,7 +608,7 @@ static void metagraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
         motifs = importMotifs(f.name, mg, twins);
         motifs.add(par);
         rMotifs.add(motifs);
-        pTwins.add(parallels); // XXX ???
+        // pTwins.add(parallels);
         stats[i] = getMotifStats(mg, motifs, true);
         if (motifNames == null) {
           int j = 0;
