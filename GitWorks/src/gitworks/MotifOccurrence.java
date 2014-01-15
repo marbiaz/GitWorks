@@ -32,7 +32,8 @@ MotifOccurrence(ArrayList<MetaEdge> parEdges) {
     GitWorks.addUnique(mEdges, m);
     weight += m.getWeight();
   }
-  minLayer = maxLayer = parEdges.get(0).layer;
+  minLayer = parEdges.get(0).first.layer;
+  maxLayer = parEdges.get(0).last.layer;
   totEdges = mEdges.size();
   numParallels = 1;
   getNumAuthors();
@@ -49,8 +50,8 @@ MotifOccurrence(ArrayList<MetaEdge> edges, HashMap<String, ArrayList<MetaEdge>> 
   ArrayList<Commit> nodes = new ArrayList<Commit>();
   parallels = new HashMap<MetaEdge, MetaEdge[]>();
   for (MetaEdge m : mEdges) {
-    minLayer = Math.min(minLayer, m.layer);
-    maxLayer = Math.max(maxLayer, m.layer);
+    minLayer = Math.min(minLayer, m.first.layer);
+    maxLayer = Math.max(maxLayer, m.last.layer);
     GitWorks.addUnique(nodes, m.first);
     GitWorks.addUnique(nodes, m.last);
     t = twins.get(m.first.id.getName() + m.last.id.getName());

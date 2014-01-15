@@ -23,7 +23,8 @@ ArrayList<BranchRef> branches; // all branches which this commit belongs to
 ArrayList<BranchRef> heads; // all branches which this commit is HEAD of
 int inDegree; // number of parents in the meta-graph
 int outDegree; // number of children in the meta-graph
-ArrayList<Integer> edges;
+ArrayList<Integer> edges; // metagraph's edges touching the commit
+int layer; // layer in a metagraph's dag which the commit belongs to
 
 Commit() {}
 
@@ -43,6 +44,7 @@ Commit(RevCommit c) {
   edges = new ArrayList<Integer>();
   inDegree = 0;
   outDegree = 0;
+  layer = -1;
 }
 
 
@@ -54,6 +56,7 @@ Commit(Commit c) {
   edges = new ArrayList<Integer>();
   inDegree = 0;
   outDegree = 0;
+  layer = -1;
 }
 
 
@@ -161,6 +164,7 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
     data[i] = in.readByte();
   }
   id  = (ObjectId)in.readObject();
+  layer = in.readInt();
   inDegree = in.readInt();
   outDegree = in.readInt();
   size = in.readInt();
@@ -197,6 +201,7 @@ public void writeExternal(ObjectOutput out) throws IOException {
     out.write(b);
   }
   out.writeObject(id);
+  out.writeInt(layer);
   out.writeInt(inDegree);
   out.writeInt(outDegree);
   out.writeInt(branches.size());

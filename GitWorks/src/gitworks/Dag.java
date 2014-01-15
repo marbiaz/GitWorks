@@ -323,6 +323,7 @@ Commit[] bfVisit() {
   prev.addAll(roots);
   cur.addAll(roots);
   for (Commit r : roots) {
+    r.layer = 0;
     res[next++] = r;
   }
   Arrays.sort(res, size, next, nodeComp);
@@ -340,6 +341,7 @@ Commit[] bfVisit() {
           }
         }
         if (done) {
+          e.last.layer = layer;
           e.layer = layer;
           mar = pending.remove(e.last);
           if (mar != null) {
