@@ -24,9 +24,7 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
@@ -309,8 +307,12 @@ boolean union(Dag d) {
 }
 
 
-// it gives the commits in bf order, with ties decided by
-// comparing commits with Metagraph.NodeDegreeComparator
+/**
+ * It assigns layers to commits and timestamps to edges. It also set the diameter.
+ * 
+ * @return non-sequential commits in bf order, with ties decided by comparing commits with
+ *         Metagraph.NodeDegreeComparator
+ */
 Commit[] bfVisit() {
   int i, curSize, layer = 0, size = 0, next = 0,
       tot = nodes.size() + roots.size() + leaves.size();
@@ -319,9 +321,9 @@ Commit[] bfVisit() {
   MetaGraph.NodeDegreeComparator nodeComp = new MetaGraph.NodeDegreeComparator();
   Commit[] res = new Commit[tot];
   ArrayList<Commit> prev = new ArrayList<Commit>();
-  ArrayList<Commit> cur = new ArrayList<Commit>();
-  ArrayList<MetaEdge> mar;
-  HashMap<Commit, ArrayList<MetaEdge>> pending = new HashMap<Commit, ArrayList<MetaEdge>>();
+  ArrayList<Commit> cur = new ArrayList<Commit>(); // to check for duplicates in res
+//  ArrayList<MetaEdge> mar;
+//  HashMap<Commit, ArrayList<MetaEdge>> pending = new HashMap<Commit, ArrayList<MetaEdge>>(); // XXX
   prev.addAll(roots);
   cur.addAll(roots);
   for (Commit r : roots) {
@@ -344,26 +346,26 @@ Commit[] bfVisit() {
         }
         if (done) {
           e.last.layer = layer;
-          e.layer = layer;
-          mar = pending.remove(e.last);
-          if (mar != null) {
-            for (MetaEdge mes : mar)
-              mes.layer = layer;
-          }
           e.startTimestamp = e.first.getCommittingInfo().getWhen().getTime();
           e.endTimestamp = e.last.getCommittingInfo().getWhen().getTime();
+          // e.endLayer = layer; // XXX
+//          mar = pending.remove(e.last);  //
+//          if (mar != null) {            //
+//            for (MetaEdge mes : mar)    //
+//              mes.endLayer = layer;     //
+//          }                             //
           if (Collections.binarySearch(cur, e.last) < 0) {
             res[next++] = e.last;
             GitWorks.addUnique(cur, e.last);
           }
-        } else {
-          mar = pending.get(e.last);
-          if (mar == null) {
-            mar = new ArrayList<MetaEdge>();
-            pending.put(e.last, mar);
-          }
-          mar.add(e);
-        }
+        } //else {                        //
+//          mar = pending.get(e.last);    //
+//          if (mar == null) {            //
+//            mar = new ArrayList<MetaEdge>(); //
+//            pending.put(e.last, mar);       //
+//          }                             //
+//          mar.add(e);                   //
+//        }                               //
       }
     }
     size = curSize;
@@ -382,12 +384,14 @@ void bfPrintout(Commit[] commits) {
     cur = 0;
     for (MetaEdge me : metaEdges) {
       if (me.last.equals(c)) {
-        System.err.print(me.ID + " : " + me.first.id.getName() + " -> " + me.last.id.getName() + " : "+ me.layer);
-        if (me.layer < prev)
+        System.err.print(me.ID + " : " + me.first.id.getName() + " -> " + me.last.id.getName()
+            + " : " + me.endLayer);
+        if (me.endLayer < prev)
           System.err.print(" Dag : ERROR : bf-visit layer order is wrong.");
-        prev = me.layer;
-        if (cur == 0) cur = me.layer;
-        else if (me.layer != cur)
+        prev = me.endLayer;
+        if (cur == 0)
+          cur = me.endLayer;
+        else if (me.endLayer != cur)
           System.err.print(" Dag : ERROR : bf-visit layers differ within the same group.");
         System.err.println();
       }
@@ -997,7 +1001,7 @@ void exportToGexf(String name) { // XXX
     }
     e.setWeight(e.getWeight() + (float)me.getWeight())
         .getAttributeValues().addValue(attWeight, "" + e.getWeight())
-            .addValue(attLayer, "" + me.layer);
+.addValue(attLayer, "" + me.endLayer);
   }
 
   StaxGraphWriter graphWriter = new StaxGraphWriter();
