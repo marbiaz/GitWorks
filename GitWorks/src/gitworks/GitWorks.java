@@ -281,7 +281,7 @@ public static void main(String[] args) throws Exception {
     // projects.printForkTrees(System.out); // from this, lists of repos to retrieve can be made
   } else {
     projects = new ForkList();
-    importData(projects, trees_out_dir + "dumpFiles/" + "OSS.forkListDump"); // XXX
+    importData(projects, trees_out_dir + "dumpFiles/" + "OSS.forkListDump"); // XXX forkListDump
     // computeAggregates(null, projects, 1); // reset all projects aggregates
   }
   ArrayList<ForkEntry> forkTrees = projects.getRoots();
@@ -330,13 +330,6 @@ public static void main(String[] args) throws Exception {
       }
       if (newAnalysis || compuFeatures)
         Runtime.getRuntime().exec(pwd + "/backupDumps.sh " + getSafeName(fe)).waitFor();
-
-      // XXX tests
-//      if (!(newAnalysis || compuFeatures))
-//        importData(gitMiner, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".gm");
-      // waitForUser("Starting the tests");
-//      testMetaGraph(gitMiner);
-//      testSubGraphs(gitMiner);
     }
     catch (Exception e) {
       System.err.println("ERROR : computation of " + getSafeName(fe)
@@ -368,7 +361,7 @@ public static void main(String[] args) throws Exception {
 //    }
 //    exportData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
     // waitForUser("");
-    importData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
+    // importData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
     Features ft;
     Commit co;
     MetaGraph mg;
@@ -382,47 +375,31 @@ public static void main(String[] args) throws Exception {
         fe = forkTrees.get(i);
       // System.err.print("Getting " + getSafeName(fe) + "...");
       // System.err.flush();
-      ft = GitWorks.getElement(features, getSafeName(fe));
+      // ft = GitWorks.getElement(features, getSafeName(fe));
+      ft = new Features();
+      importData(ft, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".feat");
       // Runtime.getRuntime().exec(pwd + "/loadDumps.sh " + getSafeName(fe)).waitFor(); XXX
       gitMiner = new GitMiner();
       importData(gitMiner, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".gm");
       // Runtime.getRuntime().exec(pwd + "/backupDumps.sh " + getSafeName(fe)).waitFor(); XXX
-      if (ft == null && gitMiner.name.equals("ajaxorg__A-T__ace")) { // XXX
-        ft = new Features();
-        ft.setFeatures(projects, fe, gitMiner);
-      }
       // System.err.println(" done.");
       // System.err.flush();
-      // {
-      // int[] stats = gitMiner.metaGraph.getStats();
-      // if (stats[3] >= 30) {
-      // mgs.add(gitMiner.metaGraph);
-      // feats.add(ft);
-      // System.err.println("Taking repo # " + (++count) + " : " + ft.name + " which has "
-      // + gitMiner.metaGraph.dags.size() + " dags, " + stats[3] + " metaedges, " + stats[0]
-      // + " roots, " + stats[1] + " nodes and " + stats[2] + " leaves");
-      // System.err.println("\t of which " + stats[3] + " are branch nodes, " + stats[4]
-      // + " are merge nodes and " + stats[5] + " are both.");
-      // } else {
-      // // System.err.println("Discarding " + ft.name + " which has " + n + " metaedges.");
-      // }
-      // }
 
       heads.clear();
       allComs.clear();
-      // System.err.print("Creating mainline metagraph ...");
-      // System.err.flush();
+      System.err.print("Creating " + gitMiner.name + " mainline metagraph ...");
+      System.err.flush();
       for (Commit c : gitMiner.comInF.get(ft.allForks[ft.rootIndex])) {
         co = new Commit(c);
         GitWorks.addUnique(allComs, co);
         if (co.isHead()) heads.add(co);
       }
       mg = MetaGraph.createMetaGraph(allComs, heads);
-      // System.err.println(" done.");
-      // System.err.flush();
-      int[] stats = mg.getSummaryStats();
+      System.err.println(" done.");
+      System.err.flush();
+      int[] stats = mg.getDensestDag().getSummaryStats(); // mg.getSummaryStats(); // XXX
       if (stats[3] >= 30) {
-        mgs.add(mg);
+        mgs.add(MetaGraph.createMetaGraph(mg.getDensestDag())); // mgs.add(mg); // XXX
         feats.add(ft);
         System.err.println("Taking repo # " + (++count) + " : " + ft.name + " which has "
             + mg.dags.size() + " dags, " + stats[3] + " metaedges, " + stats[0] + " roots, "
@@ -461,7 +438,7 @@ static void testMetaGraph(GitMiner gm) {
     for (Dag d : gm.metaGraph.dags) {
       d.bfPrintout(d.bfVisit());
     }
-    gm.metaGraph.getDensierDag().exportToGexf(gm.name + "_complete");
+    gm.metaGraph.getDensestDag().exportToGexf(gm.name + "_complete");
   }
 }
 
@@ -479,7 +456,7 @@ static void testSubGraphs(GitMiner gm) {
     for (Dag d : quarter.dags) {
       d.bfPrintout(d.bfVisit());
     }
-    quarter.getDensierDag().exportToGexf(gm.name + "_quarter");
+    quarter.getDensestDag().exportToGexf(gm.name + "_quarter");
   } else
     System.out.println(gm.name + " quarter meta-graph (since " + new java.util.Date(since)
         + " until " + new java.util.Date(until) + ") is empty.");
@@ -493,7 +470,7 @@ static void testSubGraphs(GitMiner gm) {
     for (Dag d : half.dags) {
       d.bfPrintout(d.bfVisit());
     }
-    half.getDensierDag().exportToGexf(gm.name + "_half");
+    half.getDensestDag().exportToGexf(gm.name + "_half");
   } else
     System.out.println(gm.name + " half meta-graph (since " + new java.util.Date(since) + " until "
         + new java.util.Date(until) + ") is empty.");
@@ -508,7 +485,7 @@ static void testSubGraphs(GitMiner gm) {
     for (Dag d : threequarters.dags) {
       d.bfPrintout(d.bfVisit());
     }
-    threequarters.getDensierDag().exportToGexf(gm.name + "_threequarters");
+    threequarters.getDensestDag().exportToGexf(gm.name + "_threequarters");
   } else
     System.out.println(gm.name + " threequarters meta-graph (since " + new java.util.Date(since)
         + " until " + new java.util.Date(until) + ") is empty.");
