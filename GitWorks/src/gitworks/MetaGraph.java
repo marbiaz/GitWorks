@@ -30,6 +30,10 @@ static class NodeDegreeComparator implements java.util.Comparator<Commit> {
 }
 
 
+public static enum DagType {
+  OLDEST, LARGEST, DENSEST
+}
+
 private int maxID;
 
 ArrayList<Commit> allCommits;
@@ -37,8 +41,8 @@ ArrayList<Dag> dags;
 long since;
 long until;
 private int diameter; // the number of metaedges in the longest path from the oldest root
-private int maxWidth; // the largest number of metaedges belonging to the same layer
-private int[] layerSizes; // how many metaedges per layer
+private int maxWidth; // the largest number of commits belonging to the same layer in the same dag
+private int maxDensity; // the largest number of commits belonging to the same layer in the same dag
 
 
 private MetaGraph() {
@@ -48,8 +52,8 @@ private MetaGraph() {
   since = Long.MAX_VALUE;
   until = 0L;
   diameter = 0;
-  maxWidth = 0;
-  layerSizes = null;
+  maxWidth = -1;
+  maxDensity = -1;
 }
 
 
@@ -59,21 +63,36 @@ public MetaGraph(ArrayList<Commit> all) {
   dags = new ArrayList<Dag>();
   since = Long.MAX_VALUE;
   until = 0L;
-  diameter = 0;
-  maxWidth = 0;
-  layerSizes = null;
+  diameter = -1;
+  maxWidth = -1;
+  maxDensity = -1;
 }
 
 
 int getDiameter() {
-  if (diameter == 0) getLayerSizes();
+  if (diameter == -1) {
+    for (Dag d : dags)
+      diameter = Math.max(diameter, d.getDiameter());
+  }
   return diameter;
 }
 
 
 int getMaxWidth() {
-  if (maxWidth == 0) getLayerSizes();
+  if (maxWidth == -1) {
+    for (Dag d : dags)
+      maxWidth = Math.max(maxWidth, d.getMaxWidth());
+  }
   return maxWidth;
+}
+
+
+int getMaxDensity() {
+  if (maxDensity == -1) {
+    for (Dag d : dags)
+      maxDensity = Math.max(maxDensity, d.getMaxDensity());
+  }
+  return maxDensity;
 }
 
 
@@ -117,40 +136,49 @@ DescriptiveStatistics getMetaEdgeAuthorStats() {
 }
 
 
-DescriptiveStatistics getLayerStats() {
-  DescriptiveStatistics ds = new DescriptiveStatistics();
-  if (layerSizes == null) getLayerSizes();
-  if (layerSizes != null)
-    for (int s : getLayerSizes())
-      ds.addValue((double)s);
-  return ds;
+/**
+ * @return Layer stats of the densest dag in the metagraph
+ */
+DescriptiveStatistics[] getLayerStats() {
+  if (dags.size() == 1) return dags.get(0).getLayerStats();
+  return getLayerStats(DagType.DENSEST);
 }
 
 
-int[] getLayerSizes() {
-  if (layerSizes != null) return layerSizes;
-  int[][] m = new int[dags.size()][];
-  int i = 0;
-  diameter = 0;
-  maxWidth = 0;
-  for (Dag d : dags) {
-    m[i] = d.getLayerSizes();
-    diameter = Math.max(diameter, d.getDiameter());
-    maxWidth = Math.max(maxWidth, d.getMaxWidth());
-    i++;
+DescriptiveStatistics[] getLayerStats(DagType t) {
+  switch (t) {
+  case OLDEST:
+    return getOldestDag().getLayerStats();
+  case LARGEST:
+    return getLargestDag().getLayerStats();
+  case DENSEST:
+    return getDensestDag().getLayerStats();
+  default:
+    return null;
   }
-  if (diameter == 0) return null;
-  layerSizes = new int[diameter];
-  Arrays.fill(layerSizes, 0);
-  for (int[] vals : m) {
-    if (vals == null) continue;
-    i = 0;
-    for (int v : vals) {
-      layerSizes[i] += v;
-      i++;
-    }
+}
+
+
+/**
+ * @return Layer sizes of the densest dag in the metagraph
+ */
+int[][] getLayerSizes() {
+  if (dags.size() == 1) return dags.get(0).getLayerSizes();
+  return getLayerSizes(DagType.DENSEST);
+}
+
+
+int[][] getLayerSizes(DagType t) {
+  switch (t) {
+  case OLDEST:
+    return getOldestDag().getLayerSizes();
+  case LARGEST:
+    return getLargestDag().getLayerSizes();
+  case DENSEST:
+    return getDensestDag().getLayerSizes();
+  default:
+    return null;
   }
-  return layerSizes;
 }
 
 
@@ -183,9 +211,9 @@ static MetaGraph createMetaGraph(Dag d) {
   res.dags.add(d);
   res.since = since;
   res.until = until;
-  res.layerSizes = d.getLayerSizes();
   res.diameter = d.getDiameter();
   res.maxWidth = d.getMaxWidth();
+  res.maxDensity = d.getMaxDensity();
 
   return res;
 }
@@ -340,7 +368,7 @@ Dag getLargestDag() {
 }
 
 
-Dag getDensierDag() {
+Dag getDensestDag() {
   int i, bi = 0, cur, best = 0;
   for (i = 0; i < dags.size(); i++) {
     cur = dags.get(i).getNumMetaEdges();

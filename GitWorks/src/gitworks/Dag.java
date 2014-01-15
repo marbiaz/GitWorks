@@ -95,9 +95,11 @@ ArrayList<Commit> nodes; // every node in the graph but roots and leaves
 ArrayList<Commit> leaves; // nodes with no child
 ArrayList<Commit> roots; // nodes with no parent
 private ArrayList<MetaEdge> metaEdges; // graph's edges
-private int[] layerSizes;
+
+private int[][] layerSizes;
 private int diameter;
-private int maxWidth;
+private int maxWidth; // max number of commits in a layer
+private int maxDensity; // max number of edges e in a layer L such that e.first.layer <= L <= e.last.layer
 ArrayList<Commit> mergeCommits;
 ArrayList<Commit> branchCommits;
 ArrayList<Commit> coolCommits;
@@ -113,7 +115,8 @@ public Dag() {
   coolCommits = null;
   layerSizes = null;
   diameter = 0;
-  maxWidth = 0;
+  maxWidth = -1;
+  maxDensity = -1;
 }
 
 
@@ -178,14 +181,19 @@ ArrayList<MetaEdge> getInEdges(Commit c) {
 
 
 int getDiameter() {
-  if (diameter == 0) computeLayerSizes();
   return diameter;
 }
 
 
 int getMaxWidth() {
-  if (maxWidth == 0) computeLayerSizes();
+  if (maxWidth == -1) computeLayerSizes();
   return maxWidth;
+}
+
+
+int getMaxDensity() {
+  if (maxDensity == -1) computeLayerSizes();
+  return maxDensity;
 }
 
 
@@ -201,56 +209,50 @@ void getMetaEdgeAuthorStats(DescriptiveStatistics ds) {
 }
 
 
-DescriptiveStatistics getLayerStats() {
-  DescriptiveStatistics ds = new DescriptiveStatistics();
+// [0] -> vertexes ; [1] -> edges
+DescriptiveStatistics[] getLayerStats() {
+  DescriptiveStatistics ds[] = new DescriptiveStatistics[layerSizes.length];
   if (layerSizes == null) computeLayerSizes();
-  if (layerSizes != null)
-    for (int s : layerSizes)
-      ds.addValue((double)s);
+  for (int i = 0; i < ds.length; i++) {
+    ds[i] = new DescriptiveStatistics();
+    for (int s : layerSizes[i])
+      ds[i].addValue((double)s);
+  }
   return ds;
 }
 
 
 private void computeLayerSizes() {
-  if (metaEdges.size() == 0) return;
-  ArrayList<MetaEdge> allEdges = new ArrayList<MetaEdge>();
-  allEdges.addAll(metaEdges);
-  Collections.sort(allEdges, new Comparator<MetaEdge>() {
-
-    @Override
-    public int compare(MetaEdge m1, MetaEdge m2) {
-      return m1.layer - m2.layer;
-    }
-  });
-  diameter = allEdges.get(allEdges.size() - 1).layer;
-  layerSizes = new int[diameter];
-
-  int j = 0, i = 0, n = 0, cur = allEdges.get(0).layer;
-  maxWidth = 0;
-  for (MetaEdge m : allEdges) {
-    j++;
-    if (m.layer == cur) {
-      n++;
-      if (j == allEdges.size()) {
-        layerSizes[i] = n;
-        maxWidth = Math.max(layerSizes[i], maxWidth);
-      }
-    } else {
-      cur = m.layer;
-      layerSizes[i] = n;
-      maxWidth = Math.max(layerSizes[i], maxWidth);
-      n = 1;
-      i++;
-    }
+  layerSizes = new int[2][diameter + 1];
+  for (int i = 0; i < layerSizes.length; i++)
+    Arrays.fill(layerSizes[i], 0);
+  ArrayList<Commit> allComs = new ArrayList<Commit>(nodes.size() + leaves.size() + roots.size());
+  allComs.addAll(nodes);
+  allComs.addAll(roots);
+  allComs.addAll(leaves);
+  for (Commit c : allComs) {
+    layerSizes[0][c.layer]++;
+  }
+  MetaEdge me;
+  Iterator<MetaEdge> mIt = getMetaEdges();
+  while (mIt.hasNext()) {
+    me = mIt.next();
+    for (int i = me.last.layer; i > me.first.layer; i--)
+      layerSizes[1][i]++;
+  }
+  for (int i = 0; i <= diameter; i++) {
+    maxWidth = Math.max(maxWidth, layerSizes[0][i]);
+    maxDensity = Math.max(maxDensity, layerSizes[1][i]);
   }
 }
 
 
-int[] getLayerSizes() {
+int[][] getLayerSizes() {
   if (layerSizes == null) computeLayerSizes();
-  if (layerSizes == null) return null;
-  int[] res = new int[layerSizes.length];
-  System.arraycopy(layerSizes, 0, res, 0, res.length);
+  int[][] res = new int[layerSizes.length][layerSizes[0].length];
+  for (int i = 0; i < layerSizes.length; i++)
+    for (int j = 0; j < layerSizes[i].length; j++)
+      res[i][j] = layerSizes[i][j];
   return res;
 }
 
@@ -369,6 +371,7 @@ Commit[] bfVisit() {
     for (i = size; i < next; i++)
       GitWorks.addUnique(prev, res[i]);
   }
+  diameter = layer;
   return res;
 }
 

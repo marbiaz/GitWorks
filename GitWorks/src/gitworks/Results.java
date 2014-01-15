@@ -381,7 +381,7 @@ static void computeDistros(ArrayList<MetaGraph> mgs, FeatureList fl) {
   // deg1[i] = FastMath.round(deg1[i]);
 
   for (MetaGraph mg : mgs) {
-    d = mg.getDensierDag();
+    d = mg.getDensestDag();
     coms = selectMeaningful(d);
     deg1 = new double[coms.size()];
     i = 0;
@@ -397,7 +397,7 @@ static void computeDistros(ArrayList<MetaGraph> mgs, FeatureList fl) {
 
   for (i = 0; i < non_normal.size() - 1; i++) {
     mg1 = non_normal.get(i);
-    d = mg1.getDensierDag();
+    d = mg1.getDensestDag();
     System.err.println("Got the dag for " + mg1);
     System.err.flush();
     coms = selectMeaningful(d);
@@ -409,7 +409,7 @@ static void computeDistros(ArrayList<MetaGraph> mgs, FeatureList fl) {
       deg1[k++] = (double)(c.inDegree + c.outDegree);
     for (j = i + 1; j < non_normal.size(); j++) {
       mg2 = non_normal.get(j);
-      d = mg2.getDensierDag();
+      d = mg2.getDensestDag();
       System.err.println("Got the dag for " + mg2);
       System.err.flush();
       coms = selectMeaningful(d);
@@ -683,7 +683,7 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
   try {
     ds[6] = mg.getInternalCommitStats(); // XXX
     ds[7] = mg.getMetaEdgeAuthorStats();
-    ds[8] = mg.getLayerStats();
+    ds[8] = mgStats[0];
     while (moIt.hasNext()) {
       mo = moIt.next();
       try {
@@ -844,21 +844,26 @@ static void footPrint(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
   Features f;
   Iterator<Features> fIt = fl.iterator();
   XYSeriesChart chart = new XYSeriesChart(new String[] {"footprints", "", ""});
-  double max = 0.0;
+  double allMax = 0.0;
+  double[] max = new double[mgs.size()];
+  Arrays.fill(max, 0.0);
   int i, c = 0;
-  int[] lSizes;
+  int[][] lSizes;
   for (MetaGraph mg : mgs) {
     lSizes = mg.getLayerSizes();
-    if (lSizes != null) for (int s : lSizes)
-      max = Math.max(max, s);
-  }
-  for (MetaGraph mg : mgs) {
+    for (int s : lSizes[1]) {
+      max[c] = Math.max(max[c], s);
+      allMax = Math.max(allMax, s);
+    }
     c++;
+  }
+  c = 0;
+  for (MetaGraph mg : mgs) {
     f = fIt.next();
     lSizes = mg.getLayerSizes();
-    if (lSizes == null) continue;
-    double[] x = new double[lSizes.length * 2];
-    double[] vals = new double[lSizes.length * 2];
+    if (lSizes[0].length == 1) continue;
+    double[] x = new double[lSizes[0].length * 2];
+    double[] vals = new double[lSizes[0].length * 2];
     int k = 1;
     for (i = 0; i < x.length; i++) {
       x[i] = k;
@@ -868,11 +873,12 @@ static void footPrint(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
     try {
       pOut = new PrintWriter(new FileWriter(GitWorks.pwd + "/gdata/"
           + f.name.split(GitWorks.safe_sep)[1] + ".footprint.gdata"));
-      i = -1;
-      for (double size : lSizes) {
-        vals[++i] = (max / 2) - (size / 2);
-        vals[++i] = (max / 2) + (size / 2);
-        pOut.println("" + ((max / 2) - (size / 2)) + "\t" + ((max / 2) + (size / 2)));
+      i = 0;
+      for (int s = 0; s < lSizes[0].length; s++) {
+        vals[i++] = (allMax / 2) - (lSizes[1][s] / 2.0);
+        vals[i++] = (allMax / 2) + (lSizes[1][s] / 2.0);
+        pOut.println("" + ((max[c] / 2) - (lSizes[1][s] / 2.0)) + "\t"
+            + ((max[c] / 2) + (lSizes[1][s] / 2.0)) + "\t" + lSizes[0][s]);
       }
       chart.addDataset(f.name + "_" + c, x, vals);
       pOut.flush();
@@ -882,6 +888,7 @@ static void footPrint(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
     }
     finally {
       if (pOut != null) pOut.close();
+      c++;
     }
   }
   // chart.plotWindow();
