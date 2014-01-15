@@ -655,24 +655,25 @@ static void metagraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
 //
 static String[] metricsNames = new String[] {
     "mo_min_layer", "mo_max_layer", "mo_tot_edges", "mo_num_parallels", "mo_weight", "mo_num_authors",
-    "mg_weights", "mg_num_authors", "mg_layer_size"};
+    "mg_weights", "mg_num_authors", "mg_layer_width", "mg_layer_density"};
 
-static String[] aggregatesNames = new String[] {"_min", "_25p", "_med", "_75p", "_max", "_avg",
-    "_stdev"};
+static String[] aggregatesNames = new String[] {
+    "_min", "_25p", "_med", "_75p", "_max", "_avg", "_stdev"};
 
-static String[] singleValuesNames = new String[] {"mo_num_occur", "mo_num_nodes", "mo_num_edges",
-    "mo_z-score", "mg_diameter"};
+static String[] singleValuesNames = new String[] {
+    "mo_num_occur", "mo_num_nodes", "mo_num_edges", "mo_z-score", "mg_diameter"};
 
 static String[] colHeader = null;
 
 
 static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean printout) {
-  // 5 + (6 + 3) metrics to aggregate x 7 aggregates XXX
-  double[][] res = new double[motifs.size()][68];
+  // 5 + (6 + 4) metrics to aggregate x 7 aggregates XXX
+  double[][] res = new double[motifs.size()][75];
   for (double[] row : res)
     Arrays.fill(row, 0.0);
   Iterator<Motif> moIt = motifs.iterator();
-  DescriptiveStatistics ds[] = new DescriptiveStatistics[9]; // XXX
+  DescriptiveStatistics ds[] = new DescriptiveStatistics[10]; // XXX
+  DescriptiveStatistics mgStats[] = mg.getLayerStats();
   for (int i = 0; i < 6; i++) { // XXX
     ds[i] = new DescriptiveStatistics();
   }
@@ -684,6 +685,7 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
     ds[6] = mg.getInternalCommitStats(); // XXX
     ds[7] = mg.getMetaEdgeAuthorStats();
     ds[8] = mgStats[0];
+    ds[9] = mgStats[1];
     while (moIt.hasNext()) {
       mo = moIt.next();
       try {
@@ -708,12 +710,12 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
         zScore = mo.zScore;
         occur = mo.occurrences.size();
         for (MotifOccurrence ma : mo.occurrences) {
-          if (printout)
+          if (printout) // XXX
             pout.println(occur + "\t" + ma.mNodes.length + "\t" + ma.mEdges.size() + "\t" + zScore
                 + "\t" + mg.getDiameter()
                 + "\t" + ma.minLayer + "\t" + ma.maxLayer + "\t" + ma.totEdges + "\t" + ma.numParallels
                 + "\t" + ma.weight + "\t" + ma.numAuthors + "\t" + ds[6].getMean() + "\t"
-                + ds[7].getMean() + "\t" + ds[8].getMean());
+                + ds[7].getMean() + "\t" + ds[8].getMean() + "\t" + ds[9].getMean());
           ds[0].addValue(ma.minLayer); // XXX
           ds[1].addValue(ma.maxLayer);
           ds[2].addValue(ma.totEdges);
@@ -726,7 +728,7 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
         res[j][2] = edges;
         res[j][3] = zScore;
         res[j][4] = mg.getDiameter();
-        for (i = 0; i < ds.length; i++) {
+        for (i = 0; i < ds.length; i++) { // XXX
           res[j][5 + i * 7 + 0] = ds[i].getMin();
           res[j][5 + i * 7 + 1] = ds[i].getPercentile(25);
           res[j][5 + i * 7 + 2] = ds[i].getPercentile(50);
@@ -830,11 +832,12 @@ static void motifsFeatsCorrelation(ArrayList<MetaGraph> mgs, ArrayList<Features>
     motifRank = IndexedSortable.sortedPermutation(numMotifs, false);
     for (int j = 0; j < featNames.length; j++) {
       sc = new SpearmansCorrelation();
-      System.out.print(mn + " & " + featNames[j] + " : " + sc.correlation(numMotifs, featVals[j]));
+      System.out
+          .println(mn + " & " + featNames[j] + " : " + sc.correlation(numMotifs, featVals[j]));
       chart.addDataset(featNames[j], motifRank, featRanks[j]);
     }
     k++;
-    chart.plotWindow();
+    // chart.plotWindow();
   }
 }
 
