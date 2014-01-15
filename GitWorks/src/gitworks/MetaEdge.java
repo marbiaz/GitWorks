@@ -10,7 +10,6 @@ int ID;
 private ArrayList<Commit> internals;
 Commit first; // ancestor commit (oldest in this meta edge)
 Commit last; // latest commit in this meta edge
-int endLayer; // TODO delete this
 long startTimestamp;
 long endTimestamp;
 
@@ -23,7 +22,6 @@ int getWeight() {
 public MetaEdge(int id) {
   ID = id;
   internals = null;
-  endLayer = 0;
   startTimestamp = -1;
   endTimestamp = -1;
 }
@@ -31,7 +29,6 @@ public MetaEdge(int id) {
 
 MetaEdge(MetaEdge me) {
   ID = me.ID;
-  endLayer = me.endLayer;
   first = null;
   last = null;
   internals = null;
@@ -49,6 +46,11 @@ void addInternal(Commit c) {
 
 ArrayList<Commit> getInternals() {
   return internals;
+}
+
+
+int getSpan() {
+  return last.layer - first.layer;
 }
 
 

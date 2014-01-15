@@ -322,8 +322,6 @@ Commit[] bfVisit() {
   Commit[] res = new Commit[tot];
   ArrayList<Commit> prev = new ArrayList<Commit>();
   ArrayList<Commit> cur = new ArrayList<Commit>(); // to check for duplicates in res
-//  ArrayList<MetaEdge> mar;
-//  HashMap<Commit, ArrayList<MetaEdge>> pending = new HashMap<Commit, ArrayList<MetaEdge>>(); // XXX
   prev.addAll(roots);
   cur.addAll(roots);
   for (Commit r : roots) {
@@ -348,24 +346,11 @@ Commit[] bfVisit() {
           e.last.layer = layer;
           e.startTimestamp = e.first.getCommittingInfo().getWhen().getTime();
           e.endTimestamp = e.last.getCommittingInfo().getWhen().getTime();
-          // e.endLayer = layer; // XXX
-//          mar = pending.remove(e.last);  //
-//          if (mar != null) {            //
-//            for (MetaEdge mes : mar)    //
-//              mes.endLayer = layer;     //
-//          }                             //
           if (Collections.binarySearch(cur, e.last) < 0) {
             res[next++] = e.last;
             GitWorks.addUnique(cur, e.last);
           }
-        } //else {                        //
-//          mar = pending.get(e.last);    //
-//          if (mar == null) {            //
-//            mar = new ArrayList<MetaEdge>(); //
-//            pending.put(e.last, mar);       //
-//          }                             //
-//          mar.add(e);                   //
-//        }                               //
+        }
       }
     }
     size = curSize;
@@ -379,25 +364,14 @@ Commit[] bfVisit() {
 
 
 void bfPrintout(Commit[] commits) {
-  int prev = 0, cur;
+  int prev = 0;
   for (Commit c : commits) {
-    cur = 0;
-    for (MetaEdge me : metaEdges) {
-      if (me.last.equals(c)) {
-        System.err.print(me.ID + " : " + me.first.id.getName() + " -> " + me.last.id.getName()
-            + " : " + me.endLayer);
-        if (me.endLayer < prev)
-          System.err.print(" Dag : ERROR : bf-visit layer order is wrong.");
-        prev = me.endLayer;
-        if (cur == 0)
-          cur = me.endLayer;
-        else if (me.endLayer != cur)
-          System.err.print(" Dag : ERROR : bf-visit layers differ within the same group.");
-        System.err.println();
-      }
-    }
+    System.err.print(c.id + " : " + c.layer);
+    if (c.layer < prev) System.err.print(" Dag : ERROR : bf-visit layer order is wrong.");
+    prev = c.layer;
     System.err.println();
   }
+  System.err.println();
 }
 
 
@@ -944,7 +918,7 @@ void exportToGexf(String name) { // XXX
       .setDefaultValue("false");
   Attribute attTstamp = nAttrList.createAttribute("3", AttributeType.LONG, "timestamp");
   Attribute attWeight = eAttrList.createAttribute("4", AttributeType.INTEGER, "meta-weight");
-  Attribute attLayer = eAttrList.createAttribute("5", AttributeType.INTEGER, "layer");
+  Attribute attLayer = eAttrList.createAttribute("5", AttributeType.INTEGER, "span");
 
   MyNode node;
   ArrayList<MyNode> cache = new ArrayList<MyNode>(nodes.size() + roots.size() + leaves.size());
@@ -1001,7 +975,7 @@ void exportToGexf(String name) { // XXX
     }
     e.setWeight(e.getWeight() + (float)me.getWeight())
         .getAttributeValues().addValue(attWeight, "" + e.getWeight())
-.addValue(attLayer, "" + me.endLayer);
+        .addValue(attLayer, "" + me.getSpan());
   }
 
   StaxGraphWriter graphWriter = new StaxGraphWriter();
