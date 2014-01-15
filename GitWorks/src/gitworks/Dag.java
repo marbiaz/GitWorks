@@ -346,6 +346,8 @@ Commit[] bfVisit() {
             for (MetaEdge mes : mar)
               mes.layer = layer;
           }
+          e.startTimestamp = e.first.getCommittingInfo().getWhen().getTime();
+          e.endTimestamp = e.last.getCommittingInfo().getWhen().getTime();
           if (Collections.binarySearch(cur, e.last) < 0) {
             res[next++] = e.last;
             GitWorks.addUnique(cur, e.last);

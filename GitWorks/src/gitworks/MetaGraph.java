@@ -583,7 +583,9 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
     size = in.readInt();
     for (i = 0; i < size; i++) {
       e = new MetaEdge(in.readInt());
-      e.layer = in.readInt();
+      // e.endLayer = in.readInt(); // TODO delete this
+      e.startTimestamp = in.readLong();
+      e.endTimestamp = in.readLong();
       e.first = allCommits.get(in.readInt());
       e.last = allCommits.get(in.readInt());
       j = in.readInt();
@@ -627,7 +629,9 @@ public void writeExternal(ObjectOutput out) throws IOException {
     while (ite.hasNext()) {
       me = ite.next();
       out.writeInt(me.ID);
-      out.writeInt(me.layer);
+      // out.writeInt(me.endLayer); TODO delete this
+      out.writeLong(me.startTimestamp);
+      out.writeLong(me.endTimestamp);
       out.writeInt(Collections.binarySearch(allCommits, me.first));
       out.writeInt(Collections.binarySearch(allCommits, me.last));
       out.writeInt(me.getWeight());
