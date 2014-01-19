@@ -51,7 +51,7 @@ private MetaGraph() {
   dags = new ArrayList<Dag>();
   since = Long.MAX_VALUE;
   until = 0L;
-  diameter = 0;
+  diameter = -1;
   maxWidth = -1;
   maxDensity = -1;
 }
@@ -124,14 +124,6 @@ DescriptiveStatistics getInternalCommitStats() {
   DescriptiveStatistics ds = new DescriptiveStatistics();
   for (Dag d : dags)
     d.getInternalCommitStats(ds);
-  return ds;
-}
-
-
-DescriptiveStatistics getMetaEdgeAuthorStats() {
-  DescriptiveStatistics ds = new DescriptiveStatistics();
-  for (Dag d : dags)
-    d.getMetaEdgeAuthorStats(ds);
   return ds;
 }
 

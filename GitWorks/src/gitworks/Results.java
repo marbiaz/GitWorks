@@ -754,6 +754,146 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
 }
 
 
+/**
+ * @param me
+ * @param allCommits
+ *          If true, the result accounts for the first and last node of the metaedges; otherwise,
+ *          only internal nodes are considered.
+ * @return The number of distinct authors of commits in the metaedges.
+ */
+static int getMetaEdgeAuthors(ArrayList<MetaEdge> edges, boolean allCommits) {
+  ArrayList<String> auth = new ArrayList<String>();
+  for (MetaEdge me : edges) {
+    if (me.getWeight() > 0) for (Commit c : me.getInternals()) {
+      GitWorks.addUnique(auth, c.getAuthoringInfo().getEmailAddress());
+    }
+    if (allCommits) {
+      GitWorks.addUnique(auth, me.first.getAuthoringInfo().getEmailAddress());
+      GitWorks.addUnique(auth, me.last.getAuthoringInfo().getEmailAddress());
+    }
+  }
+  return auth.size();
+}
+
+
+/**
+ * @param me
+ * @param allCommits
+ *          If true, the result accounts for the first and last node of the metaedges; otherwise,
+ *          only internal commits are considered.
+ * @return The number of distinct commits in the metaedges.
+ */
+static int getMetaEdgeCommits(ArrayList<MetaEdge> edges, boolean allCommits) {
+  ArrayList<String> coms = new ArrayList<String>();
+  int weights = 0;
+  for (MetaEdge me : edges) {
+    weights += me.getWeight();
+    if (allCommits) {
+      GitWorks.addUnique(coms, me.first);
+      GitWorks.addUnique(coms, me.last);
+    }
+  }
+  return coms.size() + weights;
+}
+
+
+static int getMetaGraphAuthors(MetaGraph mg) {
+  ArrayList<String> auth = new ArrayList<String>(mg.allCommits.size());
+  for (Commit c : mg.allCommits)
+    GitWorks.addUnique(auth, c.getAuthoringInfo().getEmailAddress());
+  return auth.size();
+}
+
+
+/**
+ * Statistics about the number of interal commits per metaedge. The first array is global, the
+ * second only about non-motifs, the third only about motif metaedges. Then one array per motifs,
+ * according to the second argument.
+ * 
+ * @param mg
+ * @param motifs
+ * @return Aggregates of the number of internal commits per metaedge.
+ */
+static DescriptiveStatistics[] getMetaEdgeCommitStats(MetaGraph mg, ArrayList<Motif> motifs) {
+  DescriptiveStatistics[] res = new DescriptiveStatistics[3 + motifs.size()];
+  for (int i = 0; i < res.length; i++)
+    res[i] = new DescriptiveStatistics();
+  ArrayList<MetaEdge> edges = new ArrayList<MetaEdge>();
+  Iterator<MetaEdge> mIt;
+  MetaEdge me;
+  int m;
+  double coms;
+  boolean inMotif;
+  for (Dag d : mg.dags) {
+    mIt = d.getMetaEdges();
+    while (mIt.hasNext()) {
+      edges.clear();
+      me = mIt.next();
+      edges.add(me);
+      coms = getMetaEdgeCommits(edges, false);
+      inMotif = false;
+      m = 0;
+      for (Motif mo : motifs) {
+        if (Collections.binarySearch(mo.allEdges, me) >= 0) {
+          inMotif = true;
+          res[3 + m].addValue(coms);
+        }
+        m++;
+      }
+      res[0].addValue(coms);
+      if (inMotif)
+        res[2].addValue(coms);
+      else
+        res[1].addValue(coms);
+    }
+  }
+  return res;
+}
+
+
+/**
+ * Statistics about the number of authors per metaedge (only internal commits). The first array is
+ * global, the second only about non-motifs, the third only about motif metaedges. Then one array
+ * per motifs, according to the second argument.
+ * 
+ * @param mg
+ * @param motifs
+ * @return Aggregates of the number of authors per metaedge (only internal commits).
+ */
+static DescriptiveStatistics[] getMetaEdgeAuthorStats(MetaGraph mg, ArrayList<Motif> motifs) {
+  DescriptiveStatistics[] res = new DescriptiveStatistics[3 + motifs.size()];
+  for (int i = 0; i < res.length; i++)
+    res[i] = new DescriptiveStatistics();
+  ArrayList<MetaEdge> edges = new ArrayList<MetaEdge>();
+  Iterator<MetaEdge> mIt;
+  MetaEdge me;
+  int m; double auth;
+  boolean inMotif;
+  for (Dag d : mg.dags) {
+    mIt = d.getMetaEdges();
+    while (mIt.hasNext()) {
+      edges.clear();
+      me = mIt.next();
+      edges.add(me);
+      auth = getMetaEdgeAuthors(edges, false);
+      inMotif = false;
+      m = 0;
+      for (Motif mo : motifs) {
+        if (Collections.binarySearch(mo.allEdges, me) >= 0) {
+          inMotif = true;
+          res[3 + m].addValue(auth);
+        }
+        m++;
+      }
+      res[0].addValue(auth);
+      if (inMotif) res[2].addValue(auth);
+      else res[1].addValue(auth);
+    }
+  }
+  return res;
+}
+
+
 /******************* motifs and feats ******************/
 
 // return a graph without parallel edges and the lists of them in 'twins'.

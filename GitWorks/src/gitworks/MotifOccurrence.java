@@ -16,7 +16,6 @@ int maxLayer;
 int totEdges;
 int numParallels; // how many groups of parallels
 int weight;
-int numAuthors;
 
 
 // only to make a motif out of parallel edges
@@ -27,7 +26,6 @@ MotifOccurrence(ArrayList<MetaEdge> parEdges) {
   Arrays.sort(mNodes);
   mEdges = new ArrayList<MetaEdge>(parEdges.size());
   weight = 0;
-  numAuthors = 0;
   for (MetaEdge m : parEdges) {
     GitWorks.addUnique(mEdges, m);
     weight += m.getWeight();
@@ -36,7 +34,6 @@ MotifOccurrence(ArrayList<MetaEdge> parEdges) {
   maxLayer = parEdges.get(0).last.layer;
   totEdges = mEdges.size();
   numParallels = 1;
-  getNumAuthors();
   parallels = null;
 }
 
@@ -65,7 +62,6 @@ MotifOccurrence(ArrayList<MetaEdge> edges, HashMap<String, ArrayList<MetaEdge>> 
   Collections.sort(mEdges);
   getTotEdges();
   getWeight();
-  getNumAuthors();
 }
 
 
@@ -113,19 +109,6 @@ MetaEdge[] getAllEdges() {
       res.add(m);
   }
   return res.toArray(new MetaEdge[0]);
-}
-
-
-private void getNumAuthors() {
-  MetaEdge[] allEdges = getAllEdges();
-  ArrayList<String> authors = new ArrayList<String>(allEdges.length);
-  for (MetaEdge m : allEdges) {
-    if (m.getInternals() != null) for (Commit c : m.getInternals())
-      GitWorks.addUnique(authors, c.getAuthoringInfo().getEmailAddress());
-    GitWorks.addUnique(authors, m.first.getAuthoringInfo().getEmailAddress());
-    GitWorks.addUnique(authors, m.last.getAuthoringInfo().getEmailAddress());
-  }
-  numAuthors = authors.size();
 }
 
 

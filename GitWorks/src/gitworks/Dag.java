@@ -201,12 +201,6 @@ void getInternalCommitStats(DescriptiveStatistics ds) {
 }
 
 
-void getMetaEdgeAuthorStats(DescriptiveStatistics ds) {
-  for (MetaEdge me : metaEdges)
-    ds.addValue((double)me.getNumAuthors());
-}
-
-
 // [0] -> vertexes ; [1] -> edges
 DescriptiveStatistics[] getLayerStats() {
   DescriptiveStatistics ds[] = new DescriptiveStatistics[layerSizes.length];
