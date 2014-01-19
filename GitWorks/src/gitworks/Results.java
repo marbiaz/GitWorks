@@ -470,7 +470,7 @@ static void printLatexTable(ArrayList<ArrayList<Motif>> motifs) {
           score = "\\textbf{$+\\infty$}";
         else
           score = (Math.abs(z) > 2 ? "\\textbf{" : "") + "$"
-              + String.format("%.3f", z) + "$"
+              + (z.doubleValue() == z.intValue() ? z.intValue() : String.format("%.3f", z)) + "$"
               + (Math.abs(z) > 2 ? "}" : "");
         tableOut.write(" & $" + mo.occurrences.size() + "$ & "// $" + mo.cStats.get(1) + "$ "& "
             + score);
@@ -653,43 +653,85 @@ static void metagraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
 // commit density in motifs VS average commit per edge-set + #authors in motifs
 // motif scores and #author #watchers
 //
-static String[] metricsNames = new String[] {
-    "mo_min_layer", "mo_max_layer", "mo_tot_edges", "mo_num_parallels", "mo_weight", "mo_num_authors",
-    "mg_weights", "mg_num_authors", "mg_layer_width", "mg_layer_density"};
+static String[] singleValuesNames = new String[] { // XXX F = 10
+    "mo_num_occur", // number of occurrences of the motif in the metagraph
+    "mo_num_nodes", // number of non sequential commits in the motif (structural nodes)
+    "mo_num_edges", // number of edges (excluding parallel ones, thus structural edges)
+    "mo_z-score",   // z-score that measure the significance of the number of occurrences of the motif in th emetagraph
+    "mg_diameter",  // diameter of the metagraph
+    "mg_num_edges", // number of metaedges in the metagraph
+    "mg_num_nodes", // number of non-sequential nodes in the metagraph (structural nodes)
+    "mg_num_commits", // total number of commits in the metagraph (structural nodes + internals)
+    "mg_num_authors", // total number of distinct authors of commits in the metagraph (considering structural nodes + internals)
+    "mg_mo_edges"   // number of metaedges that are part of a motif (each metaedge is considered only once)
+};
 
-static String[] aggregatesNames = new String[] {
+static String[] metricsNames = new String[] { // XXX M = 7 + G = 8
+    "mo_min_layer",     // minimum layer of a motif occurrence
+    "mo_max_layer",     // maximum layer of a motif occurrence
+    "mo_tot_edges",     // minimum layer of a motif occurrence
+    "mo_num_parallels", // number of groups of parallel edges within a motif occurrence
+    "mo_seq_commits",   // number of sequential commits in a motif occurrence
+    "mo_me_authors",    // number of authors of (internal?) commits per metaedge of a motif (occurrence)
+    "mo_me_seq_commits", // number of (internal?) commits per metaedge of a motif (occurrence)
+
+    "mg_mo-me_authors",     // number of authors of internal commits per motif-belonging metaedge in the metagraph (each metaedge is considered only once)
+    "mg_mo-me_seq_commits", // number of internal commits per motif-belonging metaedge in the metagraph (each metaedge is considered only once)
+    "mg_non-mo-me_authors", // number of authors of internal commits per non-motif-belonging metaedge in the metagraph
+    "mg_non-mo-me_seq_commits", // number of internal commits per non-motif-belonging metaedge in the metagraph
+    "mg_me_authors",    // number of authors of internal commits per metaedge in the metagraph
+    "mg_seq_commits",   // number of internal commits per metaedge in the metagraph
+    "mg_layer_width",   // maximum number of non-sequential commits (structural nodes) in a metagraph layer
+    "mg_layer_density"  // maximum number of metaedges within two consecutive metagraph layers
+};
+
+static String[] aggregatesNames = new String[] { // XXX A = 7
     "_min", "_25p", "_med", "_75p", "_max", "_avg", "_stdev"};
-
-static String[] singleValuesNames = new String[] {
-    "mo_num_occur", "mo_num_nodes", "mo_num_edges", "mo_z-score", "mg_diameter"};
 
 static String[] colHeader = null;
 
 
 static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean printout) {
-  // 5 + (6 + 4) metrics to aggregate x 7 aggregates XXX
-  double[][] res = new double[motifs.size()][75];
+  // Fixed = 10 + ( Motif = 7 + Graph = 8) metrics x Aggregates = 7 XXX
+  final int M = 7, G = 8, F = 10, A = 7; // -> F + ((M + G) * A) = 115
+  double[][] res = new double[motifs.size()][F + ((M + G) * A)];
   for (double[] row : res)
     Arrays.fill(row, 0.0);
   Iterator<Motif> moIt = motifs.iterator();
-  DescriptiveStatistics ds[] = new DescriptiveStatistics[10]; // XXX
-  DescriptiveStatistics mgStats[] = mg.getLayerStats();
-  for (int i = 0; i < 6; i++) { // XXX
+  DescriptiveStatistics ds[] = new DescriptiveStatistics[M + G];
+  DescriptiveStatistics mgLayerStats[] = mg.getLayerStats();
+  DescriptiveStatistics mgAuthorStats[] = getMetaEdgeAuthorStats(mg, motifs);
+  DescriptiveStatistics mgCommitStats[] = getMetaEdgeCommitStats(mg, motifs);
+  for (int i = 0; i < M; i++) {
     ds[i] = new DescriptiveStatistics();
   }
   Motif mo;
-  int i, j = -1, nodes, edges, occur;
-  double zScore;
+  int i, j = -1;
+  int[] mgSummary = mg.getSummaryStats();
+  int mgAuth = getMetaGraphAuthors(mg);
+  int allMoEdges;
   PrintWriter pout = null;
   try {
-    ds[6] = mg.getInternalCommitStats(); // XXX
-    ds[7] = mg.getMetaEdgeAuthorStats();
-    ds[8] = mgStats[0];
-    ds[9] = mgStats[1];
+    ds[7] = mgAuthorStats[2]; // XXX from M for each ds in G
+    ds[8] = mgCommitStats[2];
+    ds[9] = mgAuthorStats[1];
+    ds[10] = mgCommitStats[1];
+    ds[11] = mgAuthorStats[0];
+    ds[12] = mg.getInternalCommitStats();
+    ds[13] = mgLayerStats[0];
+    ds[14] = mgLayerStats[1];
+    ArrayList<MetaEdge> edges = new ArrayList<MetaEdge>(mgSummary[3]);
+    while (moIt.hasNext()) {
+      mo = moIt.next();
+      for (MetaEdge me : mo.allEdges)
+        GitWorks.addUnique(edges, me);
+    }
+    allMoEdges = edges.size();
+    moIt = motifs.iterator();
     while (moIt.hasNext()) {
       mo = moIt.next();
       try {
-        for (i = 0; i < 6; i++) { // XXX
+        for (i = 0; i < M; i++) {
           ds[i].clear();
         }
         j++;
@@ -705,37 +747,43 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
             pout.print("\t" + s);
           pout.println();
         }
-        nodes = mo.numNodes;
-        edges = mo.numEdges;
-        zScore = mo.zScore;
-        occur = mo.occurrences.size();
+        res[j][0] = mo.occurrences.size(); // XXX from 0 for each F
+        res[j][1] = mo.numNodes;
+        res[j][2] = mo.numEdges;
+        res[j][3] = mo.zScore;
+        res[j][4] = mg.getDiameter();
+        res[j][5] = mgSummary[3]; // #metaedges
+        res[j][6] = mgSummary[0] + mgSummary[1] + mgSummary[2]; // #vertexes
+        res[j][7] = mgSummary[7]; // #commits
+        res[j][8] = mgAuth;
+        res[j][9] = allMoEdges;
         for (MotifOccurrence ma : mo.occurrences) {
-          if (printout) // XXX
-            pout.println(occur + "\t" + ma.mNodes.length + "\t" + ma.mEdges.size() + "\t" + zScore
-                + "\t" + mg.getDiameter()
-                + "\t" + ma.minLayer + "\t" + ma.maxLayer + "\t" + ma.totEdges + "\t" + ma.numParallels
-                + "\t" + ma.weight + "\t" + ma.numAuthors + "\t" + ds[6].getMean() + "\t"
-                + ds[7].getMean() + "\t" + ds[8].getMean() + "\t" + ds[9].getMean());
-          ds[0].addValue(ma.minLayer); // XXX
+          if (printout)
+            pout.println(res[j][0] + "\t" + ma.mNodes.length + "\t" + ma.mEdges.size() + "\t" // XXX for each res in F
+                + res[j][3] + "\t" + mg.getDiameter() + "\t" + res[j][5] + "\t" + res[j][6] + "\t"
+                + res[j][7] + "\t" + res[j][8] + "\t" + res[j][9] + "\t"
+                + ma.minLayer + "\t" + ma.maxLayer + "\t"                                   // XXX for each measure in M
+                + ma.totEdges + "\t" + ma.numParallels + "\t" + ma.weight + "\t"
+                + getMetaEdgeAuthors(ma.mEdges, true) + "\t"+ getMetaEdgeCommits(ma.mEdges, true)+ "\t"
+                + ds[7].getMean() + "\t" + ds[8].getMean() + "\t" + ds[9].getMean() + "\t"  // XXX from M for each ds in G 
+                + ds[10].getMean() + "\t" + ds[11].getMean() + "\t" + ds[12].getMean() + "\t"
+                + ds[13].getMean() + "\t" + ds[14].getMean());
+          ds[0].addValue(ma.minLayer); // XXX from 0 for each ds in M
           ds[1].addValue(ma.maxLayer);
           ds[2].addValue(ma.totEdges);
           ds[3].addValue(ma.numParallels);
           ds[4].addValue(ma.weight);
-          ds[5].addValue(ma.numAuthors);
         }
-        res[j][0] = occur;
-        res[j][1] = nodes;
-        res[j][2] = edges;
-        res[j][3] = zScore;
-        res[j][4] = mg.getDiameter();
-        for (i = 0; i < ds.length; i++) { // XXX
-          res[j][5 + i * 7 + 0] = ds[i].getMin();
-          res[j][5 + i * 7 + 1] = ds[i].getPercentile(25);
-          res[j][5 + i * 7 + 2] = ds[i].getPercentile(50);
-          res[j][5 + i * 7 + 3] = ds[i].getPercentile(75);
-          res[j][5 + i * 7 + 4] = ds[i].getMax();
-          res[j][5 + i * 7 + 5] = ds[i].getMean();
-          res[j][5 + i * 7 + 6] = ds[i].getStandardDeviation();
+        ds[5] = mgAuthorStats[3 + j];
+        ds[6] = mgCommitStats[3 + j];  // XXX           "
+        for (i = 0; i < ds.length; i++) { // XXX A = 7
+          res[j][F + i * A + 0] = ds[i].getMin();
+          res[j][F + i * A + 1] = ds[i].getPercentile(25);
+          res[j][F + i * A + 2] = ds[i].getPercentile(50);
+          res[j][F + i * A + 3] = ds[i].getPercentile(75);
+          res[j][F + i * A + 4] = ds[i].getMax();
+          res[j][F + i * A + 5] = ds[i].getMean();
+          res[j][F + i * A + 6] = ds[i].getStandardDeviation();
         }
         if (printout) {
           pout.flush();
@@ -1120,8 +1168,8 @@ static void computeStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
     curTstamp = prevTstamp = mg.since - 1;
     for (i = 0; i < Results.ages; i++) {
       // ds.clear();
-      prevTstamp = curTstamp + 1; // XXX to get subsequent disjoint
-                                  // (VS incrementally inclusive) subgraphs
+      prevTstamp = curTstamp + 1; // XXX comment this to get incrementally inclusive
+                                  // (VS subsequent disjoint) subgraphs
       curTstamp = i * (mg.until - mg.since) / Results.ages + mg.since;
       mgNext = mg.buildSubGraph(new java.util.Date(prevTstamp),
           new java.util.Date(curTstamp));
