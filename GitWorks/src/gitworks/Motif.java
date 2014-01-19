@@ -8,6 +8,8 @@ import java.util.HashMap;
 public class Motif implements Comparable<Object> {
 
 String name;
+
+ArrayList<MetaEdge> allEdges;
 ArrayList<MotifOccurrence> occurrences;
 ArrayList<Double> cStats; // min mean med max stdev
 int minLayer;
@@ -22,6 +24,7 @@ public Motif(String n, int nodes, int edges) {
   numNodes = nodes;
   numEdges = edges;
   occurrences = new ArrayList<MotifOccurrence>();
+  allEdges = new ArrayList<MetaEdge>();
   cStats = new ArrayList<Double>();
   minLayer = Integer.MAX_VALUE;
   maxLayer = 0;
@@ -33,6 +36,11 @@ void addOccurrence(MotifOccurrence mo) {
   minLayer = Math.min(minLayer, mo.minLayer);
   maxLayer = Math.max(maxLayer, mo.maxLayer);
   GitWorks.addUnique(occurrences, mo);
+  for (MetaEdge me : mo.mEdges)
+    GitWorks.addUnique(allEdges, me);
+  for (MetaEdge[] mes : mo.parallels.values())
+    for (MetaEdge me : mes)
+      GitWorks.addUnique(allEdges, me);
 }
 
 
@@ -41,6 +49,11 @@ void addOccurrence(ArrayList<MetaEdge> edges, HashMap<String, ArrayList<MetaEdge
   minLayer = Math.min(minLayer, mo.minLayer);
   maxLayer = Math.max(maxLayer, mo.maxLayer);
   GitWorks.addUnique(occurrences, mo);
+  for (MetaEdge me : mo.mEdges)
+    GitWorks.addUnique(allEdges, me);
+  for (MetaEdge[] mes : mo.parallels.values())
+    for (MetaEdge me : mes)
+      GitWorks.addUnique(allEdges, me);
 }
 
 
