@@ -42,6 +42,160 @@ import circos.WriteCommitsToMain;
  */
 public class Results {
 
+private static int countICommits(Features fe) {
+  ArrayList<Integer> coms = new ArrayList<Integer>(fe.commitAuthor.length);
+  int i = 0;
+  for (int r : fe.commitRank) {
+    if (r > CommitRank.NONE.getValue()) GitWorks.addUnique(coms, i);
+    i++;
+  }
+  return coms.size();
+}
+
+
+private static int countIAuthors(Features fe) {
+  ArrayList<Integer> auths = new ArrayList<Integer>(fe.allAuthors.length);
+  int i = 0;
+  for (int r : fe.commitRank) {
+    if (r > CommitRank.NONE.getValue()) GitWorks.addUnique(auths, fe.commitAuthor[i]);
+    i++;
+  }
+  return auths.size();
+}
+
+
+private static int countICommits(Features fe, CommitRank r) {
+  int coms = 0;
+  for (int i : fe.commitRank) {
+    if ((r.equals(CommitRank.ROOT) && i == CommitRank.UNIQUE.getValue())
+        || (r.equals(CommitRank.UNIQUE) && i == CommitRank.ROOT.getValue()) // FIXME we do root + unique for the output...
+        || i == r.getValue()) coms++;
+  }
+  return coms;
+}
+
+
+private static int countIAuthors(Features fe, CommitRank r) {
+  ArrayList<Integer> auths = new ArrayList<Integer>(fe.allAuthors.length);
+  int i = 0;
+  for (int ra : fe.commitRank) {
+    if ((r.equals(CommitRank.ROOT) && ra == CommitRank.UNIQUE.getValue())
+        || (r.equals(CommitRank.UNIQUE) && ra == CommitRank.ROOT.getValue()) // FIXME we do root + unique for the output...
+        || ra == r.getValue()) GitWorks.addUnique(auths, fe.commitAuthor[i]);
+    i++;
+  }
+  return auths.size();
+}
+
+
+private static int countICommits(Features fe, int f) {
+  int res = 0;
+  for (CommitRank r : CommitRank.values()) {
+    switch (r) {
+    case NONE:
+    break;
+    case ROOT:
+      if (f == fe.rootIndex) res += fe.iCommitForF[f][r.getValue() + 1].size();
+    break;
+    case UNIQUE:
+      if (f != fe.rootIndex) res += fe.iCommitForF[f][r.getValue() + 1].size();
+    break;
+    default:
+      res += fe.iCommitForF[f][r.getValue() + 1].size();
+    }
+  }
+  return res;
+}
+
+
+private static int countIAuthors(Features fe, int f) {
+  int res = 0;
+  for (CommitRank r : CommitRank.values()) {
+    switch (r) {
+    case NONE:
+    break;
+    case ROOT:
+      if (f == fe.rootIndex) res += fe.iAuthorForF[f][r.getValue() + 1].size();
+    break;
+    case UNIQUE:
+      if (f != fe.rootIndex) res += fe.iAuthorForF[f][r.getValue() + 1].size();
+    break;
+    default:
+      res += fe.iAuthorForF[f][r.getValue() + 1].size();
+    }
+  }
+  return res;
+}
+
+
+static void printoutForkStats(ArrayList<Features> fl) {
+  PrintWriter pout = null;
+  String names = "fork_name\tmainline_gazers\ttot_gazers\ttot_commits\ttot_authors\ttot_generations"
+      + "\tnum_mainline_forks\tmax_non-mainline_forks\ttot_iCommits\ttot_iAuthors\tfork_iCommits\tfork_iAuthors";
+  for (CommitRank cr : CommitRank.values()) {
+    if (cr.name().equals("ROOT")) continue;
+    names += "\ttot_num_" + cr.name() + "_commit\ttot_num_" + cr.name() + "_authors\tfork_"
+        + cr.name() + "_commit_ratio\tfork_" + cr.name()
+        + "_authors_ratio\tfork_num_" + cr.name() + "_commit\tfork_num_" + cr.name() + "_authors";
+  }
+  String fixedVals, vals;
+  int f, totc, tota;
+  int[] totc_r = new int[CommitRank.values().length];
+  int[] tota_r = new int[CommitRank.values().length];
+  int rankCount;
+  ArrayList<Integer> rankAuthors = new ArrayList<Integer>();
+  try {
+    for (Features fe : fl) {
+      fe.computeExtra();
+      fixedVals = "\t" + fe.nWatchers + "\t" + fe.totWatchers + "\t" + fe.nCommits + "\t"
+          + fe.allAuthors.length + "\t" + fe.nGenerations + "\t"
+          + fe.nForks + "\t" + fe.maxGenSize;
+      try {
+        pout = new PrintWriter(new FileWriter(GitWorks.trees_out_dir + "/feats/"
+            + fe.name.split(GitWorks.safe_sep)[1] + ".feats.gdata", false));
+        pout.println(names);
+        f = 0;
+        totc = countICommits(fe);
+        tota = countIAuthors(fe);
+        for (CommitRank cr : CommitRank.values()) {
+          totc_r[cr.getValue() + 1] = countICommits(fe, cr);
+          tota_r[cr.getValue() + 1] = countIAuthors(fe, cr);
+        }
+        for (String n : fe.allForks) {
+          vals = n.split(GitWorks.safe_sep)[0] + fixedVals + "\t" + totc + "\t" + tota + "\t"
+              + countICommits(fe, f) + "\t" + countIAuthors(fe, f);
+          for (CommitRank cr : CommitRank.values()) {
+            if (cr.equals(CommitRank.ROOT)) continue;
+            if (cr.equals(CommitRank.UNIQUE) && fe.rootIndex == f) cr = CommitRank.ROOT;
+            rankCount = 0;
+            rankAuthors.clear();
+            for (int c : fe.iCommitForF[f][cr.getValue() + 1]) {
+              rankCount++;
+              GitWorks.addUnique(rankAuthors, fe.commitAuthor[c]);
+            }
+            vals += "\t" + totc_r[cr.getValue() + 1] + "\t" + tota_r[cr.getValue() + 1] + "\t"
+                + fe.commitRankRatio[cr.getValue() + 1] + "\t"
+                + fe.authorRankRatio[cr.getValue() + 1] + "\t" + rankCount + "\t"
+                + rankAuthors.size();
+          }
+          pout.println(vals);
+          f++;
+        }
+      }
+      catch (Exception e) {
+        e.printStackTrace();
+      }
+      finally {
+        fe.deleteExtra();
+        if (pout != null) pout.flush();
+        pout.close();
+      }
+    }
+  }
+  finally {}
+}
+
+
 private static CircosData getIAuthorsInMainline(Features f, int min) {
   CircosData res = new CircosData();
   // get the acAuthorImpactPerFork and plot it as histo OR
@@ -55,8 +209,8 @@ private static CircosData getIAuthorsInMainline(Features f, int min) {
   Integer val;
   DIdeogram di, main;
   System.err.println("INFO: " + f.toString());
-  for (i = 0; i < f.vipCommitForF[f.rootIndex][CommitRank.U_VIP.getValue() + 1].size(); i++) {
-    iCommits[c] = f.vipCommitForF[f.rootIndex][CommitRank.U_VIP.getValue() + 1].get(i);
+  for (i = 0; i < f.iCommitForF[f.rootIndex][CommitRank.U_VIP.getValue() + 1].size(); i++) {
+    iCommits[c] = f.iCommitForF[f.rootIndex][CommitRank.U_VIP.getValue() + 1].get(i);
     tstamps[c] = f.commitTimeLine[iCommits[c]];
     iAuthors[c] = f.commitAuthor[iCommits[c]];
     if (aFreq.containsKey(iAuthors[c]))
@@ -65,8 +219,8 @@ private static CircosData getIAuthorsInMainline(Features f, int min) {
       aFreq.put(iAuthors[c], 1);
     c++;
   }
-  for (i = 0; i < f.vipCommitForF[f.rootIndex][CommitRank.VIP.getValue() + 1].size(); i++) {
-    iCommits[c] = f.vipCommitForF[f.rootIndex][CommitRank.VIP.getValue() + 1].get(i);
+  for (i = 0; i < f.iCommitForF[f.rootIndex][CommitRank.VIP.getValue() + 1].size(); i++) {
+    iCommits[c] = f.iCommitForF[f.rootIndex][CommitRank.VIP.getValue() + 1].get(i);
     tstamps[c] = f.commitTimeLine[iCommits[c]];
     iAuthors[c] = f.commitAuthor[iCommits[c]];
     if (aFreq.containsKey(iAuthors[c]))
@@ -75,8 +229,8 @@ private static CircosData getIAuthorsInMainline(Features f, int min) {
       aFreq.put(iAuthors[c], 1);
     c++;
   }
-  for (i = 0; i < f.vipCommitForF[f.rootIndex][CommitRank.PERVASIVE.getValue() + 1].size(); i++) {
-    iCommits[c] = f.vipCommitForF[f.rootIndex][CommitRank.PERVASIVE.getValue() + 1].get(i);
+  for (i = 0; i < f.iCommitForF[f.rootIndex][CommitRank.PERVASIVE.getValue() + 1].size(); i++) {
+    iCommits[c] = f.iCommitForF[f.rootIndex][CommitRank.PERVASIVE.getValue() + 1].get(i);
     tstamps[c] = f.commitTimeLine[iCommits[c]];
     iAuthors[c] = f.commitAuthor[iCommits[c]];
     if (aFreq.containsKey(iAuthors[c]))
@@ -97,13 +251,12 @@ private static CircosData getIAuthorsInMainline(Features f, int min) {
   }
   for (i = 0; i < sorting.length; i++) {
     cur = sorting[i];
-    val = aFreq.remove(iAuthors[iCommits[cur]]);// =
-                                                // f.authorsImpactPerF[iAuthors[iCommits[cur]]][f.rootIndex][1]
+    val = aFreq.remove(iAuthors[iCommits[cur]]);// = f.authorsImpactPerF[iAuthors[iCommits[cur]]][f.rootIndex][1]
     if (val == null) continue; // || val <= min XXX
     di = new DIdeogram(f.allAuthors[iAuthors[iCommits[cur]]], val, 0);
     res.addToSetB(di);
     res.getLinks().add(new DLink(main, di, di.getValue())); // keep the order in res.links
-    // if (uCommits[cur] > 0) di.setScatter(uCommits[cur]); //res.addScatter(di, uCommits[cur]);
+    // if (uCommits[cur] > 0) di.setScatter(uCommits[cur]);
   }
 
   return res;
@@ -124,29 +277,29 @@ private static CircosData getICommitsToMainline(Features f, int min) {
   System.err.println("INFO: " + f.toString());
   for (i = 0; i < f.allForks.length; i++) {
     tstamps[i] = f.since[i];
-    iCommits[i] = f.vipCommitForF[i][CommitRank.U_VIP.getValue() + 1].size()
-        + f.vipCommitForF[i][CommitRank.VIP.getValue() + 1].size()
-        + f.vipCommitForF[i][CommitRank.PERVASIVE.getValue() + 1].size();
-    uCommits[i] = (i == f.rootIndex) ? f.vipCommitForF[i][CommitRank.ROOT.getValue() + 1].size()
-        : f.vipCommitForF[i][CommitRank.UNIQUE.getValue() + 1].size();
+    iCommits[i] = f.iCommitForF[i][CommitRank.U_VIP.getValue() + 1].size()
+        + f.iCommitForF[i][CommitRank.VIP.getValue() + 1].size()
+        + f.iCommitForF[i][CommitRank.PERVASIVE.getValue() + 1].size();
+    uCommits[i] = (i == f.rootIndex) ? f.iCommitForF[i][CommitRank.ROOT.getValue() + 1].size()
+        : f.iCommitForF[i][CommitRank.UNIQUE.getValue() + 1].size();
     iAuthors[i] = new ArrayList<Integer>();
     uAuthors[i] = new ArrayList<Integer>();
     if (iCommits[i] <= min) continue;
-    for (Integer inte : f.vipCommitForF[i][CommitRank.U_VIP.getValue() + 1]) {
+    for (Integer inte : f.iCommitForF[i][CommitRank.U_VIP.getValue() + 1]) {
       GitWorks.addUnique(iAuthors[i], f.commitAuthor[inte]);
     }
-    for (Integer inte : f.vipCommitForF[i][CommitRank.VIP.getValue() + 1]) {
+    for (Integer inte : f.iCommitForF[i][CommitRank.VIP.getValue() + 1]) {
       GitWorks.addUnique(iAuthors[i], f.commitAuthor[inte]);
     }
-    for (Integer inte : f.vipCommitForF[i][CommitRank.PERVASIVE.getValue() + 1]) {
+    for (Integer inte : f.iCommitForF[i][CommitRank.PERVASIVE.getValue() + 1]) {
       GitWorks.addUnique(iAuthors[i], f.commitAuthor[inte]);
     }
     if (i == f.rootIndex) {
-      for (Integer inte : f.vipCommitForF[i][CommitRank.ROOT.getValue() + 1]) {
+      for (Integer inte : f.iCommitForF[i][CommitRank.ROOT.getValue() + 1]) {
         GitWorks.addUnique(uAuthors[i], f.commitAuthor[inte]);
       }
     } else {
-      for (Integer inte : f.vipCommitForF[i][CommitRank.UNIQUE.getValue() + 1]) {
+      for (Integer inte : f.iCommitForF[i][CommitRank.UNIQUE.getValue() + 1]) {
         GitWorks.addUnique(uAuthors[i], f.commitAuthor[inte]);
       }
     }
@@ -154,8 +307,9 @@ private static CircosData getICommitsToMainline(Features f, int min) {
   sorting = IndexedSortable.sortedPermutation(tstamps, false);
   main = new DIdeogram(f.allForks[f.rootIndex], iCommits[f.rootIndex], iAuthors[f.rootIndex].size());
   if (iCommits[f.rootIndex] > 0) {
-    if (uCommits[f.rootIndex] > 0) main.setScatter(uCommits[f.rootIndex]); // res.addScatter(main,
-                                                                           // uCommits[f.rootIndex]);
+    if (uCommits[f.rootIndex] > 0)
+      main.setScatter(uCommits[f.rootIndex]); //((int)((1.0 * uCommits[f.rootIndex])
+//          / f.iCommitForF[f.rootIndex][CommitRank.U_VIP.getValue() + 1].size() * main.getValue())));
     res.addToSetA(main);
     System.err.println("\t" + f.name + " has " + iCommits[f.rootIndex] + " iCommits: OK.");
   } else {
@@ -170,58 +324,61 @@ private static CircosData getICommitsToMainline(Features f, int min) {
     di = new DIdeogram(f.allForks[cur], iCommits[cur], iAuthors[cur].size());
     res.addToSetB(di);
     res.getLinks().add(new DLink(main, di, di.getValue())); // keep the order in res.links
-    if (uCommits[cur] > 0) di.setScatter(uCommits[cur]); // res.addScatter(di, uCommits[cur]);
+    if (uCommits[cur] > 0)
+      di.setScatter(uCommits[cur]);//((int)((1.0 * uCommits[cur])
+//          / f.iCommitForF[cur][CommitRank.U_VIP.getValue() + 1].size() * di.getValue())));
   }
   return res;
 }
 
 
-// //returns all forks that have more than min commits of the given rank
-// @SuppressWarnings("unused")
-// private static CircosData getRankedCommitToMainline(Features f, CommitRank rank, int min) {
-// CircosData res = new CircosData();
-// int i, l, d, b;
-// ArrayList<Integer> a = new ArrayList<Integer>();
-// DIdeogram di;
-// Iterator<DIdeogram> dIt;
-// for (i = 0; i < f.allForks.length; i++) {
-// if (f.commitRankRatio[rank.getValue()] * f.acCommitDiffusion.length <= min) continue;
-// l = 0;
-// a.clear();
-// for (int cc : f.getCommits(i)) {
-// if (f.commitRank[cc] == rank.getValue()) {
-// l++;
-// GitWorks.addUnique(a, f.commitAuthor[cc]);
-// }
-// }
-// b = a.size();
-// if (i == f.getRootIndex()) {
-// res.addToSetA(new DIdeogram(f.allForks[i], l, b));
-// } else {
-// res.addToSetB(new DIdeogram(f.allForks[i], l, b));
-// }
-// }
-//
-// dIt = res.getAllSets().iterator(); // get links from rank-ed commits
-// while (dIt.hasNext()) {
-// di = dIt.next();
-// d = Arrays.binarySearch(f.allForks, di.getName());
-// for (int j = 0; j < f.cLinkMap[rank.getValue() + 1][d].length; j++) {
-// a = f.cLinkMap[rank.getValue() + 1][d][j];
-// if (a == null || a.size() == 0) continue;
-// res.addLink(di.getName(), f.allForks[j], a.size());
-// }
-// }
-// return res;
-// }
+@SuppressWarnings("unused")
+private static CircosData getRankedCommitToMainline(Features f, CommitRank rank, int min) {
+  CircosData res = new CircosData();
+  int i, l, d, b;
+  ArrayList<Integer> a = new ArrayList<Integer>();
+  DIdeogram di;
+  Iterator<DIdeogram> dIt;
+  for (i = 0; i < f.allForks.length; i++) {
+    if (f.commitRankRatio[rank.getValue()] * f.acCommitDiffusion.length <= min) continue;
+    l = 0;
+    a.clear();
+    for (int cc : f.forkCommit[i]) {
+      if (f.commitRank[cc] == rank.getValue()) {
+        l++;
+        GitWorks.addUnique(a, f.commitAuthor[cc]);
+      }
+    }
+    b = a.size();
+    if (i == f.getRootIndex()) {
+      res.addToSetA(new DIdeogram(f.allForks[i], l, b));
+    } else {
+      res.addToSetB(new DIdeogram(f.allForks[i], l, b));
+    }
+  }
 
-public static void createCircosFiles(FeatureList fl) throws InterruptedException, IOException {
+  dIt = res.getAllSets().iterator(); // get links from ranked commits
+  while (dIt.hasNext()) {
+    di = dIt.next();
+    d = Arrays.binarySearch(f.allForks, di.getName());
+    for (int j = 0; j < f.cLinkMap[rank.getValue() + 1][d].length; j++) {
+      a = f.cLinkMap[rank.getValue() + 1][d][j];
+      if (a == null || a.size() == 0) continue;
+      res.addLink(di.getName(), f.allForks[j], a.size());
+    }
+  }
+  return res;
+}
+
+
+public static void createCircosFiles(ArrayList<Features> fl) throws InterruptedException, IOException {
   Features fe;
   CircosData data;
   WriteCommitsToMain wctm;
   // String id;
   for (int i = 0; i < fl.size(); i++) {
     fe = fl.get(i);
+    fe.computeExtra();
     if (fe.allForks.length < 3) continue;
     // for (int j = 3; j < CommitRank.values().length; j++) {
     // id = fe.name + "." + CommitRank.values()[j].name();
@@ -231,217 +388,20 @@ public static void createCircosFiles(FeatureList fl) throws InterruptedException
     // ".txt");
     // Runtime.getRuntime().exec(GitWorks.pwd + "/makeCircosPlots.sh").waitFor();
     // }
-    data = getIAuthorsInMainline(fe, 0); // getICommitsToMainline(fe, 0);
+    data = getICommitsToMainline(fe, 0); // getIAuthorsInMainline(fe, 0);
     if (data == null) continue;
-    System.out.println(data.toString());
+    // System.out.println(data.toString());
     wctm = new WriteCommitsToMain(data, fe.name);
     wctm.createCircosFiles(GitWorks.trees_out_dir + fe.name + ".colors.conf",
         GitWorks.trees_out_dir + fe.name + ".karyo.txt", GitWorks.trees_out_dir + fe.name
             + ".links.txt", GitWorks.trees_out_dir + fe.name + ".scatters.txt");
     Runtime.getRuntime().exec(GitWorks.pwd + "/makeCircosPlots.sh").waitFor();
+    // fe.deleteExtra(); XXX
   }
 }
 
 
-static private boolean haveSameDistribution(double[] val1, double[] val2) {
-  int min = 0, i, t;
-  // GTest test = new GTest();
-  // WilcoxonSignedRankTest test = new WilcoxonSignedRankTest();
-  MannWhitneyUTest test = new MannWhitneyUTest();
-  double[] v2Freq = null;
-  double[] v1Freq = null;
-  Comparable<?> v1[], v2[];
-  java.util.Map.Entry<Comparable<?>, Long> co;
-  Iterator<java.util.Map.Entry<Comparable<?>, Long>> cit;
-  DescriptiveStatistics ds = new DescriptiveStatistics();
-  Frequency v1f = new Frequency(), v2f = new Frequency();
-  for (double d : val1) {
-    ds.addValue(d);
-    if (d >= 2.0) v1f.addValue(d);
-  }
-  System.err.println("unique count = " + v1f.getUniqueCount()); // XXX
-  v1 = new Comparable[v1f.getUniqueCount()];
-  v1Freq = new double[v1.length];
-  i = 0;
-  cit = v1f.entrySetIterator();
-  while (cit.hasNext()) {
-    co = cit.next();
-    v1[i] = co.getKey();
-    v1Freq[i++] = co.getValue();
-  }
-  if (val2 == null) {
-    v2 = new Comparable<?>[v1.length];
-    v2Freq = new double[v1.length];
-    NormalDistribution gd = new NormalDistribution(ds.getMean(), ds.getStandardDeviation());
-    t = 0;
-    do {
-      t++;
-      val2 = gd.sample(val1.length * 2);
-      if (v2f.getUniqueCount() > 0)
-        System.err.println("Sampled " + v2f.getUniqueCount() + " / " + v1.length);
-      for (double d : val2)
-        // if (d >= 2.0)
-        v2f.addValue(FastMath.round(d));
-    }
-    while (v2f.getUniqueCount() < v1.length);
-    i = 0;
-    cit = v2f.entrySetIterator();
-    while (i < v1.length) {
-      co = cit.next();
-      v2[i] = co.getKey();
-      v2Freq[i++] = t > 1 ? FastMath.max(co.getValue() / t, 1) : co.getValue();
-    }
-  } else {
-    for (double d : val2)
-      // if (d >= 2.0)
-      v2f.addValue(d);
-    v2 = new Comparable[v2f.getUniqueCount()];
-    v2Freq = new double[v2.length];
-    i = 0;
-    cit = v2f.entrySetIterator();
-    while (cit.hasNext()) {
-      co = cit.next();
-      v2[i] = co.getKey();
-      v2Freq[i++] = co.getValue();
-    }
-    if (v1.length != v2.length) {
-      min = FastMath.min(v1.length, v2.length);
-      // shuffle the larger array
-      if (v1.length < v2.length) {
-        GitWorks.shuffle(v2, v2.length);
-        i = 0;
-        for (Comparable<?> c : v2)
-          v2Freq[i++] = v2f.getCount(c);
-      } else {
-        GitWorks.shuffle(v1, v1.length);
-        i = 0;
-        for (Comparable<?> c : v1)
-          v1Freq[i++] = v1f.getCount(c);
-      }
-    }
-  }
-  if (min == 0) {
-    min = v1.length;
-  }
-
-  Number[][][] data = new Number[2][][];
-  data[0] = new Number[2][v1.length];
-  data[1] = new Number[2][v2.length];
-  for (i = 0; i < v1.length; i++) {
-    data[0][0][i] = ((Double)v1[i]).intValue();
-    data[0][1][i] = v1Freq[i];
-  }
-  for (i = 0; i < v2.length; i++) {
-    data[1][0][i] = ((Number)v2[i]).intValue();
-    data[1][1][i] = v2Freq[i];
-  }
-  jfreechart.XYSeriesChart chart = new jfreechart.XYSeriesChart(data, new String[] {
-      "Degree distributions", "data points", "freq"});
-  chart.plotWindow();
-  if (min < 5)
-    System.err.println("Results : WARNING : Test not meaningful with only " + min
-        + " distinct values.");
-  // return !test.gTest(Arrays.copyOfRange(v2Freq, 0, min), Arrays.copyOfRange(v1Freq, 0, min),
-  // 0.05);
-  double p;
-  // p = test.wilcoxonSignedRankTest(Arrays.copyOfRange(v2Freq, 0, min),
-  // Arrays.copyOfRange(v1Freq, 0, min), false);
-  p = test.mannWhitneyUTest(Arrays.copyOfRange(v2Freq, 0, min), Arrays.copyOfRange(v1Freq, 0, min));
-  System.err.println("Results : INFO : p-value = " + p);
-  System.err.flush();
-  return p < 0.05;
-}
-
-
-static private ArrayList<Commit> selectMeaningful(Dag d) {
-  ArrayList<Commit> res = new ArrayList<Commit>(d.nodes.size() + d.leaves.size() + d.roots.size());
-  res.addAll(d.nodes);
-  for (Commit c : d.leaves) {
-    if (c.inDegree > 1) GitWorks.addUnique(res, c);
-  }
-  for (Commit c : d.roots) {
-    if (c.outDegree > 1) GitWorks.addUnique(res, c);
-  }
-  return res;
-}
-
-
-static void computeDistros(ArrayList<MetaGraph> mgs, FeatureList fl) {
-  // compute correlation among couples within the same groups.
-  int i, j, k;
-  ArrayList<Commit> coms;
-  double[] deg1, deg2;
-  MetaGraph mg1, mg2;
-  Dag d;
-  ArrayList<MetaGraph> normal = new ArrayList<MetaGraph>();
-  ArrayList<MetaGraph> non_normal = new ArrayList<MetaGraph>();
-  // NormalDistribution gd = new NormalDistribution(6, 6);
-  // deg1 = gd.sample(1000);
-  // for (i = 0; i < deg1.length; i++)
-  // deg1[i] = FastMath.round(deg1[i]);
-
-  for (MetaGraph mg : mgs) {
-    d = mg.getDensestDag();
-    coms = selectMeaningful(d);
-    deg1 = new double[coms.size()];
-    i = 0;
-    for (Commit c : coms)
-      deg1[i++] = (double)(c.inDegree + c.outDegree);
-    if (haveSameDistribution(deg1, null))
-      normal.add(mg);
-    else
-      non_normal.add(mg);
-  }
-  // GitWorks.printAny(normal, "NORMALS ABOVE\n", System.out);
-  // GitWorks.printAny(non_normal, "NON NORMALS ABOVE\n", System.out);
-
-  for (i = 0; i < non_normal.size() - 1; i++) {
-    mg1 = non_normal.get(i);
-    d = mg1.getDensestDag();
-    System.err.println("Got the dag for " + mg1);
-    System.err.flush();
-    coms = selectMeaningful(d);
-    System.err.println("Got its meaningful commits as well.");
-    System.err.flush();
-    deg1 = new double[coms.size()];
-    k = 0;
-    for (Commit c : coms)
-      deg1[k++] = (double)(c.inDegree + c.outDegree);
-    for (j = i + 1; j < non_normal.size(); j++) {
-      mg2 = non_normal.get(j);
-      d = mg2.getDensestDag();
-      System.err.println("Got the dag for " + mg2);
-      System.err.flush();
-      coms = selectMeaningful(d);
-      System.err.println("Got its meaningful commits as well.");
-      System.err.flush();
-      deg2 = new double[coms.size()];
-      k = 0;
-      for (Commit c : coms)
-        deg2[k++] = (double)(c.inDegree + c.outDegree);
-      if (haveSameDistribution(deg1, deg2))
-        System.err.println("YES!!");
-      else
-        System.err.println("NO!!");
-    }
-  }
-}
-
-static final String[] resultNames = {"totCommits", "totNodes", "numLeaves", "maxInDegree",
-    "maxOutDegree", "medInDegree", "medOutDegree", "maxDegree", "medDegree", "maxDiff", "medDiff"};
-
-static final int totCommits = 0;
-static final int totNodes = 1;
-static final int numLeaves = 2;
-static final int maxInDegree = 3;
-static final int maxOutDegree = 4;
-static final int medInDegree = 5;
-static final int medOutDegree = 6;
-static final int maxDegree = 7;
-static final int medDegree = 8;
-static final int maxDiff = 9;
-static final int medDiff = 10;
-static final int ages = 5;
+/************* METAGRAPH AND MOTIFS ************/ // XXX
 
 
 static void printLatexTable(ArrayList<ArrayList<Motif>> motifs) {
@@ -942,8 +902,6 @@ static DescriptiveStatistics[] getMetaEdgeAuthorStats(MetaGraph mg, ArrayList<Mo
 }
 
 
-/******************* motifs and feats ******************/
-
 // return a graph without parallel edges and the lists of them in 'twins'.
 static DirectedSparseGraph<Commit, MetaEdge> makeSimpleGraph(MetaGraph mg,
     HashMap<String, ArrayList<MetaEdge>> twins) {
@@ -1146,7 +1104,221 @@ static void exportGraph(String name, Graph<Commit, MetaEdge> g) throws IOExcepti
 }
 
 
-static void computeStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
+/************* FEATURES AND SUBGRAPH DISTRIBUTIONS ************/ // XXX
+
+static private boolean haveSameDistribution(double[] val1, double[] val2) {
+  int min = 0, i, t;
+  // GTest test = new GTest();
+  // WilcoxonSignedRankTest test = new WilcoxonSignedRankTest();
+  MannWhitneyUTest test = new MannWhitneyUTest();
+  double[] v2Freq = null;
+  double[] v1Freq = null;
+  Comparable<?> v1[], v2[];
+  java.util.Map.Entry<Comparable<?>, Long> co;
+  Iterator<java.util.Map.Entry<Comparable<?>, Long>> cit;
+  DescriptiveStatistics ds = new DescriptiveStatistics();
+  Frequency v1f = new Frequency(), v2f = new Frequency();
+  for (double d : val1) {
+    ds.addValue(d);
+    if (d >= 2.0) v1f.addValue(d);
+  }
+  System.err.println("unique count = " + v1f.getUniqueCount()); // XXX
+  v1 = new Comparable[v1f.getUniqueCount()];
+  v1Freq = new double[v1.length];
+  i = 0;
+  cit = v1f.entrySetIterator();
+  while (cit.hasNext()) {
+    co = cit.next();
+    v1[i] = co.getKey();
+    v1Freq[i++] = co.getValue();
+  }
+  if (val2 == null) {
+    v2 = new Comparable<?>[v1.length];
+    v2Freq = new double[v1.length];
+    NormalDistribution gd = new NormalDistribution(ds.getMean(), ds.getStandardDeviation());
+    t = 0;
+    do {
+      t++;
+      val2 = gd.sample(val1.length * 2);
+      if (v2f.getUniqueCount() > 0)
+        System.err.println("Sampled " + v2f.getUniqueCount() + " / " + v1.length);
+      for (double d : val2)
+        // if (d >= 2.0)
+        v2f.addValue(FastMath.round(d));
+    }
+    while (v2f.getUniqueCount() < v1.length);
+    i = 0;
+    cit = v2f.entrySetIterator();
+    while (i < v1.length) {
+      co = cit.next();
+      v2[i] = co.getKey();
+      v2Freq[i++] = t > 1 ? FastMath.max(co.getValue() / t, 1) : co.getValue();
+    }
+  } else {
+    for (double d : val2)
+      // if (d >= 2.0)
+      v2f.addValue(d);
+    v2 = new Comparable[v2f.getUniqueCount()];
+    v2Freq = new double[v2.length];
+    i = 0;
+    cit = v2f.entrySetIterator();
+    while (cit.hasNext()) {
+      co = cit.next();
+      v2[i] = co.getKey();
+      v2Freq[i++] = co.getValue();
+    }
+    if (v1.length != v2.length) {
+      min = FastMath.min(v1.length, v2.length);
+      // shuffle the larger array
+      if (v1.length < v2.length) {
+        GitWorks.shuffle(v2, v2.length);
+        i = 0;
+        for (Comparable<?> c : v2)
+          v2Freq[i++] = v2f.getCount(c);
+      } else {
+        GitWorks.shuffle(v1, v1.length);
+        i = 0;
+        for (Comparable<?> c : v1)
+          v1Freq[i++] = v1f.getCount(c);
+      }
+    }
+  }
+  if (min == 0) {
+    min = v1.length;
+  }
+
+  Number[][][] data = new Number[2][][];
+  data[0] = new Number[2][v1.length];
+  data[1] = new Number[2][v2.length];
+  for (i = 0; i < v1.length; i++) {
+    data[0][0][i] = ((Double)v1[i]).intValue();
+    data[0][1][i] = v1Freq[i];
+  }
+  for (i = 0; i < v2.length; i++) {
+    data[1][0][i] = ((Number)v2[i]).intValue();
+    data[1][1][i] = v2Freq[i];
+  }
+  jfreechart.XYSeriesChart chart = new jfreechart.XYSeriesChart(data, new String[] {
+      "Degree distributions", "data points", "freq"});
+  chart.plotWindow();
+  if (min < 5)
+    System.err.println("Results : WARNING : Test not meaningful with only " + min
+        + " distinct values.");
+  // return !test.gTest(Arrays.copyOfRange(v2Freq, 0, min), Arrays.copyOfRange(v1Freq, 0, min),
+  // 0.05);
+  double p;
+  // p = test.wilcoxonSignedRankTest(Arrays.copyOfRange(v2Freq, 0, min),
+  // Arrays.copyOfRange(v1Freq, 0, min), false);
+  p = test.mannWhitneyUTest(Arrays.copyOfRange(v2Freq, 0, min), Arrays.copyOfRange(v1Freq, 0, min));
+  System.err.println("Results : INFO : p-value = " + p);
+  System.err.flush();
+  return p < 0.05;
+}
+
+
+static private ArrayList<Commit> selectMeaningful(Dag d) {
+  ArrayList<Commit> res = new ArrayList<Commit>(d.nodes.size() + d.leaves.size() + d.roots.size());
+  res.addAll(d.nodes);
+  for (Commit c : d.leaves) {
+    if (c.inDegree > 1) GitWorks.addUnique(res, c);
+  }
+  for (Commit c : d.roots) {
+    if (c.outDegree > 1) GitWorks.addUnique(res, c);
+  }
+  return res;
+}
+
+
+static void computeDistros(ArrayList<MetaGraph> mgs, FeatureList fl) {
+  // compute correlation among couples within the same groups.
+  int i, j, k;
+  ArrayList<Commit> coms;
+  double[] deg1, deg2;
+  MetaGraph mg1, mg2;
+  Dag d;
+  ArrayList<MetaGraph> normal = new ArrayList<MetaGraph>();
+  ArrayList<MetaGraph> non_normal = new ArrayList<MetaGraph>();
+  // NormalDistribution gd = new NormalDistribution(6, 6);
+  // deg1 = gd.sample(1000);
+  // for (i = 0; i < deg1.length; i++)
+  // deg1[i] = FastMath.round(deg1[i]);
+
+  for (MetaGraph mg : mgs) {
+    d = mg.getDensestDag();
+    coms = selectMeaningful(d);
+    deg1 = new double[coms.size()];
+    i = 0;
+    for (Commit c : coms)
+      deg1[i++] = (double)(c.inDegree + c.outDegree);
+    if (haveSameDistribution(deg1, null))
+      normal.add(mg);
+    else
+      non_normal.add(mg);
+  }
+  // GitWorks.printAny(normal, "NORMALS ABOVE\n", System.out);
+  // GitWorks.printAny(non_normal, "NON NORMALS ABOVE\n", System.out);
+
+  for (i = 0; i < non_normal.size() - 1; i++) {
+    mg1 = non_normal.get(i);
+    d = mg1.getDensestDag();
+    System.err.println("Got the dag for " + mg1);
+    System.err.flush();
+    coms = selectMeaningful(d);
+    System.err.println("Got its meaningful commits as well.");
+    System.err.flush();
+    deg1 = new double[coms.size()];
+    k = 0;
+    for (Commit c : coms)
+      deg1[k++] = (double)(c.inDegree + c.outDegree);
+    for (j = i + 1; j < non_normal.size(); j++) {
+      mg2 = non_normal.get(j);
+      d = mg2.getDensestDag();
+      System.err.println("Got the dag for " + mg2);
+      System.err.flush();
+      coms = selectMeaningful(d);
+      System.err.println("Got its meaningful commits as well.");
+      System.err.flush();
+      deg2 = new double[coms.size()];
+      k = 0;
+      for (Commit c : coms)
+        deg2[k++] = (double)(c.inDegree + c.outDegree);
+      if (haveSameDistribution(deg1, deg2))
+        System.err.println("YES!!");
+      else
+        System.err.println("NO!!");
+    }
+  }
+}
+
+static final String[] resultNames = {"totCommits", "totNodes", "numLeaves", "maxInDegree",
+    "maxOutDegree", "medInDegree", "medOutDegree", "maxDegree", "medDegree", "maxDiff", "medDiff"};
+
+static final int totCommits = 0;
+
+static final int totNodes = 1;
+
+static final int numLeaves = 2;
+
+static final int maxInDegree = 3;
+
+static final int maxOutDegree = 4;
+
+static final int medInDegree = 5;
+
+static final int medOutDegree = 6;
+
+static final int maxDegree = 7;
+
+static final int medDegree = 8;
+
+static final int maxDiff = 9;
+
+static final int medDiff = 10;
+
+static final int ages = 5;
+
+
+static void computeSubGraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
   MetaGraph mgNext;
   Features f;
   Dag d;
