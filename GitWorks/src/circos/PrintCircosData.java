@@ -88,15 +88,15 @@ private void printBands(PrintWriter destination, int maxBand) {
       forkSize = gi.getEnd() - gi.getStart();
       bandWidth = forkSize / bandsNumber / 2;
       if (bandWidth == 0) bandWidth = 1;// XXX
-      colorIndex = colors.size() / maxBand; // (colors.size() - 1) / bandsNumber FIXME what if maxBand is very large???
-      System.err.println("colorIndex=" + colorIndex + "; maxBand=" + maxBand);
+      colorIndex = colors.size() / maxBand; // FIXME what if maxBand is very large???
+      // System.err.println("colorIndex=" + colorIndex + "; maxBand=" + maxBand);
       start = forkSize / 4; // 0; // XXX
       for (int i = 0; i < bandsNumber; i++) {//bandsNumber - 1
         bandcounter++;
         bandStart = start;
         bandEnd = start + bandWidth;
         line = "band " + gi.getId() + " author" + bandcounter + " author" + bandcounter + " "
-            + bandStart + " " + bandEnd + " " + (String)colors.get((i + 1) * colorIndex);
+            + bandStart + " " + bandEnd + " " + (String)colors.get((i) * colorIndex);
         destination.println(line);
         start = start + bandWidth;
       }
