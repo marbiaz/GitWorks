@@ -37,9 +37,12 @@ int[][][] authorsImpactPerF;
  * For each fork, the indexes of the commits in it
  */
 int[][] forkCommit;
-// for each commit, the meaningful forks it is in
-int[][] vipForkForC;
-// All fork names, in order
+
+/**
+ * For each commit, the meaningful forks it is in
+ */
+int[][] iForkForC;
+
 /**
  * All fork names, in order
  */
@@ -182,6 +185,17 @@ public static enum CommitRank {
  * For each commit, its rank (as defined by CommitRank)
  */
 public int[] commitRank;
+
+/**
+ * For each fork : for each rank, the sorted list of commits belonging to that rank
+ */
+ArrayList<Integer>[][] iCommitForF;
+
+/**
+ * For each fork : for each rank, the sorted list of authors of commits belonging to that rank
+ */
+ArrayList<Integer>[][] iAuthorForF;
+
 /**
  * For each ranking (+1), how many commits are ranked like that (normalized)
  */
@@ -215,21 +229,23 @@ ArrayList<Integer>[][][] aLinkMap;
 
 void deleteExtra() {
   commitRank = null;
-  vipCommitForF = null;
+  iCommitForF = null;
+  iAuthorForF = null;
   commitRankRatio = null;
   authorRankRatio = null;
   aggregateTimeLines = null;
   extendedTimeLines = null;
   cLinkMap = null;
   aLinkMap = null;
-  System.gc();
 }
 
 
 @SuppressWarnings({"unchecked"})
 void computeExtra() {
+  if (commitRank != null) return;
   commitRank = new int[acCommitDiffusion.length];
-  vipCommitForF = new ArrayList[allForks.length][CommitRank.values().length];
+  iCommitForF = new ArrayList[allForks.length][CommitRank.values().length];
+  iAuthorForF = new ArrayList[allForks.length][CommitRank.values().length];
   commitRankRatio = new double[CommitRank.values().length];
   authorRankRatio = new double[CommitRank.values().length];
   cLinkMap = new ArrayList[CommitRank.values().length][][];
@@ -243,7 +259,8 @@ void computeExtra() {
     cLinkMap[q] = new ArrayList[allForks.length][allForks.length];
     aLinkMap[q] = new ArrayList[allForks.length][allForks.length];
     for (i = 0; i < allForks.length; i++) {
-      vipCommitForF[i][q] = new ArrayList<Integer>();
+      iCommitForF[i][q] = new ArrayList<Integer>();
+      iAuthorForF[i][q] = new ArrayList<Integer>();
       for (k = 0; k < allForks.length; k++) {
         cLinkMap[q][i][k] = new ArrayList<Integer>();
         aLinkMap[q][i][k] = new ArrayList<Integer>();
@@ -252,8 +269,8 @@ void computeExtra() {
   }
   Arrays.fill(commitRankRatio, 0.0);
   Arrays.fill(authorRankRatio, 0.0);
-  for (i = 0; i < vipForkForC.length; i++) {
-    switch (vipForkForC[i].length) {
+  for (i = 0; i < iForkForC.length; i++) {
+    switch (iForkForC[i].length) {
     case 0:
       commitRank[i] = CommitRank.NONE.getValue();
     break;
@@ -266,21 +283,22 @@ void computeExtra() {
           : CommitRank.SCATTERED.getValue();
     break;
     default:
-      if (vipForkForC[i].length == allForks.length)
+      if (iForkForC[i].length == allForks.length)
         commitRank[i] = CommitRank.PERVASIVE.getValue();
       else
         commitRank[i] = Arrays.binarySearch(acRootCommits, i) >= 0 ? CommitRank.VIP.getValue()
             : CommitRank.SCATTERED.getValue();
     }
 
-    for (k = 0; k < vipForkForC[i].length; k++) {
-      GitWorks.addUnique(vipCommitForF[vipForkForC[i][k]][commitRank[i] + 1], i);
-      for (int kk = k + 1; kk < vipForkForC[i].length; kk++) {
-        GitWorks.addUnique(cLinkMap[commitRank[i] + 1][vipForkForC[i][k]][vipForkForC[i][kk]], i);
-        GitWorks.addUnique(cLinkMap[commitRank[i] + 1][vipForkForC[i][kk]][vipForkForC[i][k]], i);
-        GitWorks.addUnique(aLinkMap[commitRank[i] + 1][vipForkForC[i][k]][vipForkForC[i][kk]],
+    for (k = 0; k < iForkForC[i].length; k++) {
+      GitWorks.addUnique(iCommitForF[iForkForC[i][k]][commitRank[i] + 1], i);
+      GitWorks.addUnique(iAuthorForF[iForkForC[i][k]][commitRank[i] + 1], commitAuthor[i]);
+      for (int kk = k + 1; kk < iForkForC[i].length; kk++) {
+        GitWorks.addUnique(cLinkMap[commitRank[i] + 1][iForkForC[i][k]][iForkForC[i][kk]], i);
+        GitWorks.addUnique(cLinkMap[commitRank[i] + 1][iForkForC[i][kk]][iForkForC[i][k]], i);
+        GitWorks.addUnique(aLinkMap[commitRank[i] + 1][iForkForC[i][k]][iForkForC[i][kk]],
             commitAuthor[i]);
-        GitWorks.addUnique(aLinkMap[commitRank[i] + 1][vipForkForC[i][kk]][vipForkForC[i][k]],
+        GitWorks.addUnique(aLinkMap[commitRank[i] + 1][iForkForC[i][kk]][iForkForC[i][k]],
             commitAuthor[i]);
       }
     }
@@ -347,7 +365,7 @@ void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
   Iterator<ArrayList<BranchRef>> brAlIt;
   ArrayList<Commit> ca; Commit c; int indx;
   ArrayList<Integer> acMainlineCommits = new ArrayList<Integer>();
-  vipForkForC = new int[gm.allCommits.size()][];
+  iForkForC = new int[gm.allCommits.size()][];
   commitDiffusion = new int[gm.allCommits.size()];
   acCommitDiffusion = new int[gm.allCommits.size()];
   commitTimeLine = new long[gm.allCommits.size()];
@@ -406,7 +424,7 @@ void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
   boolean inRoot;
   Commit co;
   ArrayList<String> repos;
-  ArrayList<Integer> vipF = new ArrayList<Integer>(gm.allCommits.size());
+  ArrayList<Integer> iF = new ArrayList<Integer>(gm.allCommits.size());
   while (cIt.hasNext()) {
     co = cIt.next();
     acRes = 0;
@@ -421,20 +439,20 @@ void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
         acRes++;
         if (fIndex == rootIndex) acMainlineCommits.add(i);
         authorsImpactPerF[commitAuthor[i]][fIndex][1]++;
-        vipF.add(fIndex);
+        iF.add(fIndex);
       } else if (!inRoot) {
-        vipF.add(fIndex);
+        iF.add(fIndex);
       }
     }
     commitDiffusion[i] = repos.size();
     acCommitDiffusion[i] = acRes;
-    vipForkForC[i] = new int[vipF.size()];
+    iForkForC[i] = new int[iF.size()];
     j = 0;
-    for (int f : vipF) {
-      vipForkForC[i][j++] = f;
+    for (int f : iF) {
+      iForkForC[i][j++] = f;
     }
 
-    vipF.clear();
+    iF.clear();
     i++;
   }
 
@@ -552,15 +570,15 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
   acCommitDiffusion = new int[size];
   commitAuthor = new int[size];
   commitTimeLine = new long[size];
-  vipForkForC = new int[size][];
+  iForkForC = new int[size][];
   for(i = 0; i < commitDiffusion.length; i++) {
     commitDiffusion[i] = in.readInt();
     acCommitDiffusion[i] = in.readInt();
     commitAuthor[i] = in.readInt();
     commitTimeLine[i] = in.readLong();
-    vipForkForC[i] = new int[in.readInt()];
-    for (j = 0; j < vipForkForC[i].length; j++) {
-      vipForkForC[i][j] = in.readInt();
+    iForkForC[i] = new int[in.readInt()];
+    for (j = 0; j < iForkForC[i].length; j++) {
+      iForkForC[i][j] = in.readInt();
     }
   }
   acRootCommits = new int[in.readInt()];
@@ -614,9 +632,9 @@ public void writeExternal(ObjectOutput out) throws IOException {
     out.writeInt(acCommitDiffusion[d]);
     out.writeInt(commitAuthor[d]);
     out.writeLong(commitTimeLine[d]);
-    out.writeInt(vipForkForC[d].length);
-    for (int i = 0; i < vipForkForC[d].length; i++) {
-      out.writeInt(vipForkForC[d][i]);
+    out.writeInt(iForkForC[d].length);
+    for (int i = 0; i < iForkForC[d].length; i++) {
+      out.writeInt(iForkForC[d][i]);
     }
   }
   out.writeInt(acRootCommits.length);
