@@ -275,11 +275,15 @@ void computeExtra() {
       commitRank[i] = CommitRank.NONE.getValue();
     break;
     case 1:
-      commitRank[i] = Arrays.binarySearch(acRootCommits, i) >= 0 ? CommitRank.ROOT.getValue()
+      if (allForks.length == 1) commitRank[i] = CommitRank.NONE.getValue();
+      else
+        commitRank[i] = Arrays.binarySearch(acRootCommits, i) >= 0 ? CommitRank.ROOT.getValue()
           : CommitRank.UNIQUE.getValue();
     break;
     case 2:
-      commitRank[i] = Arrays.binarySearch(acRootCommits, i) >= 0 ? CommitRank.U_VIP.getValue()
+      if (allForks.length == 2) commitRank[i] = CommitRank.PERVASIVE.getValue();
+      else
+        commitRank[i] = Arrays.binarySearch(acRootCommits, i) >= 0 ? CommitRank.U_VIP.getValue()
           : CommitRank.SCATTERED.getValue();
     break;
     default:
@@ -508,7 +512,7 @@ void setFeatures(ForkList fl, ForkEntry fe, GitMiner gm) {
   nGenerations = fe.dfsAggregateDepth;
   maxGenSize = fe.dfsMaxChildren;
   if (!fe.dfsOk || nWatchers < 0) {
-    System.err.println("FeatureSet: ERROR : the aggregates of " + fe.getId() + " are not valid!");
+    System.err.println("Features: ERROR : the aggregates of " + fe.getId() + " are not valid!");
   }
   name = allForks[rootIndex];
 
