@@ -10,69 +10,149 @@ import java.io.ObjectOutput;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.Date;
+import java.util.Iterator;
 
 import org.eclipse.jgit.lib.PersonIdent;
 
 
 public class Features implements Comparable<Object>, Externalizable {
 
-// The name of the root fork identifies the Features instance
+/**
+ * The name of the root fork identifies the Features instance
+ */
 String name = "";
-//Index of the root fork in allF
+
+/**
+ * Index of the root fork in allForks
+ */
 int rootIndex = -1;
-// for each author, how many commits in each fork (overall and after fork creation)
+
+/**
+ * For each author, how many commits in each fork (overall and after fork creation)
+ */
 int[][][] authorsImpactPerF;
-// For each fork, the indexes of the commits in it
+
+/**
+ * For each fork, the indexes of the commits in it
+ */
 int[][] forkCommit;
 // for each commit, the meaningful forks it is in
 int[][] vipForkForC;
 // All fork names, in order
+/**
+ * All fork names, in order
+ */
 public String allForks[];
-//All author unique identifiers, in order
+
+/**
+ * All author unique identifiers, in order
+ */
 public String allAuthors[];
-// All fork's creation timestamps, ordered as allF.
+
+/**
+ * All fork's creation timestamps, ordered as allForks.
+ */
 public long since[];
-// For each fork, time of data retrieval from github
+
+/**
+ * For each fork, time of data retrieval from github
+ */
 public long until[];
-// For each commit, its timestamp
+
+/**
+ * For each commit, its timestamp
+ */
 public long[] commitTimeLine;
-// Ordered list of root's commit indexes
+
+/**
+ * Ordered list of root's commit indexes
+ */
 int[] acRootCommits;
-// For each commit, its author
+
+/**
+ * For each commit, its author
+ */
 public int[] commitAuthor;
-//For each fork, number of commits, in order
+
+/**
+ * For each fork, number of commits, in order
+ */
 public int[] commitsOfF;
-//For each fork, number of authors of commits, in order
+
+/**
+ * For each fork, number of authors of commits, in order
+ */
 public int[] authorsOfF;
-//For each fork, number of commits after the fork's creation, in order
+
+/**
+ * For each fork, number of commits after the fork's creation, in order
+ */
 public int[] acCommitsOfF;
-//For each fork, number of authors of commits after fork's creation, in order
+
+/**
+ * For each fork, number of authors of commits after fork's creation, in order
+ */
 public int[] acAuthorsOfF;
-// For each commit, how many forks is it in
+
+/**
+ * For each commit, how many forks is it in
+ */
 public int[] commitDiffusion;
-//For each commit, how many forks is it in, among those created before the commit time
+
+/**
+ * For each commit, how many forks is it in, among those created before the commit time
+ */
 public int[] acCommitDiffusion;
-// For each fork, number of unique commits, in order
+
+/**
+ * For each fork, number of unique commits, in order
+ */
 public int[] uCommitsOfF;
-// For each fork, number of authors of unique commits, in order
+
+/**
+ * For each fork, number of authors of unique commits, in order
+ */
 public int[] uAuthorsOfF;
-// For each fork, number of branches, in order
+
+/**
+ * For each fork, number of branches, in order
+ */
 public int[] branchesOfF;
-// Number of commits in the fork tree
+
+/**
+ * Number of commits in the fork tree
+ */
 public int nCommits;
-// Number of watchers of the root fork
+
+/**
+ * Number of watchers of the root fork
+ */
 public int nWatchers;
-// Number of watchers in the fork tree
+
+/**
+ * Number of watchers in the fork tree
+ */
 public int totWatchers;
-// Max number of watchers among the forks (root excluded)
+
+/**
+ * Max number of watchers among the forks (root excluded)
+ */
 public int maxWatchers;
-// Depth of the fork tree
+
+/**
+ * Depth of the fork tree
+ */
 public int nGenerations;
-// Max number of siblings among generations of forks (not direct children of root fork)
+
+/**
+ * Max number of siblings among generations of forks (not direct children of root fork)
+ */
 public int maxGenSize;
-// Number of direct forks of the root fork
+
+/**
+ * Number of direct forks of the root fork
+ */
 public int nForks;
 
 /************  begin complex features  ************/
@@ -98,21 +178,38 @@ public static enum CommitRank {
   }
 }
 
-// For each commit, its rank (as defined by CommitRank)
+/**
+ * For each commit, its rank (as defined by CommitRank)
+ */
 public int[] commitRank;
-// For each fork : for each rank, the list of commits belonging to that rank
-ArrayList<Integer>[][] vipCommitForF;
-// For each ranking (+1), how many commits are ranked like that (normalized)
+/**
+ * For each ranking (+1), how many commits are ranked like that (normalized)
+ */
 public double[] commitRankRatio;
-// For each entry in commitRankRatio, how many authors are ranked like that (normalized)
+
+/**
+ * For each entry in commitRankRatio, how many authors are ranked like that (normalized)
+ */
 public double[] authorRankRatio;
-// For each week (week of the first commit is 0), the number of commits in that week
+
+/**
+ * For each week (week of the first commit is 0), the number of commits in that week
+ */
 public int[] aggregateTimeLines;
-// For each commit, the week it has been committed (week of the first commit is 0)
+
+/**
+ * For each commit, the week it has been committed (week of the first commit is 0)
+ */
 public int[] extendedTimeLines;
-// For each rank, matrix of the graph that models common commits among forks
+
+/**
+ * For each rank, matrix of the graph that models common commits among forks
+ */
 ArrayList<Integer>[][][] cLinkMap;
-// For each rank, matrix of the graph that models authors of common commits among forks
+
+/**
+ * For each rank, matrix of the graph that models authors of common commits among forks
+ */
 ArrayList<Integer>[][][] aLinkMap;
 
 
