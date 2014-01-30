@@ -249,8 +249,6 @@ public static void main(String[] args) throws Exception {
   ForkEntry fe;
   Features feat;
   GitMiner gitMiner;
-  ArrayList<MetaGraph> mgs = new ArrayList<MetaGraph>();
-  ArrayList<Features> feats = new ArrayList<Features>();
 
   if (args.length < 4) {
     System.err
@@ -363,11 +361,7 @@ public static void main(String[] args) throws Exception {
     // waitForUser("");
     // importData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
     Features ft;
-    Commit co;
-    MetaGraph mg;
-    int n, count = 0;
-    ArrayList<Commit> heads = new ArrayList<Commit>();
-    ArrayList<Commit> allComs = new ArrayList<Commit>();
+    features = null;
     for (int i = 0, j = 0; i < forkTrees.size() && (ids == null || j < ids.length); i++) {
       if (ids != null)
         fe = GitWorks.getElement(projects, ids[j++]);
@@ -385,44 +379,57 @@ public static void main(String[] args) throws Exception {
       // System.err.println(" done.");
       // System.err.flush();
 
-      heads.clear();
-      allComs.clear();
-      System.err.print("Creating " + gitMiner.name + " mainline metagraph ...");
-      System.err.flush();
-      for (Commit c : gitMiner.comInF.get(ft.allForks[ft.rootIndex])) {
-        co = new Commit(c);
-        GitWorks.addUnique(allComs, co);
-        if (co.isHead()) heads.add(co);
-      }
-      mg = MetaGraph.createMetaGraph(allComs, heads);
-      System.err.println(" done.");
-      System.err.flush();
-      int[] stats = mg.getDensestDag().getSummaryStats(); // mg.getSummaryStats(); // XXX
-      if (stats[3] >= 30) {
-        mgs.add(MetaGraph.createMetaGraph(mg.getDensestDag())); // mgs.add(mg); // XXX
-        feats.add(ft);
-        System.err.println("Taking repo # " + (++count) + " : " + ft.name + " which has "
-            + mg.dags.size() + " dags, " + stats[3] + " metaedges, " + stats[0] + " roots, "
-            + stats[1] + " nodes and " + stats[2] + " leaves, for a total of " + stats[7]
-            + " commits,\n\t of which " + stats[4] + " are branch nodes, " + stats[5]
-            + " are merge nodes and " + stats[6] + " are both.");
-      } else {
-        System.err.println("Discarding " + ft.name + " which has " + stats[3] + " metaedges.");
-      }
+      // computeMetaGraph(gitMiner, ft);
+      feats.add(ft);
 
       gitMiner = null;
       ft = null;
       System.gc();
     }
-    features = null;
-    // System.gc();
+
   }
-  // Results.createDataFiles(features);
-  // Results.createCircosFiles(features); // XXX
-  Results.metagraphStats(mgs, feats);
+  // Results.createCircosFiles(feats); // XXX
+  Results.printoutForkStats(feats);
+  // Results.metagraphStats(mgs, feats);
 
   System.err.println("\n# Computation ended at " + (new java.util.Date()).toString());
   System.exit(0);
+}
+
+
+static ArrayList<MetaGraph> mgs = new ArrayList<MetaGraph>();
+static ArrayList<Features> feats = new ArrayList<Features>();
+
+static void computeMetaGraph(GitMiner gm, Features ft) {
+  Commit co;
+  MetaGraph mg;
+  int count = 0;
+  ArrayList<Commit> heads = new ArrayList<Commit>();
+  ArrayList<Commit> allComs = new ArrayList<Commit>();
+
+  System.err.print("Creating " + gm.name + " mainline metagraph ...");
+  System.err.flush();
+  for (Commit c : gm.comInF.get(ft.allForks[ft.rootIndex])) {
+    co = new Commit(c);
+    GitWorks.addUnique(allComs, co);
+    if (co.isHead()) heads.add(co);
+  }
+  mg = MetaGraph.createMetaGraph(allComs, heads);
+  System.err.println(" done.");
+  System.err.flush();
+  int[] stats = mg.getDensestDag().getSummaryStats(); // mg.getSummaryStats(); // XXX
+  if (stats[3] >= 30) {
+    mgs.add(MetaGraph.createMetaGraph(mg.getDensestDag())); // mgs.add(mg); // XXX
+    feats.add(ft);
+    System.err.println("Taking repo # " + (++count) + " : " + ft.name + " which has "
+        + mg.dags.size() + " dags, " + stats[3] + " metaedges, " + stats[0] + " roots, "
+        + stats[1] + " nodes and " + stats[2] + " leaves, for a total of " + stats[7]
+        + " commits,\n\t of which " + stats[4] + " are branch nodes, " + stats[5]
+        + " are merge nodes and " + stats[6] + " are both.");
+  } else {
+    System.err.println("Discarding " + ft.name + " which has " + stats[3] + " metaedges.");
+  }
+
 }
 
 
