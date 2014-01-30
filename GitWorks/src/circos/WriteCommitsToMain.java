@@ -65,8 +65,8 @@ void buildIdeograms() {
     gi.setColor_label("color" + color_index);
     ideograms.add(gi);
     if (fork.getScatter() > Integer.MIN_VALUE)
-      scatters.add(new GScatter(gi.getId(), gi.getStart(), gi.getEnd(), fork.getScatter(), fork
-          .getScatter(), gi.getColor_label()));
+      scatters.add(new GScatter(gi.getId(), gi.getStart(), gi.getEnd(), fork.getScatter(),
+          fork.getScatter(), gi.getColor_label()));
     widthMainLine = widthMainLine + fork.getValue();// + link.getWidth()
     // }
   }
@@ -75,8 +75,8 @@ void buildIdeograms() {
   gi = new GIdeogram(fork.getName(), fork.getName(), 0, widthMainLine, "orange");
   gi.setBands(fork.getBands());
   if (fork.getScatter() > Integer.MIN_VALUE)
-    scatters.add(new GScatter(
-        gi.getId(), gi.getStart(), gi.getEnd(), fork.getScatter(), fork.getScatter(), gi.getColor_label()));
+    scatters.add(new GScatter(gi.getId(), gi.getStart(), gi.getEnd(), fork.getScatter(), fork
+        .getScatter(), gi.getColor_label()));
   ideograms.add(gi);
 
 //  // set the colors of the ideograms
