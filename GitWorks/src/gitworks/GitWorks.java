@@ -62,7 +62,7 @@ static String[] ids = null; // list of root repos to be considered to build the 
 static ForkList projects;
 static FeatureList features;
 static BufferedReader in = null;
-static MersenneTwister rand = new MersenneTwister(123456789);
+static MersenneTwister rand = null;
 
 
 static void dfsVisit(int depth, ForkEntry f, DfsOperator t, Object o) throws Exception {
@@ -581,6 +581,7 @@ public static <T> T getElement(List list, Comparable target) {
 public static <T> void shuffle(T[] a, int size) {
   T temp;
   int ran;
+  if (rand == null) rand = new MersenneTwister(123456789);
   for (int i = size - 1; i > 0; i--) {
     ran = rand.nextInt(i + 1);
     temp = a[ran];
