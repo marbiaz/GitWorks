@@ -438,7 +438,7 @@ static void printLatexTable(ArrayList<ArrayList<Motif>> motifs) {
       tableOut.write(" \\\\\n");
     }
     tableOut.write("" + "\\hline" + "\n" + "\\end{tabular}" + "\n" + "\\caption{Motifs scores}"
-        + "\n" + "\\end{table}" + "\n\\twocolumn\n\n");
+        + "\n" + "\\end{table*}\n\n");
     tableOut.flush();
     Runtime.getRuntime().exec(
             "cp -f " + GitWorks.pwd + "/table.tex "
