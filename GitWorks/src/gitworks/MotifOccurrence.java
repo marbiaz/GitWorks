@@ -58,6 +58,7 @@ MotifOccurrence(ArrayList<MetaEdge> edges, HashMap<String, ArrayList<MetaEdge>> 
     }
   }
   numParallels = parallels.keySet().size(); // XXX how many groups of parallel edges
+  if (numParallels == 0) parallels = null;
   mNodes = nodes.toArray(new Commit[0]);
   Collections.sort(mEdges);
   getTotEdges();
@@ -69,7 +70,7 @@ private void getTotEdges() {
   MetaEdge[] ma;
   totEdges = 0;
   for (MetaEdge m : mEdges) {
-    ma = parallels.get(m);
+    ma = parallels == null ? null : parallels.get(m);
     if (ma != null)
       totEdges += ma.length;
     else
@@ -82,7 +83,7 @@ private void getWeight() {
   MetaEdge[] ma;
   weight = 0;
   for (MetaEdge m : mEdges) {
-    ma = parallels.get(m);
+    ma = parallels == null ? null : parallels.get(m);
     if (ma != null) {
       for (MetaEdge mm : ma)
         weight += mm.getWeight();
@@ -94,6 +95,11 @@ private void getWeight() {
 
 int getTotCommits() {
   return weight + mNodes.length;
+}
+
+
+boolean hasParallels() {
+  return parallels != null;
 }
 
 

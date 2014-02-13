@@ -38,7 +38,7 @@ void addOccurrence(MotifOccurrence mo) {
   GitWorks.addUnique(occurrences, mo);
   for (MetaEdge me : mo.mEdges)
     GitWorks.addUnique(allEdges, me);
-  for (MetaEdge[] mes : mo.parallels.values())
+  if (mo.hasParallels()) for (MetaEdge[] mes : mo.parallels.values())
     for (MetaEdge me : mes)
       GitWorks.addUnique(allEdges, me);
 }
@@ -51,7 +51,7 @@ void addOccurrence(ArrayList<MetaEdge> edges, HashMap<String, ArrayList<MetaEdge
   GitWorks.addUnique(occurrences, mo);
   for (MetaEdge me : mo.mEdges)
     GitWorks.addUnique(allEdges, me);
-  for (MetaEdge[] mes : mo.parallels.values())
+  if (mo.hasParallels()) for (MetaEdge[] mes : mo.parallels.values())
     for (MetaEdge me : mes)
       GitWorks.addUnique(allEdges, me);
 }
