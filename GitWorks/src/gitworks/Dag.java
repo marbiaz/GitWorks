@@ -322,23 +322,6 @@ int[] getSummaryStats() {
 }
 
 
-boolean union(Dag d) {
-  if (this == d) return false;
-  int tot = getNumCommits() + d.getNumCommits();
-  for (Commit c : d.leaves)
-    GitWorks.addUnique(leaves, c);
-  for (Commit c : d.roots)
-    GitWorks.addUnique(roots, c);
-  for (Commit c : d.nodes)
-    GitWorks.addUnique(nodes, c);
-  for (MetaEdge m : d.metaEdges)
-    addEdge(m);
-  if (getNumCommits() != tot)
-    System.err.println("Dag : ERROR : something wrong while merging...");
-  return true;
-}
-
-
 /**
  * It assigns layers to commits and sets the diameter. It also sets the timestamps for each
  * metaedge.

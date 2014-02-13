@@ -234,6 +234,25 @@ static MetaGraph createMetaGraph(Dag d) {
 }
 
 
+private static boolean union(Dag dest, Dag d) {
+  if (dest == d) return false;
+  int tot = dest.getNumCommits() + d.getNumCommits();
+  for (Commit c : d.leaves)
+    GitWorks.addUnique(dest.leaves, c);
+  for (Commit c : d.roots)
+    GitWorks.addUnique(dest.roots, c);
+  for (Commit c : d.nodes)
+    GitWorks.addUnique(dest.nodes, c);
+  Iterator<MetaEdge> mIt = d.getMetaEdges();
+  while (mIt.hasNext())
+    dest.addEdge(mIt.next());
+  if (dest.getNumCommits() != tot)
+    System.err.println("Dag : ERROR : something wrong while merging " + d.toString()
+        + " into " + dest.toString());
+  return true;
+}
+
+
 /**
  * Create a meta-graph composing the given set of edges in a proper set of dags. No check is
  * performed on the arguments. Thus, being they not correct and consistent with each other, the
@@ -263,7 +282,7 @@ static MetaGraph createMetaGraph(ArrayList<MetaEdge> allEdges, ArrayList<Commit>
         if (co.equals(me.first)) continue;
         if (d1 == null) d1 = res.getDag(e);
         if (d1 != null && d1 != d) {
-          d1.union(d);
+          union(d1, d);
           d = d1;
           break;
         } else {
@@ -481,7 +500,7 @@ private Commit[] addCommit(Dag d, Commit c, MetaEdge me) {
     } else { // branch commit or merge commit
       me.first = c;
     }
-    if (d.union(d1))
+    if (union(d, d1))
       dags.remove(dags.indexOf(d1));
     res = new Commit[] {me.first};
   }
@@ -528,7 +547,7 @@ private void addHead(Commit c) {
         if (!dags.isEmpty()) {
           for (Dag d1 : dags)
             if (Collections.binarySearch(d1.roots, p[0]) >= 0) {
-              d.union(d1);
+              union(d, d1);
               dags.remove(dags.indexOf(d1));
               break;
             }
