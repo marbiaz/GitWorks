@@ -626,9 +626,11 @@ static String[] singleValuesNames = new String[] { // XXX F = 10
     "mg_mo_edges"   // number of metaedges that are part of a motif (each metaedge is considered only once)
 };
 
-static String[] metricsNames = new String[] { // XXX M = 7 + G = 8
+static String[] metricsNames = new String[] { // XXX M = 9 + G = 9
     "mo_min_layer",     // minimum layer of a motif occurrence
     "mo_max_layer",     // maximum layer of a motif occurrence
+    "mo_min_timestamp", // minimum timestamp of a motif occurrence
+    "mo_max_timestamp", // maximum timestamp of a motif occurrence
     "mo_tot_edges",     // minimum layer of a motif occurrence
     "mo_num_parallels", // number of groups of parallel edges within a motif occurrence
     "mo_seq_commits",   // number of sequential commits in a motif occurrence
@@ -641,8 +643,9 @@ static String[] metricsNames = new String[] { // XXX M = 7 + G = 8
     "mg_non-mo-me_seq_commits", // number of internal commits per non-motif-belonging metaedge in the metagraph
     "mg_me_authors",    // number of authors of internal commits per metaedge in the metagraph
     "mg_seq_commits",   // number of internal commits per metaedge in the metagraph
-    "mg_layer_width",   // maximum number of non-sequential commits (structural nodes) in a metagraph layer
-    "mg_layer_density"  // maximum number of metaedges within two consecutive metagraph layers
+    "mg_layer_width",   // number of non-sequential commits (structural nodes) in a metagraph layer
+    "mg_layer_density", // number of metaedges within two consecutive metagraph layers
+    "mg_layer_time"     // duration of the time window of metagraph layers
 };
 
 static String[] aggregatesNames = new String[] { // XXX A = 7
@@ -653,7 +656,7 @@ static String[] colHeader = null;
 
 static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean printout) {
   // Fixed = 10 + ( Motif = 7 + Graph = 8) metrics x Aggregates = 7 XXX
-  final int M = 7, G = 8, F = 10, A = 7; // -> F + ((M + G) * A) = 115
+  final int M = 9, G = 9, F = 10, A = 7; // -> F + ((M + G) * A) = 115
   double[][] res = new double[motifs.size()][F + ((M + G) * A)];
   for (double[] row : res)
     Arrays.fill(row, 0.0);
@@ -672,14 +675,15 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
   int allMoEdges;
   PrintWriter pout = null;
   try {
-    ds[7] = mgAuthorStats[2]; // XXX from M for each ds in G
-    ds[8] = mgCommitStats[2];
-    ds[9] = mgAuthorStats[1];
-    ds[10] = mgCommitStats[1];
-    ds[11] = mgAuthorStats[0];
-    ds[12] = mg.getInternalCommitStats();
-    ds[13] = mgLayerStats[0];
-    ds[14] = mgLayerStats[1];
+    ds[9] = mgAuthorStats[2]; // XXX from M for each ds in G
+    ds[10] = mgCommitStats[2];
+    ds[11] = mgAuthorStats[1];
+    ds[12] = mgCommitStats[1];
+    ds[13] = mgAuthorStats[0];
+    ds[14] = mg.getInternalCommitStats();
+    ds[15] = mgLayerStats[0];
+    ds[16] = mgLayerStats[1];
+    ds[17] = mgLayerStats[2];
     ArrayList<MetaEdge> edges = new ArrayList<MetaEdge>(mgSummary[3]);
     while (moIt.hasNext()) {
       mo = moIt.next();
@@ -722,20 +726,22 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
             pout.println(res[j][0] + "\t" + ma.mNodes.length + "\t" + ma.mEdges.size() + "\t" // XXX for each res in F
                 + res[j][3] + "\t" + mg.getDiameter() + "\t" + res[j][5] + "\t" + res[j][6] + "\t"
                 + res[j][7] + "\t" + res[j][8] + "\t" + res[j][9] + "\t"
-                + ma.minLayer + "\t" + ma.maxLayer + "\t"                                   // XXX for each measure in M
+                + ma.minLayer + "\t" + ma.maxLayer + "\t" + ma.minTimestamp + "\t" + ma.maxTimestamp + "\t" // XXX for each measure in M
                 + ma.totEdges + "\t" + ma.numParallels + "\t" + ma.weight + "\t"
                 + getMetaEdgeAuthors(ma.mEdges, true) + "\t"+ getMetaEdgeCommits(ma.mEdges, true)+ "\t"
-                + ds[7].getMean() + "\t" + ds[8].getMean() + "\t" + ds[9].getMean() + "\t"  // XXX from M for each ds in G 
-                + ds[10].getMean() + "\t" + ds[11].getMean() + "\t" + ds[12].getMean() + "\t"
-                + ds[13].getMean() + "\t" + ds[14].getMean());
+                + ds[9].getMean() + "\t" + ds[10].getMean() + "\t" + ds[11].getMean() + "\t"  // XXX from M for each ds in G 
+                + ds[12].getMean() + "\t" + ds[13].getMean() + "\t" + ds[14].getMean() + "\t"
+                + ds[15].getMean() + "\t" + ds[16].getMean() + "\t" + ds[17].getMean());
           ds[0].addValue(ma.minLayer); // XXX from 0 for each ds in M
           ds[1].addValue(ma.maxLayer);
-          ds[2].addValue(ma.totEdges);
-          ds[3].addValue(ma.numParallels);
-          ds[4].addValue(ma.weight);
+          ds[2].addValue(ma.minTimestamp);
+          ds[3].addValue(ma.maxTimestamp);
+          ds[4].addValue(ma.totEdges);
+          ds[5].addValue(ma.numParallels);
+          ds[6].addValue(ma.weight);
         }
-        ds[5] = mgAuthorStats[3 + j];
-        ds[6] = mgCommitStats[3 + j];  // XXX           "
+        ds[7] = mgAuthorStats[3 + j];
+        ds[8] = mgCommitStats[3 + j];  // XXX           "
         for (i = 0; i < ds.length; i++) { // XXX A = 7
           res[j][F + i * A + 0] = ds[i].getMin();
           res[j][F + i * A + 1] = ds[i].getPercentile(25);
@@ -998,6 +1004,7 @@ static void footPrint(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
   Arrays.fill(max, 0.0);
   int i, c = 0;
   int[][] lSizes;
+  long[][] lTimes;
   for (MetaGraph mg : mgs) {
     lSizes = mg.getLayerSizes();
     for (int s : lSizes[1]) {
@@ -1010,6 +1017,7 @@ static void footPrint(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
   for (MetaGraph mg : mgs) {
     f = fIt.next();
     lSizes = mg.getLayerSizes();
+    lTimes = mg.getLayerTimes();
     if (lSizes[0].length == 1) continue;
     double[] x = new double[lSizes[0].length * 2];
     double[] vals = new double[lSizes[0].length * 2];
@@ -1027,7 +1035,8 @@ static void footPrint(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
         vals[i++] = (allMax / 2) - (lSizes[1][s] / 2.0);
         vals[i++] = (allMax / 2) + (lSizes[1][s] / 2.0);
         pOut.println("" + ((max[c] / 2) - (lSizes[1][s] / 2.0)) + "\t"
-            + ((max[c] / 2) + (lSizes[1][s] / 2.0)) + "\t" + lSizes[0][s]);
+            + ((max[c] / 2) + (lSizes[1][s] / 2.0)) + "\t" + lSizes[0][s]
+            + "\t" + lTimes[0][s] + "\t" + lTimes[1][s]);
       }
       chart.addDataset(f.name + "_" + c, x, vals);
       pOut.flush();

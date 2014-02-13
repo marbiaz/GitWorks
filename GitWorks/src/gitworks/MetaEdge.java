@@ -49,8 +49,13 @@ ArrayList<Commit> getInternals() {
 }
 
 
-int getSpan() {
+int getLayerSpan() {
   return last.layer - first.layer;
+}
+
+
+long getTimeSpan() {
+  return endTimestamp - startTimestamp;
 }
 
 

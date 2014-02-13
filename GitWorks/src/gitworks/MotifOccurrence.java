@@ -13,6 +13,8 @@ ArrayList<MetaEdge> mEdges; // sorted list of simple metaedges
 HashMap<MetaEdge, MetaEdge[]> parallels; // map of sorted arrays of parallel edges
 int minLayer;
 int maxLayer;
+long minTimestamp;
+long maxTimestamp;
 int totEdges;
 int numParallels; // how many groups of parallels
 int weight;
@@ -32,6 +34,8 @@ MotifOccurrence(ArrayList<MetaEdge> parEdges) {
   }
   minLayer = parEdges.get(0).first.layer;
   maxLayer = parEdges.get(0).last.layer;
+  minTimestamp = parEdges.get(0).startTimestamp;
+  maxTimestamp = parEdges.get(0).endTimestamp;
   totEdges = mEdges.size();
   numParallels = 1;
   parallels = null;
@@ -41,6 +45,8 @@ MotifOccurrence(ArrayList<MetaEdge> parEdges) {
 MotifOccurrence(ArrayList<MetaEdge> edges, HashMap<String, ArrayList<MetaEdge>> twins) {
   minLayer = Integer.MAX_VALUE;
   maxLayer = Integer.MIN_VALUE;
+  minTimestamp = Long.MAX_VALUE;
+  maxTimestamp = Long.MIN_VALUE;
   numParallels = 0;
   mEdges = edges;
   ArrayList<MetaEdge> t;
@@ -49,6 +55,8 @@ MotifOccurrence(ArrayList<MetaEdge> edges, HashMap<String, ArrayList<MetaEdge>> 
   for (MetaEdge m : mEdges) {
     minLayer = Math.min(minLayer, m.first.layer);
     maxLayer = Math.max(maxLayer, m.last.layer);
+    minTimestamp = Math.min(minTimestamp, m.startTimestamp);
+    maxTimestamp = Math.max(maxTimestamp, m.endTimestamp);
     GitWorks.addUnique(nodes, m.first);
     GitWorks.addUnique(nodes, m.last);
     t = twins.get(m.first.id.getName() + m.last.id.getName());

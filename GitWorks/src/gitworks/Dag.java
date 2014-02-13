@@ -94,7 +94,8 @@ ArrayList<Commit> leaves; // nodes with no child
 ArrayList<Commit> roots; // nodes with no parent
 private ArrayList<MetaEdge> metaEdges; // graph's edges
 
-private int[][] layerSizes;
+private int[][] layerSizes; // for each layer, number of commits and edges
+private long[][] layerTimes; // for each layer, min and max timestamp
 private int diameter;
 private int maxWidth; // max number of commits in a layer
 private int maxDensity; // max number of edges e in a layer L such that e.first.layer <= L <= e.last.layer
@@ -201,14 +202,19 @@ void getInternalCommitStats(DescriptiveStatistics ds) {
 }
 
 
-// [0] -> vertexes ; [1] -> edges
+// [0] -> vertexes ; [1] -> edges ; [2] -> time range
 DescriptiveStatistics[] getLayerStats() {
-  DescriptiveStatistics ds[] = new DescriptiveStatistics[layerSizes.length];
+  DescriptiveStatistics ds[] = new DescriptiveStatistics[3];
   if (layerSizes == null) computeLayerSizes();
+  if (layerTimes == null) computeLayerTimes();
   for (int i = 0; i < ds.length; i++) {
     ds[i] = new DescriptiveStatistics();
-    for (int s : layerSizes[i])
-      ds[i].addValue((double)s);
+    if (i < 2)
+      for (int s : layerSizes[i])
+        ds[i].addValue((double)s);
+    else
+      for (int t = 0; t < layerTimes[0].length; t++)
+        ds[i].addValue((new Long(layerTimes[1][t] - layerTimes[0][t])).doubleValue());
   }
   return ds;
 }
@@ -246,6 +252,38 @@ int[][] getLayerSizes() {
     for (int j = 0; j < layerSizes[i].length; j++)
       res[i][j] = layerSizes[i][j];
   return res;
+}
+
+
+long[][] getLayerTimes() {
+  if (layerTimes == null) computeLayerTimes();
+  long[][] res = new long[layerTimes.length][layerTimes[0].length];
+  for (int i = 0; i < layerTimes.length; i++)
+    for (int j = 0; j < layerTimes[i].length; j++)
+      res[i][j] = layerTimes[i][j];
+  return res;
+}
+
+
+private void computeLayerTimes() {
+  layerTimes = new long[2][diameter + 1];
+  Arrays.fill(layerTimes[0], Long.MAX_VALUE);
+  Arrays.fill(layerTimes[1], 0L);
+  MetaEdge me;
+  long t;
+  Iterator<MetaEdge> mIt = getMetaEdges();
+  while (mIt.hasNext()) {
+    me = mIt.next();
+    layerTimes[0][me.first.layer] = Math.min(layerTimes[0][me.first.layer], me.startTimestamp);
+    layerTimes[0][me.last.layer] = Math.min(layerTimes[0][me.last.layer], me.endTimestamp);
+    layerTimes[1][me.first.layer] = Math.max(layerTimes[1][me.first.layer], me.startTimestamp);
+    layerTimes[1][me.last.layer] = Math.max(layerTimes[1][me.last.layer], me.endTimestamp);
+  }
+  for (Commit c : roots) {
+    t = c.getCommittingInfo().getWhen().getTime();
+    layerTimes[0][0] = Math.min(layerTimes[0][0], t);
+    layerTimes[1][0] = Math.max(layerTimes[1][0], t);
+  }
 }
 
 
@@ -302,7 +340,8 @@ boolean union(Dag d) {
 
 
 /**
- * It assigns layers to commits and timestamps to edges. It also set the diameter.
+ * It assigns layers to commits and sets the diameter. It also sets the timestamps for each
+ * metaedge.
  * 
  * @return non-sequential commits in bf order, with ties decided by comparing commits with
  *         Metagraph.NodeDegreeComparator

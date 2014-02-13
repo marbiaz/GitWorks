@@ -175,6 +175,29 @@ int[][] getLayerSizes(DagType t) {
 
 
 /**
+ * @return Layer sizes of the densest dag in the metagraph
+ */
+long[][] getLayerTimes() {
+  if (dags.size() == 1) return dags.get(0).getLayerTimes();
+  return getLayerTimes(DagType.DENSEST);
+}
+
+
+long[][] getLayerTimes(DagType t) {
+  switch (t) {
+  case OLDEST:
+    return getOldestDag().getLayerTimes();
+  case LARGEST:
+    return getLargestDag().getLayerTimes();
+  case DENSEST:
+    return getDensestDag().getLayerTimes();
+  default:
+    return null;
+  }
+}
+
+
+/**
  * Create a meta-graph from a given Dag. No duplication of fields is done, thus the returned
  * meta-graph references the original objects.
  */
@@ -188,9 +211,9 @@ static MetaGraph createMetaGraph(Dag d) {
     me = mIt.next();
     maxID = Math.max(maxID, me.ID);
     GitWorks.addUnique(coms, me.first);
-    since = Math.min(since, me.first.getCommittingInfo().getWhen().getTime());
+    since = Math.min(since, me.startTimestamp);
     GitWorks.addUnique(coms, me.last);
-    until = Math.max(until, me.last.getCommittingInfo().getWhen().getTime());
+    until = Math.max(until, me.endTimestamp);
     if (me.getWeight() > 0)
       for (Commit c : me.getInternals())
         GitWorks.addUnique(coms, c);

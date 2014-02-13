@@ -14,6 +14,8 @@ ArrayList<MotifOccurrence> occurrences;
 ArrayList<Double> cStats; // min mean med max stdev
 int minLayer;
 int maxLayer;
+long minTimestamp;
+long maxTimestamp;
 int numNodes;
 int numEdges;
 double zScore;
@@ -28,6 +30,8 @@ public Motif(String n, int nodes, int edges) {
   cStats = new ArrayList<Double>();
   minLayer = Integer.MAX_VALUE;
   maxLayer = 0;
+  minTimestamp = Long.MAX_VALUE;
+  maxTimestamp = 0L;
   zScore = 0;
 }
 
@@ -35,6 +39,8 @@ public Motif(String n, int nodes, int edges) {
 void addOccurrence(MotifOccurrence mo) {
   minLayer = Math.min(minLayer, mo.minLayer);
   maxLayer = Math.max(maxLayer, mo.maxLayer);
+  minTimestamp = Math.min(minTimestamp, mo.minTimestamp);
+  maxTimestamp = Math.max(maxTimestamp, mo.maxTimestamp);
   GitWorks.addUnique(occurrences, mo);
   for (MetaEdge me : mo.mEdges)
     GitWorks.addUnique(allEdges, me);
@@ -48,6 +54,8 @@ void addOccurrence(ArrayList<MetaEdge> edges, HashMap<String, ArrayList<MetaEdge
   MotifOccurrence mo = new MotifOccurrence(edges, twins);
   minLayer = Math.min(minLayer, mo.minLayer);
   maxLayer = Math.max(maxLayer, mo.maxLayer);
+  minTimestamp = Math.min(minTimestamp, mo.minTimestamp);
+  maxTimestamp = Math.max(maxTimestamp, mo.maxTimestamp);
   GitWorks.addUnique(occurrences, mo);
   for (MetaEdge me : mo.mEdges)
     GitWorks.addUnique(allEdges, me);
