@@ -399,11 +399,11 @@ public static void main(String[] args) throws Exception {
 
 static ArrayList<MetaGraph> mgs = new ArrayList<MetaGraph>();
 static ArrayList<Features> feats = new ArrayList<Features>();
+static int repoCounter = 0;
 
 static void computeMetaGraph(GitMiner gm, Features ft) {
   Commit co;
   MetaGraph mg;
-  int count = 0;
   ArrayList<Commit> heads = new ArrayList<Commit>();
   ArrayList<Commit> allComs = new ArrayList<Commit>();
 
@@ -421,9 +421,9 @@ static void computeMetaGraph(GitMiner gm, Features ft) {
   if (stats[3] >= 30) {
     mgs.add(MetaGraph.createMetaGraph(mg.getDensestDag())); // mgs.add(mg); // XXX
     feats.add(ft);
-    System.err.println("Taking repo # " + (++count) + " : " + ft.name + " which has "
-        + mg.dags.size() + " dags, " + stats[3] + " metaedges, " + stats[0] + " roots, "
-        + stats[1] + " nodes and " + stats[2] + " leaves, for a total of " + stats[7]
+    System.err.println("Taking repo # " + (++repoCounter) + " : " + ft.name + ", which has "
+        + mg.dags.size() + " dags, " + stats[3] + " metaedges, " + stats[0] + " roots, " + stats[1]
+        + " nodes and " + stats[2] + " leaves, for a total of " + stats[7]
         + " commits,\n\t of which " + stats[4] + " are branch nodes, " + stats[5]
         + " are merge nodes and " + stats[6] + " are both.");
   } else {
