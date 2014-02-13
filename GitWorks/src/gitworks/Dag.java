@@ -395,12 +395,14 @@ void bfPrintout(Commit[] commits) {
 
 /**
  * It returns a new metagraph containing only commits within the given date range (committing date
- * is considered). The result is built from scratch, thus all commits are duplicated and all edges
- * are created anew (so they do not keep the original ID or layer, etc.). Note: the result may not
- * contain all original edges within the given interval, since commits that are terminal (first/last
- * of their edges) in the original dag may not be terminal in the resulting graph, due to the time
- * range contraint which may exclude some, but not all edges for given terminal commits. To obtain
- * an exact subset of the original dag, use {@link #buildSubGraph(Date, Date)}.
+ * is considered). If both parameters are null, it creates a metagraph which incapsulates the
+ * existing dag. If at least one parameter is not null, the result is built from scratch, thus all
+ * commits are duplicated and all edges are created anew (so they do not keep the original ID,
+ * etc.). Note: the result may not contain all original edges within the given interval, since
+ * commits that are terminal (first/last of their edges) in the original dag may not be terminal in
+ * the resulting graph, due to the time range contraint which may exclude some, but not all edges
+ * for given terminal commits. To obtain an exact subset of the original dag, use
+ * {@link #buildSubGraph(Date, Date)}.
  * 
  * @param minAge
  * @param maxAge
@@ -532,14 +534,16 @@ MetaGraph buildNewMetaGraph(Date minAge, Date maxAge) {
 
 
 /**
- * It returns a sub-graph taken from this object, with only edges within the given date range
- * (committing date is considered). All eligible edges are preserved and the memory footprint is
- * minimized by referencing the original internal commits. New edges take the ID and the layer of
- * the original ones which they derive from. The result is actually the portion of the original dag
- * within the given time interval. Note: the result is NOT equal to a metagraph built from scratch
- * with all commits in the given time range (see {@link #buildNewMetaGraph(Date, Date)}).
+ * If both parameters are null, it creates a metagraph which incapsulates the existing dag. If at
+ * least one parameter is not null, it returns a sub-graph taken from this object, with only edges
+ * within the given date range (committing date is considered). All eligible edges are preserved and
+ * the memory footprint is minimized by referencing the original internal commits. New edges take
+ * the ID of the original ones which they derive from. The result is actually the portion of the
+ * original dag within the given time interval. Note: the result is NOT equal to a metagraph built
+ * from scratch with all commits in the given time range (see {@link #buildNewMetaGraph(Date, Date)}
+ * ).
  */
-MetaGraph buildSubGraph(Date minAge, Date maxAge) { // FIXME
+MetaGraph buildSubGraph(Date minAge, Date maxAge) { // FIXME ?
   int i;
   MetaEdge newme;
   Date dFirst, dLast;
@@ -996,7 +1000,7 @@ void exportToGexf(String name) { // XXX
       }
     }
     if(i == node.getEdges().size()) {
-      e = node.connectTo("" + me.ID, "" + me.ID, n2);
+      e = node.connectTo("" + me.ID, "" + me.ID, n2); // id , label, target
       e.setEdgeType(EdgeType.DIRECTED).setWeight(0.0f);
     }
     e.setWeight(e.getWeight() + (float)me.getWeight())
