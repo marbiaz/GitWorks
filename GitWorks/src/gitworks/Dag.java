@@ -1001,7 +1001,7 @@ void exportToGexf(String name) { // XXX
     }
     e.setWeight(e.getWeight() + (float)me.getWeight())
         .getAttributeValues().addValue(attWeight, "" + e.getWeight())
-        .addValue(attLayer, "" + me.getSpan());
+        .addValue(attLayer, "" + me.getLayerSpan());
   }
 
   StaxGraphWriter graphWriter = new StaxGraphWriter();
