@@ -360,8 +360,6 @@ Commit[] bfVisit() {
         }
         if (done) {
           e.last.layer = layer;
-          e.startTimestamp = e.first.getCommittingInfo().getWhen().getTime();
-          e.endTimestamp = e.last.getCommittingInfo().getWhen().getTime();
           if (Collections.binarySearch(cur, e.last) < 0) {
             res[next++] = e.last;
             GitWorks.addUnique(cur, e.last);
@@ -375,6 +373,10 @@ Commit[] bfVisit() {
       GitWorks.addUnique(prev, res[i]);
   }
   diameter = layer;
+  if (!metaEdges.isEmpty()) for (MetaEdge me : metaEdges) {
+    me.startTimestamp = me.first.getCommittingInfo().getWhen().getTime();
+    me.endTimestamp = me.last.getCommittingInfo().getWhen().getTime();
+  }
   return res;
 }
 
@@ -586,6 +588,8 @@ MetaGraph buildSubGraph(Date minAge, Date maxAge) { // FIXME
 
   for (MetaEdge me : middleCut) {
     newme = new MetaEdge(me);
+    newme.startTimestamp = me.startTimestamp;
+    newme.endTimestamp = me.endTimestamp;
     co = new Commit(me.first);
     co = allCommits.get(GitWorks.addUnique(allCommits, co));
     newme.first = co;
@@ -618,6 +622,7 @@ MetaGraph buildSubGraph(Date minAge, Date maxAge) { // FIXME
         if (c.getCommittingInfo().getWhen().compareTo(minAge) >= 0) {
           first = new Commit(c);
           newme.first = first;
+          newme.startTimestamp = first.getCommittingInfo().getWhen().getTime();
           first.outDegree++;
           GitWorks.addUnique(first.edges, newme.ID);
           GitWorks.addUnique(allCommits, first);
@@ -632,6 +637,7 @@ MetaGraph buildSubGraph(Date minAge, Date maxAge) { // FIXME
     co = new Commit(me.last);
     co = allCommits.get(GitWorks.addUnique(allCommits, co));
     newme.last = co;
+    newme.endTimestamp = me.endTimestamp;
     if (first != null) {
       co.inDegree++;
       GitWorks.addUnique(edges, newme);
@@ -650,6 +656,7 @@ MetaGraph buildSubGraph(Date minAge, Date maxAge) { // FIXME
         if (leaf == null && dLast.compareTo(maxAge) <= 0) {
           leaf = new Commit(cc);
           newme.last = leaf;
+          newme.endTimestamp = leaf.getCommittingInfo().getWhen().getTime();
           leaf.inDegree++;
           GitWorks.addUnique(leaf.edges, newme.ID);
           GitWorks.addUnique(allCommits, leaf);
@@ -662,6 +669,7 @@ MetaGraph buildSubGraph(Date minAge, Date maxAge) { // FIXME
     co = new Commit(me.first);
     co = allCommits.get(GitWorks.addUnique(allCommits, co));
     newme.first = co;
+    newme.startTimestamp = me.startTimestamp;
     if (leaf != null) {
       co.outDegree++;
       GitWorks.addUnique(edges, newme);
@@ -683,6 +691,7 @@ MetaGraph buildSubGraph(Date minAge, Date maxAge) { // FIXME
           if (leaf == null) {
             leaf = new Commit(cc);
             newme.last = leaf;
+            newme.endTimestamp = leaf.getCommittingInfo().getWhen().getTime();
             GitWorks.addUnique(allCommits, leaf);
           } else {
             co = new Commit(cc);
@@ -696,6 +705,7 @@ MetaGraph buildSubGraph(Date minAge, Date maxAge) { // FIXME
         GitWorks.addUnique(allCommits, co);
         newme.getInternals().remove(newme.getInternals().size() - 1); // remove equal cc
         newme.first = co;
+        newme.startTimestamp = co.getCommittingInfo().getWhen().getTime();
       }
     }
     if (leaf != null) GitWorks.addUnique(heads, leaf);

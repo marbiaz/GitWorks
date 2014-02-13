@@ -218,8 +218,11 @@ static MetaGraph createMetaGraph(Dag d) {
       for (Commit c : me.getInternals())
         GitWorks.addUnique(coms, c);
   }
-  for (Commit c : d.roots)
+  for (Commit c : d.roots) {
     GitWorks.addUnique(coms, c);
+    since = Math.min(since, c.getCommittingInfo().getWhen().getTime());
+    until = Math.max(until, c.getCommittingInfo().getWhen().getTime());
+  }
 
   MetaGraph res = new MetaGraph(coms);
   res.maxID = maxID;
@@ -265,7 +268,6 @@ private static boolean union(Dag dest, Dag d) {
  */
 static MetaGraph createMetaGraph(ArrayList<MetaEdge> allEdges, ArrayList<Commit> allComs,
     ArrayList<Commit> heads) {
-  long tStamp;
   Dag d, d1;
   Commit co;
   MetaEdge me;
@@ -298,13 +300,16 @@ static MetaGraph createMetaGraph(ArrayList<MetaEdge> allEdges, ArrayList<Commit>
       } else {
         GitWorks.addUnique(d.nodes, co);
       }
-      tStamp = co.getCommittingInfo().getWhen().getTime();
-      if (res.until < tStamp) res.until = tStamp;
-      if (res.since > tStamp) res.since = tStamp;
     } while (!cur.isEmpty());
     if (d1 == null) res.dags.add(d);
   }
-  // res.checkup();
+  long[][] ts;
+  for (Dag da : res.dags) {
+    da.bfVisit();
+    ts = da.getLayerTimes();
+    res.until = Math.max(res.until, ts[1][ts[1].length - 1]);
+    res.since = Math.min(res.since, ts[0][0]);
+  }
   return res;
 }
 
@@ -318,7 +323,6 @@ static MetaGraph createMetaGraph(ArrayList<MetaEdge> allEdges, ArrayList<Commit>
  */
 static MetaGraph createMetaGraph(ArrayList<Commit> allComs, ArrayList<Commit> heads) {
   MetaGraph res = new MetaGraph(allComs);
-  long tStamp;
   for (Commit c : heads) {
     if (c.edges.isEmpty()) { // was not found in previous iterations
       res.addHead(c);
@@ -327,15 +331,15 @@ static MetaGraph createMetaGraph(ArrayList<Commit> allComs, ArrayList<Commit> he
   for (Commit c : heads) {
     if (c.inDegree > 0 && c.outDegree == 0) {
       GitWorks.addUnique(res.getDag(c.edges.get(0)).leaves, c);
-      tStamp = c.getCommittingInfo().getWhen().getTime();
-      if (res.until < tStamp)
-        res.until = tStamp;
-      if (res.since > tStamp)
-        res.since = tStamp;
     }
   }
-  for (Dag d : res.dags)
+  long[][] ts;
+  for (Dag d : res.dags) {
     d.bfVisit();
+    ts = d.getLayerTimes();
+    res.until = Math.max(res.until, ts[1][ts[1].length - 1]);
+    res.since = Math.min(res.since, ts[0][0]);
+  }
   return res;
 }
 
@@ -514,7 +518,6 @@ private void addHead(Commit c) {
   Commit[] p, cur;
   MetaEdge me; Commit co;
   ArrayList<Commit[]> next = new ArrayList<Commit[]>();
-  long tStamp;
   p = nextGen(c);
   Dag d = new Dag();
   // if c points the first commit of the repo, just return
@@ -525,11 +528,6 @@ private void addHead(Commit c) {
           return;
     }
     GitWorks.addUnique(d.roots, c);
-    tStamp = c.getCommittingInfo().getWhen().getTime();
-    if (since > tStamp)
-      since = tStamp;
-    if (until < tStamp)
-      until = tStamp;
     dags.add(d);
     return; 
   }
@@ -556,11 +554,6 @@ private void addHead(Commit c) {
       } else {
         GitWorks.addUnique(d.nodes, p[0]);
       }
-      tStamp = p[0].getCommittingInfo().getWhen().getTime();
-      if (since > tStamp)
-        since = tStamp;
-      if (until < tStamp)
-        until = tStamp;
       d.addEdge(me);
       if (p.length > 1) {
         next.add(p);
