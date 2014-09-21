@@ -25,6 +25,8 @@ int inDegree; // number of parents in the meta-graph
 int outDegree; // number of children in the meta-graph
 ArrayList<Integer> edges; // metagraph's edges touching the commit
 int layer; // layer in a metagraph's dag which the commit belongs to
+int mFiles; // number of files modified by this commit (0 if not sequential)
+int mLines; // number of lines changed (added + deleted) by this commit (0 if not sequential)
 
 Commit() {}
 
@@ -45,6 +47,8 @@ Commit(RevCommit c) {
   inDegree = 0;
   outDegree = 0;
   layer = -1;
+  mFiles = 0;
+  mLines = 0;
 }
 
 
@@ -57,6 +61,8 @@ Commit(Commit c) {
   inDegree = 0;
   outDegree = 0;
   layer = -1;
+  mFiles = c.mFiles;
+  mLines = c.mLines;
 }
 
 
@@ -164,6 +170,8 @@ public void readExternal(ObjectInput in) throws IOException, ClassNotFoundExcept
     data[i] = in.readByte();
   }
   id  = (ObjectId)in.readObject();
+  mFiles = in.readInt();
+  mLines = in.readInt();
   layer = in.readInt();
   inDegree = in.readInt();
   outDegree = in.readInt();
@@ -201,6 +209,8 @@ public void writeExternal(ObjectOutput out) throws IOException {
     out.write(b);
   }
   out.writeObject(id);
+  out.writeInt(mFiles);
+  out.writeInt(mLines);
   out.writeInt(layer);
   out.writeInt(inDegree);
   out.writeInt(outDegree);

@@ -328,6 +328,7 @@ public static void main(String[] args) throws Exception {
       }
       if (newAnalysis || compuFeatures)
         Runtime.getRuntime().exec(pwd + "/backupDumps.sh " + getSafeName(fe)).waitFor();
+      importModStats(gitMiner);
     }
     catch (Exception e) {
       System.err.println("ERROR : computation of " + getSafeName(fe)
@@ -379,6 +380,8 @@ public static void main(String[] args) throws Exception {
       // System.err.println(" done.");
       // System.err.flush();
 
+      // importModStats(gitMiner);
+      // exportData(gitMiner, trees_out_dir + "dumpFiles/" + gitMiner.name + ".gm");
       // computeMetaGraph(gitMiner, ft);
       feats.add(ft);
 
@@ -397,6 +400,43 @@ public static void main(String[] args) throws Exception {
 }
 
 
+static void importModStats(GitMiner gm) {
+  BufferedReader in = null;
+  String line, tokens[];
+  Commit c;
+  org.eclipse.jgit.lib.MutableObjectId id = new org.eclipse.jgit.lib.MutableObjectId();
+  int count = 0;
+  try {
+    in = new BufferedReader(new FileReader(pwd + "/STORAGE/" + gm.name + ".diffie"));
+    while ((line = in.readLine()) != null) {
+      count++;
+      tokens = line.split(" ");
+      id.fromString(tokens[0]);
+      c = GitWorks.getElement(gm.allCommits, id);
+      if (c == null) {
+        //System.err.println("WARNING : No commit " + id.getName() + " in " + gm.name + ".");
+        continue;
+      }
+      c.mFiles = c.mLines = 0;
+      switch (tokens.length) {
+      case 4 :
+        c.mLines = Integer.parseInt(tokens[3]);
+      case 3 :
+        c.mLines += Integer.parseInt(tokens[2]);
+      case 2 :
+        c.mFiles = Integer.parseInt(tokens[1]);
+      }
+      //System.err.println("LOG : " + gm.name + " : id " + id.getName() + " ; files: " + c.mFiles + " ; lines: " + c.mLines);
+    }
+    in.close();
+  }
+  catch (FileNotFoundException fnfe) {
+    System.err.println("No diffie file for " + gm.name + "!");
+  }
+  catch (Exception e) {
+    System.err.println("ERROR \"" + e.getClass().getName() + " : " + e.getMessage() + "\" while processing " + gm.name + " at line " + count + ".");
+  }
+}
 static ArrayList<MetaGraph> mgs = new ArrayList<MetaGraph>();
 static ArrayList<Features> feats = new ArrayList<Features>();
 static int repoCounter = 0;
