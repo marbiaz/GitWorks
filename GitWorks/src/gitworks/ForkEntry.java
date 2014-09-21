@@ -129,14 +129,14 @@ public static boolean isValidId(String s) {
 protected ForkEntry() {};
 
 
-public ForkEntry(String id) {
+private ForkEntry(String id) {
   String[] t = id.split(GitWorks.id_sep);
   name = t[1];
   owner = t[0];
 }
 
 
-ForkEntry(String owner, String name, int watchers, long creationTstamp, long cloneTstamp) {
+public ForkEntry(String owner, String name, int watchers, long creationTstamp, long cloneTstamp) {
   this.name = name;
   this.owner = owner;
   this.watchers = watchers;
@@ -145,17 +145,17 @@ ForkEntry(String owner, String name, int watchers, long creationTstamp, long clo
 }
 
 
-boolean hasForks() {
+public boolean hasForks() {
   return forks == null ? false : forks.size() > 0;
 }
 
 
-boolean areDfsResultsValid() {
+public boolean areDfsResultsValid() {
   return dfsOk;
 }
 
 
-boolean isRoot() {
+public boolean isRoot() {
   return parent == null;
 }
 
@@ -169,9 +169,15 @@ private void setAncestorsDfsKo() {
 }
 
 
-// after an addition, if dfs aggregates were valid for this entry, the are reset to depth 1
-// and flagged as invalid upwards.
-boolean addFork(ForkEntry f) throws Exception {
+/**
+ * After an addition, if dfs aggregates were valid for this entry, the are reset to depth 1 and
+ * flagged as invalid upwards.
+ * 
+ * @param f
+ * @return True if the fork is added; false otherwise.
+ * @throws Exception
+ */
+public boolean addFork(ForkEntry f) throws Exception {
   int res;
   if (!f.equals(this) && f.parent == null) {
     if (forks == null) forks = new ForkList();
@@ -197,15 +203,29 @@ boolean addFork(ForkEntry f) throws Exception {
 }
 
 
-boolean removeFork(String fid) throws Exception {
+/**
+ * It updates valid aggregates only from the parent downward, according to the current
+ * dfs_aggregate_depth; it flags dfs as invalid upwards.
+ * 
+ * @param f
+ * @return true if a fork is removed; false otherwise
+ * @throws Exception
+ */
+public boolean removeFork(String fid) throws Exception {
   ForkEntry fe = new ForkEntry(fid);
   return removeFork(fe);
 }
 
 
-// It updates valid aggregates only from the parent downward, according to the current
-// dfs_aggregate_depth; it flags dfs as invalid upwards
-boolean removeFork(ForkEntry f) throws Exception {
+/**
+ * It updates valid aggregates only from the parent downward, according to the current
+ * dfs_aggregate_depth; it flags dfs as invalid upwards.
+ * 
+ * @param f
+ * @return true if a fork is removed; false otherwise
+ * @throws Exception
+ */
+public boolean removeFork(ForkEntry f) throws Exception {
   if (forks != null) {
     if (forks.remove(f) != null) {
       if (dfsOk) {
@@ -219,9 +239,15 @@ boolean removeFork(ForkEntry f) throws Exception {
 }
 
 
-// It updates the aggregates only from the parent downward, according to the current
-// dfs_aggregate_depth; it flags dfs as invalid upwards
-boolean removeForks(ForkEntry[] fks) throws Exception {
+/**
+ * It updates valid aggregates only from the parent downward, according to the current
+ * dfs_aggregate_depth; it flags dfs as invalid upwards.
+ * 
+ * @param f
+ * @return true if a fork is removed; false otherwise
+ * @throws Exception
+ */
+public boolean removeForks(ForkEntry[] fks) throws Exception {
   boolean res = false;
   if (forks != null) {
     for (ForkEntry f : fks) {
@@ -243,32 +269,32 @@ public String getId() {
 }
 
 
-int howManyForks() {
+public int howManyForks() {
   return (forks == null) ? 0 : forks.size();
 }
 
 
-ForkEntry getFork(String id) {
+public ForkEntry getFork(String id) {
   return GitWorks.getElement(forks, id);
 }
 
 
-Iterator<ForkEntry> getForks() {
+public Iterator<ForkEntry> getForks() {
   return forks.iterator();
 }
 
 
-int getWatchers() {
+public int getWatchers() {
   return watchers;
 }
 
 
-long getCreationTimestamp() {
+public long getCreationTimestamp() {
   return since;
 }
 
 
-long getRetrievalTimestamp() {
+public long getRetrievalTimestamp() {
   return age;
 }
 

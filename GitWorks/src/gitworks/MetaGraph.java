@@ -106,6 +106,10 @@ MetaEdge getEdge(int id) {
 }
 
 
+/**
+ * Summary statistics of the metagraph.
+ * @return Number of { roots, nodes, leaves, edges, branchCommits, mergeCommits, coolCommits, totCommits }
+ */
 int[] getSummaryStats() {
   int[] dRes, res = new int[8];
   Arrays.fill(res, 0);

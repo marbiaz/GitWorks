@@ -287,6 +287,10 @@ private void computeLayerTimes() {
 }
 
 
+/**
+ * Summary statistics of the dag
+ * @return Number of { roots, nodes, leaves, edges, branchCommits, mergeCommits, coolCommits, totCommits }
+ */
 int[] getSummaryStats() {
   boolean merge, branch;
   if (mergeCommits == null) {

@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInput;
@@ -35,10 +36,12 @@ import org.apache.commons.math3.random.MersenneTwister;
 public class GitWorks {
 
 
-public static boolean bare = true; // the forktree is a bare git repo
-public static boolean anew = true; // (re-)create a forktree anew
+public static boolean bare = true; // the umbrella repo is a bare git repo
 
-static boolean compuForkTrees = false; // if true compute fork trees anew ; if false use serialized forkList
+public static boolean anew = true; // (re-)create an umbrella repo anew
+
+static boolean computeUmbrellas = false; // if true compute umbrella repos anew ; if false use
+                                          // serialized forkList
 static boolean newAnalysis = false; // if true perform a full gitMiner analysis ; if false use serialized gitMiner data
 static boolean compuFeatures = false; // if true compute features from gitMiner data; if false, use serialized features
 static boolean resultsOnly = true; // only compute results from serialized features
@@ -47,22 +50,20 @@ public static String prefix = "JGIT_"; // to be prepended to any jgit-generated 
 public static String field_sep = "    "; // field separator in input datafile's lines
 public static String id_sep = "/"; // the string that separates owner and name in a fork id string
 public static String safe_sep = "__A-T__"; // weird marker that should hopefully never occur in
-                                             // usernames, repo names and that is filesystem safe
+                                            // usernames, repo names and that is filesystem safe
 public static String list_sep = ","; // fork id separator in the list taken from the input file
 public static String log_sep = "<#>"; // field separator within a git log output line
 public static String repo_dir; // the absolute path to the dir that contains the git repos to be
-                                 // imported in jgit data structures
+                                // imported in jgit data structures
 public static String gits_out_dir; // the relative path to the dir which will contain the
-                                     // jgit-generated git repos to analyse
+                                    // jgit-generated git repos to analyse
 public static String trees_out_dir; // the relative path to the dir which will contain the
-                                      // jgit-generated trees of the repos
+                                    // jgit-generated trees of the repos
 static String pwd; // set according to the current pwd
 
-static String[] ids = null; // list of root repos to be considered to build the fork trees and perform analysis.
+static String[] ids = null; // list of root repos to be considered to build the umbrella repos and perform analysis.
 static ForkList projects;
 static FeatureList features;
-static BufferedReader in = null;
-static MersenneTwister rand = null;
 
 
 static void dfsVisit(int depth, ForkEntry f, DfsOperator t, Object o) throws Exception {
@@ -86,9 +87,7 @@ static void dfsVisit(int depth, ForkEntry f, DfsOperator t, Object o) throws Exc
       if (!t.runOnce()) t.run(f, o);
     }
     if (t.runOnce()) t.run(f, o);
-  } else {
-    t.run(f, o);
-  }
+  } else t.run(f, o);
   t.finalize(f);
 }
 
@@ -117,30 +116,46 @@ static void dfsVisit(int depth, ForkEntry f, DfsOperator t, int[] t_arg) throws 
     }
     if (t.runOnce()) t.run(f, temp);
     System.arraycopy(temp, 0, t_arg, 0, t_arg.length);
-  } else {
-    t.run(f, t_arg);
-  }
+  } else t.run(f, t_arg);
   t.finalize(f);
 }
 
 
-// Returns the project ID formatted in a convenient way to serve as a remote name...
-static String getSafeName(ForkEntry f) {
+/**
+ * Returns the project ID formatted in a convenient way to serve as a remote name. It substitutes
+ * occurrences of {@link #id_sep} with {@link #safe_sep}.
+ *
+ * @param f
+ * @return The safe-name of the entry.
+ */
+public static String getSafeName(ForkEntry f) {
   return f.getId().replace(id_sep, safe_sep);
 }
 
 
-// It gives the absolute path (internal URI) of the repo corresponding to the given ForkEntry.
+/**
+ * It gives the absolute path (internal URI) of the repo corresponding to the given ForkEntry.
+ *
+ * @param f
+ * @return
+ */
 static String getProjectPath(ForkEntry f) {
   String t[] = f.getId().split(id_sep);
   return repo_dir + t[0] + "/" + t[1] + ".git"; // t[1] + "/" + t[0] + "/" + t[1] + ".git";
 }
 
 
-// as of now, it is meant to compute things in the big fork tree of each project, so that for forks
-// at different layers the computed aggregation depth is parent's one - 1.
-// with a large depth param value the complete fork trees will be visited
-static void computeAggregates(String ids[], ForkList fl, int depth) throws Exception {
+/**
+ * As of now, it is meant to compute things in the umbrella repo of each project, so that for forks
+ * at different layers the computed aggregation depth is parent's one - 1. with a large depth param
+ * value the complete umbrella repos will be visited
+ *
+ * @param ids
+ * @param fl
+ * @param depth
+ * @throws Exception
+ */
+public static void computeAggregates(String ids[], ForkList fl, int depth) throws Exception {
   if (fl.size() == 0 || depth < 1) {
     System.err.println("computeAggregates : input ERROR.");
     return;
@@ -148,9 +163,8 @@ static void computeAggregates(String ids[], ForkList fl, int depth) throws Excep
   int i = 0, r[] = new int[5];
   if (ids == null || ids.length == 0) {
     ids = new String[fl.howManyTrees()];
-    for (ForkEntry f : fl) {
+    for (ForkEntry f : fl)
       if (f.isRoot()) ids[i++] = f.getId();
-    }
   }
   ForkEntry fe;
   for (String id : ids) {
@@ -165,9 +179,15 @@ static void computeAggregates(String ids[], ForkList fl, int depth) throws Excep
 }
 
 
-// delete from the children ForkList of the argument all the entries whose repo
-// cannot be found in the local FS.
-static void purgeMissingForks(ForkList globalList, ForkEntry f) throws Exception {
+/**
+ * Delete from the children ForkList of the argument all the entries whose repo cannot be found in
+ * the local FS.
+ *
+ * @param globalList
+ * @param f
+ * @throws Exception
+ */
+static void purgeMissingForks(ArrayList<ForkEntry> globalList, ForkEntry f) throws Exception {
   File fi;
   if (!f.hasForks()) return;
   int c = 0;
@@ -205,16 +225,11 @@ static ForkList populateForkList(String inputFile) throws Exception {
     if (ForkEntry.isValidId(tokens[1] + id_sep + tokens[0])) {
       cc = l.addEntry(new ForkEntry(tokens[1], tokens[0], tokens[3].equalsIgnoreCase("nan") ? -1
           : Integer.valueOf(tokens[3]), df.parse(tokens[2]).getTime(),
-              df.parse(tokens[tokens.length - 1]).getTime()));
-      if (cc < 0) {
-        children.add(-cc - 1, tokens.length == 6 ? tokens[4] : "");
-      } else {
-        System.err.println("WARNING: duplicate entry in input file (" + tokens[1] + id_sep
-            + tokens[0] + ").");
-      }
-    } else {
-      System.err.println("Error while reading fork data from file, at line " + c + ".");
-    }
+          df.parse(tokens[tokens.length - 1]).getTime()));
+      if (cc < 0) children.add(-cc - 1, tokens.length == 6 ? tokens[4] : "");
+      else System.err.println("WARNING: duplicate entry in input file (" + tokens[1] + id_sep
+          + tokens[0] + ").");
+    } else System.err.println("Error while reading fork data from file, at line " + c + ".");
   }
   listFile.close();
   Iterator<ForkEntry> it = l.iterator();
@@ -226,12 +241,9 @@ static ForkList populateForkList(String inputFile) throws Exception {
       for (String f : tokens) {
         cc++;
         fc = GitWorks.getElement(l, f);
-        if (fc != null) {
-          fe.addFork(fc);
-        } else {
-          System.err.println("Error while reading fork data from file, for project " + fe.getId()
-              + " about fork # " + cc + " (" + f + ").");
-        }
+        if (fc != null) fe.addFork(fc);
+        else System.err.println("Error while reading fork data from file, for project " + fe.getId()
+            + " about fork # " + cc + " (" + f + ").");
       }
     }
   }
@@ -252,7 +264,7 @@ public static void main(String[] args) throws Exception {
 
   if (args.length < 4) {
     System.err
-        .println("Usage: java GitWorks <repo list file path> <repo dir path> <jgit gits out dir> <jgit trees out dir> [<comma-separated no-space list of fork ids>]");
+    .println("Usage: java GitWorks <repo list file path> <repo dir path> <jgit gits out dir> <jgit trees out dir> [<comma-separated no-space list of fork ids>]");
     System.exit(2);
   }
   pwd = System.getenv("PWD"); // trees_out_dir + ".."
@@ -260,19 +272,19 @@ public static void main(String[] args) throws Exception {
   if (args.length == 5) ids = args[4].trim().split(",");
   gits_out_dir = args[2].trim() + (args[2].trim().endsWith("/") ? "" : "/");
   trees_out_dir = args[3].trim() + (args[3].trim().endsWith("/") ? "" : "/");
-  if (!new File(repo_dir).isDirectory() || !(new File(trees_out_dir)).isDirectory()
+  if (!new File(repo_dir).isDirectory() || !new File(trees_out_dir).isDirectory()
       || !new File(gits_out_dir).isDirectory()) {
     System.err
-        .println("FATAL ERROR : Cannot find repos dir (" + repo_dir + ") or gits output dir ("
-            + gits_out_dir + ") or trees output dir (" + trees_out_dir + ")");
+    .println("FATAL ERROR : Cannot find repos dir (" + repo_dir + ") or gits output dir ("
+        + gits_out_dir + ") or trees output dir (" + trees_out_dir + ")");
     System.exit(1);
   }
 
   /************** create fork list ****************/
 
-  System.err.println("# Computation started at " + (new java.util.Date()).toString() + "\n");
+  System.err.println("# Computation started at " + new java.util.Date().toString() + "\n");
 
-  if (compuForkTrees) {
+  if (computeUmbrellas) {
     projects = populateForkList(args[0].trim());
     computeAggregates(null, projects, Integer.MAX_VALUE);
     exportData(projects, trees_out_dir + "dumpFiles/" + "forkListDump.complete");
@@ -281,7 +293,9 @@ public static void main(String[] args) throws Exception {
     projects = new ForkList();
     importData(projects, trees_out_dir + "dumpFiles/" + "OSS.forkListDump"); // XXX forkListDump
     // computeAggregates(null, projects, 1); // reset all projects aggregates
+    // projects.printForkTrees(new PrintStream(new FileOutputStream(trees_out_dir + "forkTree.list")));
   }
+
   ArrayList<ForkEntry> forkTrees = projects.getRoots();
   features = new FeatureList(projects.howManyTrees() + 1);
 
@@ -299,36 +313,30 @@ public static void main(String[] args) throws Exception {
         Runtime.getRuntime().exec(pwd + "/loadDumps.sh " + getSafeName(fe)).waitFor();
       if (newAnalysis) {
         if (anew) Runtime.getRuntime().exec(pwd + "/loadRepos.sh " + getSafeName(fe)).waitFor();
-        if (compuForkTrees) {
+        if (computeUmbrellas) {
           if (anew) purgeMissingForks(projects, fe);
           computeAggregates(new String[] { fe.getId() }, projects, Integer.MAX_VALUE);
         }
-        gitMiner.analyzeForkTree(fe);
+        gitMiner.analyzeUmbrella(fe);
         if (anew) Runtime.getRuntime().exec(pwd + "/cleanup.sh " + getSafeName(fe)).waitFor();
         if (!gitMiner.buildMetaGraph()) {
           System.err.println("ERROR : Metagraph checkup failed!!!");
           gitMiner.deleteMetaGraph();
-        } else {
-          for (Dag d : gitMiner.metaGraph.dags) {
-            d.bfVisit();
-          }
-        }
+        } else for (Dag d : gitMiner.metaGraph.dags)
+          d.bfVisit();
         exportData(gitMiner, trees_out_dir + "dumpFiles/" + gitMiner.name + ".gm"); // + "_" + gitMiner.id
         System.out.println(gitMiner.getInfo()); System.out.flush();
-      } else if (compuFeatures) { // otherwise, no need to load gitMiner's data
-        importData(gitMiner, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".gm"); // + "_*"
-        // System.out.println(gitMiner.getInfo()); System.out.flush();
-      }
+      } else if (compuFeatures) importData(gitMiner, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".gm"); // + "_*"
+      // System.out.println(gitMiner.getInfo()); System.out.flush();
       if (compuFeatures) {
         feat.setFeatures(projects, fe, gitMiner);
         features.addFeatures(feat);
         exportData(feat, trees_out_dir + "dumpFiles/" + feat.name + ".feat");
-      } else {
-        importData(feat, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".feat");
-      }
+      } else importData(feat, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".feat");
       if (newAnalysis || compuFeatures)
         Runtime.getRuntime().exec(pwd + "/backupDumps.sh " + getSafeName(fe)).waitFor();
       importModStats(gitMiner);
+      computeMetaGraph(gitMiner, feat); // XXX
     }
     catch (Exception e) {
       System.err.println("ERROR : computation of " + getSafeName(fe)
@@ -351,14 +359,14 @@ public static void main(String[] args) throws Exception {
   /*********************** compute results ************************/
 
   if (resultsOnly) {
-//    for (int i = 0, j = 0; i < forkTrees.size() && (ids == null || j < ids.length); i++) {
-//      fe = forkTrees.get(i);
-//      feat = new Features();
-//      Runtime.getRuntime().exec(pwd + "/loadDumps.sh " + getSafeName(fe)).waitFor();
-//      importData(feat, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".feat");
-//      features.addFeatures(feat);
-//    }
-//    exportData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
+    //    for (int i = 0, j = 0; i < forkTrees.size() && (ids == null || j < ids.length); i++) {
+    //      fe = forkTrees.get(i);
+    //      feat = new Features();
+    //      Runtime.getRuntime().exec(pwd + "/loadDumps.sh " + getSafeName(fe)).waitFor();
+    //      importData(feat, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".feat");
+    //      features.addFeatures(feat);
+    //    }
+    //    exportData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
     // waitForUser("");
     // importData(features, trees_out_dir + "dumpFiles/" + "featureListDump");
     Features ft;
@@ -370,6 +378,7 @@ public static void main(String[] args) throws Exception {
         fe = forkTrees.get(i);
       // System.err.print("Getting " + getSafeName(fe) + "...");
       // System.err.flush();
+
       // ft = GitWorks.getElement(features, getSafeName(fe));
       ft = new Features();
       importData(ft, trees_out_dir + "dumpFiles/" + getSafeName(fe) + ".feat");
@@ -382,20 +391,27 @@ public static void main(String[] args) throws Exception {
 
       // importModStats(gitMiner);
       // exportData(gitMiner, trees_out_dir + "dumpFiles/" + gitMiner.name + ".gm");
-      // computeMetaGraph(gitMiner, ft);
-      feats.add(ft);
+
+      computeMetaGraph(gitMiner, ft); //XXX
+      // purgeMissingForks(forkTrees, fe);
+      // testGitective(gitMiner, fe, ft);
+      // feats.add(ft);
 
       gitMiner = null;
       ft = null;
-      System.gc();
+      // System.gc();
     }
 
   }
   // Results.createCircosFiles(feats); // XXX
-  Results.printoutForkStats(feats);
-  // Results.metagraphStats(mgs, feats);
+  // Results.printoutForkStats(feats);
+  Results.metagraphStats(mgs, feats);
+  // int i = 0;
+  // for (MetaGraph mg : mgs) {
+  // mg.getDensestDag().exportToGexf(feats.get(i++).name);
+  // }
 
-  System.err.println("\n# Computation ended at " + (new java.util.Date()).toString());
+  System.err.println("\n# Computation ended at " + new java.util.Date().toString());
   System.exit(0);
 }
 
@@ -458,22 +474,20 @@ static void computeMetaGraph(GitMiner gm, Features ft) {
   System.err.println(" done.");
   System.err.flush();
   int[] stats = mg.getDensestDag().getSummaryStats(); // mg.getSummaryStats(); // XXX
-  if (stats[3] >= 30) {
+  if (stats[3] >= 10) {
     mgs.add(MetaGraph.createMetaGraph(mg.getDensestDag())); // mgs.add(mg); // XXX
     feats.add(ft);
     System.err.println("Taking repo # " + (++repoCounter) + " : " + ft.name + ", which has "
         + mg.dags.size() + " dags, " + stats[3] + " metaedges, " + stats[0] + " roots, " + stats[1]
-        + " nodes and " + stats[2] + " leaves, for a total of " + stats[7]
-        + " commits,\n\t of which " + stats[4] + " are branch nodes, " + stats[5]
-        + " are merge nodes and " + stats[6] + " are both.");
-  } else {
-    System.err.println("Discarding " + ft.name + " which has " + stats[3] + " metaedges.");
-  }
+            + " nodes and " + stats[2] + " leaves, for a total of " + stats[7]
+                + " commits,\n\t of which " + stats[4] + " are branch nodes, " + stats[5]
+                    + " are merge nodes and " + stats[6] + " are both.");
+  } else System.err.println("Discarding " + ft.name + " which has " + stats[3] + " metaedges.");
 
 }
 
 
-static void testMetaGraph(GitMiner gm) {
+public static void testMetaGraph(GitMiner gm) {
   gm.deleteMetaGraph();
   if (!gm.buildMetaGraph()) {
     System.err.print("ERROR : Metagraph checkup failed! It appears to have\n\t"
@@ -482,68 +496,64 @@ static void testMetaGraph(GitMiner gm) {
     System.out.println("\n" + gm.getInfo() + "\n+++++++++++++++++++++++++++++\n");
     System.out.flush();
   } else {
-    for (Dag d : gm.metaGraph.dags) {
+    for (Dag d : gm.metaGraph.dags)
       d.bfPrintout(d.bfVisit());
-    }
     gm.metaGraph.getDensestDag().exportToGexf(gm.name + "_complete");
   }
 }
 
 
-static void testSubGraphs(GitMiner gm) {
+public static void testSubGraphs(GitMiner gm) {
   long since, until;
   since = gm.metaGraph.since; // ((gm.metaGraph.until - gm.metaGraph.since) / 8L) // gm.metaGraph.since; // 1287424351000L
-  until = ((gm.metaGraph.until - gm.metaGraph.since) / 4L) + gm.metaGraph.since; // 1287679024000L // // since // (1000L * 3600L * 24L * 31L)
+  until = (gm.metaGraph.until - gm.metaGraph.since) / 4L + gm.metaGraph.since; // 1287679024000L // // since // (1000L * 3600L * 24L * 31L)
   // System.out.println(gm.name + " : Building quarter sub-graph... ");
   MetaGraph quarter = gm.metaGraph.getOldestDag().buildSubGraph(null, new java.util.Date(until));
   if (quarter != null) {
     quarter.checkup();
     System.out.println(gm.name + " quarter meta-graph (since " + new java.util.Date(since)
-        + " until " + new java.util.Date(until) + ") has " + quarter.toString());
-    for (Dag d : quarter.dags) {
+    + " until " + new java.util.Date(until) + ") has " + quarter.toString());
+    for (Dag d : quarter.dags)
       d.bfPrintout(d.bfVisit());
-    }
     quarter.getDensestDag().exportToGexf(gm.name + "_quarter");
   } else
     System.out.println(gm.name + " quarter meta-graph (since " + new java.util.Date(since)
-        + " until " + new java.util.Date(until) + ") is empty.");
-  until = ((gm.metaGraph.until - gm.metaGraph.since) / 2L) + gm.metaGraph.since;
+    + " until " + new java.util.Date(until) + ") is empty.");
+  until = (gm.metaGraph.until - gm.metaGraph.since) / 2L + gm.metaGraph.since;
   // System.out.println(gm.name + " : Building half sub-graph... ");
   MetaGraph half = gm.metaGraph.getOldestDag().buildSubGraph(null, new java.util.Date(until));
   if (half != null) {
     half.checkup();
     System.out.println(gm.name + " half meta-graph (since " + new java.util.Date(since) + " until "
         + new java.util.Date(until) + ") has " + half.toString());
-    for (Dag d : half.dags) {
+    for (Dag d : half.dags)
       d.bfPrintout(d.bfVisit());
-    }
     half.getDensestDag().exportToGexf(gm.name + "_half");
   } else
     System.out.println(gm.name + " half meta-graph (since " + new java.util.Date(since) + " until "
         + new java.util.Date(until) + ") is empty.");
-  until = ((gm.metaGraph.until - gm.metaGraph.since) * 3L / 4L) + gm.metaGraph.since;
+  until = (gm.metaGraph.until - gm.metaGraph.since) * 3L / 4L + gm.metaGraph.since;
   // System.out.println(gm.name + " : Building threequarters sub-graph... ");
   MetaGraph threequarters = gm.metaGraph.getOldestDag().buildSubGraph(null,
       new java.util.Date(until));
   if (threequarters != null) {
     threequarters.checkup();
     System.out.println(gm.name + " threequarters meta-graph (since " + new java.util.Date(since)
-        + " until " + new java.util.Date(until) + ") has " + threequarters.toString());
-    for (Dag d : threequarters.dags) {
+    + " until " + new java.util.Date(until) + ") has " + threequarters.toString());
+    for (Dag d : threequarters.dags)
       d.bfPrintout(d.bfVisit());
-    }
     threequarters.getDensestDag().exportToGexf(gm.name + "_threequarters");
   } else
     System.out.println(gm.name + " threequarters meta-graph (since " + new java.util.Date(since)
-        + " until " + new java.util.Date(until) + ") is empty.");
+    + " until " + new java.util.Date(until) + ") is empty.");
   System.out.println(gm.name + " complete meta-graph (since "
       + new java.util.Date(gm.metaGraph.since) + " until " + new java.util.Date(gm.metaGraph.until)
-      + ") has " + gm.metaGraph.toString());
+  + ") has " + gm.metaGraph.toString());
 }
 
 
-static void importData(Externalizable o, String filePath) throws FileNotFoundException,
-    IOException, ClassNotFoundException {
+public static void importData(Externalizable o, String filePath) throws FileNotFoundException,
+IOException, ClassNotFoundException {
   ObjectInput in = new ObjectInputStream(new GZIPInputStream(new BufferedInputStream(
       new FileInputStream(filePath))));
   o.readExternal(in);
@@ -551,7 +561,7 @@ static void importData(Externalizable o, String filePath) throws FileNotFoundExc
 }
 
 
-static void exportData(Externalizable o, String filePath) throws IOException {
+public static void exportData(Externalizable o, String filePath) throws IOException {
   File dump = new File(filePath);
   if (dump.exists()) dump.delete();
   GZIPOutputStream gzOut = new GZIPOutputStream(
@@ -604,11 +614,13 @@ public static int addUnique(List set, Comparable item) {
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public static <T> T getElement(List list, Comparable target) {
   int i = Collections.binarySearch(list, target);
-  if (i >= 0) {
-    return (T)list.get(i);
-  } else
+  if (i >= 0) return (T)list.get(i);
+  else
     return null;
 }
+
+
+static MersenneTwister rand = null;
 
 
 /**
@@ -646,9 +658,8 @@ public static <T> void shuffle(T[] a, int size) {
 @SuppressWarnings({ "unchecked", "rawtypes" })
 static public void printAny(Object data, String trailer, PrintStream out) {
   int size, i = 0;
-  if (data == null) {
-    out.print("NULL");
-  } else if (data instanceof Map) {
+  if (data == null) out.print("NULL");
+  else if (data instanceof Map) {
     Entry ec = null;
     Iterator ecit = ((Map)data).entrySet().iterator();
     while (ecit.hasNext()) { // && i++ < 3
@@ -671,25 +682,22 @@ static public void printAny(Object data, String trailer, PrintStream out) {
       out.print(" [" + i + "] ");
       printAny(e, "\n", out);
     }
-  } else if (data.getClass().isPrimitive()) {
-    out.print(data);
-  } else if (!(data.getClass().isEnum() || data.getClass().isInterface())) {
-    out.print((data.getClass().cast(data)).toString());
-  } else {
-    out.println("\nERROR : cannot print " + data.getClass().toString() + " !");
-  }
+  } else if (data.getClass().isPrimitive()) out.print(data);
+  else if (!(data.getClass().isEnum() || data.getClass().isInterface())) out.print(data.getClass().cast(data).toString());
+  else out.println("\nERROR : cannot print " + data.getClass().toString() + " !");
   out.print(trailer);
   out.flush();
 }
+
+
+static BufferedReader in = null;
 
 
 public static void waitForUser(String toprint) {
   String r = "";
   System.err.println(toprint);
   try {
-    if (in == null) {
-      in = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));
-    }
+    if (in == null) in = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));
     while (!r.equals("y")) {
       System.out.print("May I go on, sir ? ");
       r = in.readLine().trim();

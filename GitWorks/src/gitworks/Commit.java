@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 
+import org.eclipse.jgit.lib.AnyObjectId;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -238,8 +239,8 @@ public int compareTo(Object o) {
     return this.id.compareTo(((Commit)o).id);
   else if (o instanceof RevCommit)
     return this.id.compareTo(((RevCommit)o).getId());
-  else if (o instanceof ObjectId)
-    return this.id.compareTo((ObjectId)o);
+  else if (o instanceof AnyObjectId)
+    return this.id.compareTo((AnyObjectId)o);
   return -1;
 }
 

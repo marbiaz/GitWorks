@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package gitworks;
 
@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 
 import jfreechart.XYSeriesChart;
 
@@ -30,6 +31,7 @@ import org.apache.commons.math3.stat.correlation.SpearmansCorrelation;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.stat.inference.MannWhitneyUTest;
 import org.apache.commons.math3.util.FastMath;
+import org.eclipse.jgit.lib.MutableObjectId;
 
 import circos.CircosData;
 import circos.DIdeogram;
@@ -66,11 +68,10 @@ private static int countIAuthors(Features fe) {
 
 private static int countICommits(Features fe, CommitRank r) {
   int coms = 0;
-  for (int i : fe.commitRank) {
-    if ((r.equals(CommitRank.ROOT) && i == CommitRank.UNIQUE.getValue())
-        || (r.equals(CommitRank.UNIQUE) && i == CommitRank.ROOT.getValue()) // FIXME we do root + unique for the output...
-        || i == r.getValue()) coms++;
-  }
+  for (int i : fe.commitRank)
+    if (r.equals(CommitRank.ROOT) && i == CommitRank.UNIQUE.getValue()
+    || r.equals(CommitRank.UNIQUE) && i == CommitRank.ROOT.getValue() // FIXME we do root + unique for the output...
+    || i == r.getValue()) coms++;
   return coms;
 }
 
@@ -79,8 +80,8 @@ private static int countIAuthors(Features fe, CommitRank r) {
   ArrayList<Integer> auths = new ArrayList<Integer>(fe.allAuthors.length);
   int i = 0;
   for (int ra : fe.commitRank) {
-    if ((r.equals(CommitRank.ROOT) && ra == CommitRank.UNIQUE.getValue())
-        || (r.equals(CommitRank.UNIQUE) && ra == CommitRank.ROOT.getValue()) // FIXME we do root + unique for the output...
+    if (r.equals(CommitRank.ROOT) && ra == CommitRank.UNIQUE.getValue()
+        || r.equals(CommitRank.UNIQUE) && ra == CommitRank.ROOT.getValue() // FIXME we do root + unique for the output...
         || ra == r.getValue()) GitWorks.addUnique(auths, fe.commitAuthor[i]);
     i++;
   }
@@ -90,40 +91,38 @@ private static int countIAuthors(Features fe, CommitRank r) {
 
 private static int countICommits(Features fe, int f) {
   int res = 0;
-  for (CommitRank r : CommitRank.values()) {
+  for (CommitRank r : CommitRank.values())
     switch (r) {
     case NONE:
-    break;
+      break;
     case ROOT:
       if (f == fe.rootIndex) res += fe.iCommitForF[f][r.getValue() + 1].size();
-    break;
+      break;
     case UNIQUE:
       if (f != fe.rootIndex) res += fe.iCommitForF[f][r.getValue() + 1].size();
-    break;
+      break;
     default:
       res += fe.iCommitForF[f][r.getValue() + 1].size();
     }
-  }
   return res;
 }
 
 
 private static int countIAuthors(Features fe, int f) {
   int res = 0;
-  for (CommitRank r : CommitRank.values()) {
+  for (CommitRank r : CommitRank.values())
     switch (r) {
     case NONE:
-    break;
+      break;
     case ROOT:
       if (f == fe.rootIndex) res += fe.iAuthorForF[f][r.getValue() + 1].size();
-    break;
+      break;
     case UNIQUE:
       if (f != fe.rootIndex) res += fe.iAuthorForF[f][r.getValue() + 1].size();
-    break;
+      break;
     default:
       res += fe.iAuthorForF[f][r.getValue() + 1].size();
     }
-  }
   return res;
 }
 
@@ -280,36 +279,28 @@ private static CircosData getICommitsToMainline(Features f, int min) {
     iCommits[i] = f.iCommitForF[i][CommitRank.U_VIP.getValue() + 1].size()
         + f.iCommitForF[i][CommitRank.VIP.getValue() + 1].size()
         + f.iCommitForF[i][CommitRank.PERVASIVE.getValue() + 1].size();
-    uCommits[i] = (i == f.rootIndex) ? f.iCommitForF[i][CommitRank.ROOT.getValue() + 1].size()
+    uCommits[i] = i == f.rootIndex ? f.iCommitForF[i][CommitRank.ROOT.getValue() + 1].size()
         : f.iCommitForF[i][CommitRank.UNIQUE.getValue() + 1].size();
     iAuthors[i] = new ArrayList<Integer>();
     uAuthors[i] = new ArrayList<Integer>();
     if (iCommits[i] <= min) continue;
-    for (Integer inte : f.iCommitForF[i][CommitRank.U_VIP.getValue() + 1]) {
+    for (Integer inte : f.iCommitForF[i][CommitRank.U_VIP.getValue() + 1])
       GitWorks.addUnique(iAuthors[i], f.commitAuthor[inte]);
-    }
-    for (Integer inte : f.iCommitForF[i][CommitRank.VIP.getValue() + 1]) {
+    for (Integer inte : f.iCommitForF[i][CommitRank.VIP.getValue() + 1])
       GitWorks.addUnique(iAuthors[i], f.commitAuthor[inte]);
-    }
-    for (Integer inte : f.iCommitForF[i][CommitRank.PERVASIVE.getValue() + 1]) {
+    for (Integer inte : f.iCommitForF[i][CommitRank.PERVASIVE.getValue() + 1])
       GitWorks.addUnique(iAuthors[i], f.commitAuthor[inte]);
-    }
-    if (i == f.rootIndex) {
-      for (Integer inte : f.iCommitForF[i][CommitRank.ROOT.getValue() + 1]) {
-        GitWorks.addUnique(uAuthors[i], f.commitAuthor[inte]);
-      }
-    } else {
-      for (Integer inte : f.iCommitForF[i][CommitRank.UNIQUE.getValue() + 1]) {
-        GitWorks.addUnique(uAuthors[i], f.commitAuthor[inte]);
-      }
-    }
+    if (i == f.rootIndex) for (Integer inte : f.iCommitForF[i][CommitRank.ROOT.getValue() + 1])
+      GitWorks.addUnique(uAuthors[i], f.commitAuthor[inte]);
+    else for (Integer inte : f.iCommitForF[i][CommitRank.UNIQUE.getValue() + 1])
+      GitWorks.addUnique(uAuthors[i], f.commitAuthor[inte]);
   }
   sorting = IndexedSortable.sortedPermutation(tstamps, false);
   main = new DIdeogram(f.allForks[f.rootIndex], iCommits[f.rootIndex], iAuthors[f.rootIndex].size());
   if (iCommits[f.rootIndex] > 0) {
     if (uCommits[f.rootIndex] > 0)
       main.setScatter(uCommits[f.rootIndex]); //((int)((1.0 * uCommits[f.rootIndex])
-//          / f.iCommitForF[f.rootIndex][CommitRank.U_VIP.getValue() + 1].size() * main.getValue())));
+    //          / f.iCommitForF[f.rootIndex][CommitRank.U_VIP.getValue() + 1].size() * main.getValue())));
     res.addToSetA(main);
     System.err.println("\t" + f.name + " has " + iCommits[f.rootIndex] + " iCommits: OK.");
   } else {
@@ -326,7 +317,7 @@ private static CircosData getICommitsToMainline(Features f, int min) {
     res.getLinks().add(new DLink(main, di, di.getValue())); // keep the order in res.links
     if (uCommits[cur] > 0)
       di.setScatter(uCommits[cur]);//((int)((1.0 * uCommits[cur])
-//          / f.iCommitForF[cur][CommitRank.U_VIP.getValue() + 1].size() * di.getValue())));
+    //          / f.iCommitForF[cur][CommitRank.U_VIP.getValue() + 1].size() * di.getValue())));
   }
   return res;
 }
@@ -343,18 +334,14 @@ private static CircosData getRankedCommitToMainline(Features f, CommitRank rank,
     if (f.commitRankRatio[rank.getValue()] * f.acCommitDiffusion.length <= min) continue;
     l = 0;
     a.clear();
-    for (int cc : f.forkCommit[i]) {
+    for (int cc : f.forkCommit[i])
       if (f.commitRank[cc] == rank.getValue()) {
         l++;
         GitWorks.addUnique(a, f.commitAuthor[cc]);
       }
-    }
     b = a.size();
-    if (i == f.getRootIndex()) {
-      res.addToSetA(new DIdeogram(f.allForks[i], l, b));
-    } else {
-      res.addToSetB(new DIdeogram(f.allForks[i], l, b));
-    }
+    if (i == f.getRootIndex()) res.addToSetA(new DIdeogram(f.allForks[i], l, b));
+    else res.addToSetB(new DIdeogram(f.allForks[i], l, b));
   }
 
   dIt = res.getAllSets().iterator(); // get links from ranked commits
@@ -394,7 +381,7 @@ public static void createCircosFiles(ArrayList<Features> fl) throws InterruptedE
     wctm = new WriteCommitsToMain(data, fe.name);
     wctm.createCircosFiles(GitWorks.trees_out_dir + fe.name + ".colors.conf",
         GitWorks.trees_out_dir + fe.name + ".karyo.txt", GitWorks.trees_out_dir + fe.name
-            + ".links.txt", GitWorks.trees_out_dir + fe.name + ".scatters.txt");
+        + ".links.txt", GitWorks.trees_out_dir + fe.name + ".scatters.txt");
     Runtime.getRuntime().exec(GitWorks.pwd + "/makeCircosPlots.sh").waitFor();
     // fe.deleteExtra(); XXX
   }
@@ -412,8 +399,8 @@ static void printLatexTable(ArrayList<ArrayList<Motif>> motifs) {
   PrintWriter tableOut = null;
   try {
     Runtime.getRuntime().exec(
-            "cp -f /home/mbiazzin/ecologyse/GIT/papers/github_mining/scores_template.tex "
-                + GitWorks.pwd + "/table.tex").waitFor();
+        "cp -f /home/mbiazzin/ecologyse/GIT/papers/github_mining/scores_template.tex "
+            + GitWorks.pwd + "/table.tex").waitFor();
     tableOut = new PrintWriter(new FileWriter(GitWorks.pwd + "/table.tex", true));
     while (moIt.hasNext()) {
       moa = moIt.next();
@@ -441,8 +428,8 @@ static void printLatexTable(ArrayList<ArrayList<Motif>> motifs) {
         + "\n" + "\\end{table*}\n\n");
     tableOut.flush();
     Runtime.getRuntime().exec(
-            "cp -f " + GitWorks.pwd + "/table.tex "
-                + "/home/mbiazzin/ecologyse/GIT/papers/github_mining/").waitFor();
+        "cp -f " + GitWorks.pwd + "/table.tex "
+            + "/home/mbiazzin/ecologyse/GIT/papers/github_mining/").waitFor();
   }
   catch (Exception e) {
     e.printStackTrace();
@@ -457,7 +444,7 @@ static void printoutMotifAggStats(String[] repos, String[] motifs, double[][][] 
   PrintWriter pOut = null;
   int i = 0, j;
   try {
-    for (String n : repos) {
+    for (String n : repos)
       try {
         pOut = new PrintWriter(new FileWriter(GitWorks.pwd + "/gdata/" + n + ".allmotifs.agg.gdata",
             false));
@@ -475,16 +462,15 @@ static void printoutMotifAggStats(String[] repos, String[] motifs, double[][][] 
         }
         pOut.flush();
       }
-      catch (IOException ioe) {
-        ioe.printStackTrace();
-      }
-      finally {
-        if (pOut != null) pOut.close();
-        i++;
-      }
+    catch (IOException ioe) {
+      ioe.printStackTrace();
+    }
+    finally {
+      if (pOut != null) pOut.close();
+      i++;
     }
     j = 0;
-    for (String m : motifs) {
+    for (String m : motifs)
       try {
         pOut = new PrintWriter(new FileWriter(GitWorks.pwd + "/gdata/" + m + ".allrepos.agg.gdata",
             false));
@@ -502,13 +488,12 @@ static void printoutMotifAggStats(String[] repos, String[] motifs, double[][][] 
         }
         pOut.flush();
       }
-      catch (IOException ioe) {
-        ioe.printStackTrace();
-      }
-      finally {
-        if (pOut != null) pOut.close();
-        j++;
-      }
+    catch (IOException ioe) {
+      ioe.printStackTrace();
+    }
+    finally {
+      if (pOut != null) pOut.close();
+      j++;
     }
   }
   finally {
@@ -530,7 +515,7 @@ static private void computeMotifs(String repoName, Graph<Commit, MetaEdge> g)
     throws InterruptedException, IOException {
   exportGraph(repoName, g);
   Runtime.getRuntime().exec(GitWorks.pwd + "/gitMotifs.sh " + repoName + " &>>gitMotifs.log")
-      .waitFor();
+  .waitFor();
 }
 
 
@@ -542,7 +527,7 @@ static void metagraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
   HashMap<String, ArrayList<MetaEdge>> twins;
   // HashMap<MetaEdge, MetaEdge[]> parallels;
   ArrayList<Motif> motifs;
-//  ArrayList<HashMap<MetaEdge, MetaEdge[]>> pTwins = new ArrayList<HashMap<MetaEdge, MetaEdge[]>>(fl.size());
+  //  ArrayList<HashMap<MetaEdge, MetaEdge[]>> pTwins = new ArrayList<HashMap<MetaEdge, MetaEdge[]>>(fl.size());
   ArrayList<ArrayList<Motif>> rMotifs = new ArrayList<ArrayList<Motif>>(fl.size());
   int nEdges, k, i = 0;
   Motif par;
@@ -562,9 +547,8 @@ static void metagraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
       f = fIt.next();
       repoNames[i] = f.name.split(GitWorks.safe_sep)[1];
       nEdges = 0;
-      for (Dag d : mg.dags) {
+      for (Dag d : mg.dags)
         nEdges += d.getNumMetaEdges();
-      }
       twins = new HashMap<String, ArrayList<MetaEdge>>(nEdges);
       g = makeSimpleGraph(mg, twins);
       // parallels = new HashMap<MetaEdge, MetaEdge[]>(twins.keySet().size());
@@ -573,7 +557,7 @@ static void metagraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
       par = twins2motif(f.name, twins);
       try {
         // computeMotifs(f.name, g); // XXX
-        motifs = importMotifs(f.name, mg, twins);
+        motifs = importPolygs(f.name, mg, g, twins); // importMotifs(f.name, mg, twins);
         motifs.add(par);
         rMotifs.add(motifs);
         // pTwins.add(parallels);
@@ -599,65 +583,77 @@ static void metagraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
       // bcRanker.printRankings(true, true);
     }
     printoutMotifAggStats(repoNames, motifNames, stats);
+    footPrint(mgs, fl);
     // printLatexTable(rMotifs);
     // motifsFeatsCorrelation(mgs, fl, rMotifs);
-    footPrint(mgs, fl);
   }
   catch (Exception e1) {
     e1.printStackTrace();
   }
 }
 
-// TODO
-// motifs per layer (are they scattered? are they where width is larger?)
-// commit density in motifs VS average commit per edge-set + #authors in motifs
-// motif scores and #author #watchers
-//
+
 static String[] singleValuesNames = new String[] { // XXX F = 10
-    "mo_num_occur", // number of occurrences of the motif in the metagraph
-    "mo_num_nodes", // number of non sequential commits in the motif (structural nodes)
-    "mo_num_edges", // number of edges (excluding parallel ones, thus structural edges)
-    "mo_z-score",   // z-score that measure the significance of the number of occurrences of the motif in th emetagraph
-    "mg_diameter",  // diameter of the metagraph
-    "mg_num_edges", // number of metaedges in the metagraph
-    "mg_num_nodes", // number of non-sequential nodes in the metagraph (structural nodes)
-    "mg_num_commits", // total number of commits in the metagraph (structural nodes + internals)
-    "mg_num_authors", // total number of distinct authors of commits in the metagraph (considering structural nodes + internals)
-    "mg_mo_edges"   // number of metaedges that are part of a motif (each metaedge is considered only once)
+  "mo_num_occur", // number of occurrences of the motif in the metagraph
+  "mo_num_nodes", // number of non sequential commits in the motif (structural nodes)
+  "mo_num_edges", // number of edges (excluding parallel ones, thus structural edges)
+  "mo_z-score",   // z-score that measure the significance of the number of occurrences of the motif in th emetagraph
+  "mg_diameter",  // diameter of the metagraph
+  "mg_num_edges", // number of metaedges in the metagraph
+  "mg_num_nodes", // number of non-sequential nodes in the metagraph (structural nodes)
+  "mg_num_commits", // total number of commits in the metagraph (structural nodes + internals)
+  "mg_num_authors", // total number of distinct authors of commits in the metagraph (considering structural nodes + internals)
+  "mg_mo_edges"   // number of metaedges that are part of a motif (each metaedge is considered only once)
 };
 
-static String[] metricsNames = new String[] { // XXX M = 9 + G = 9
-    "mo_min_layer",     // minimum layer of a motif occurrence
-    "mo_max_layer",     // maximum layer of a motif occurrence
-    "mo_min_timestamp", // minimum timestamp of a motif occurrence
-    "mo_max_timestamp", // maximum timestamp of a motif occurrence
-    "mo_tot_edges",     // minimum layer of a motif occurrence
-    "mo_num_parallels", // number of groups of parallel edges within a motif occurrence
-    "mo_seq_commits",   // number of sequential commits in a motif occurrence
-    "mo_me_authors",    // number of authors of (internal?) commits per metaedge of a motif (occurrence)
-    "mo_me_seq_commits", // number of (internal?) commits per metaedge of a motif (occurrence)
+static String[] metricsNames = new String[] { // XXX M = 13 + G = 21
+  "mo_min_layer",     // minimum layer of a motif occurrence
+  "mo_max_layer",     // maximum layer of a motif occurrence
+  "mo_min_timestamp", // minimum timestamp of a motif occurrence
+  "mo_max_timestamp", // maximum timestamp of a motif occurrence
+  "mo_tot_edges",     // number of edges in a motif (parallel included)
+  "mo_num_parallels", // number of groups of parallel edges within a motif occurrence
+  "mo_seq_commits",   // number of sequential commits in a motif occurrence
+  "mo_me_authors_int",    // number of authors of internal commits per metaedge of a motif (occurrence)
+  "mo_me_authors_ext",    // number of authors of structural commits per metaedge of a motif (occurrence)
+  "mo_me_authors_both",    // number of authors who appear in intersection between internal and structural commits per metaedge of a motif (occurrence)
+  "mo_me_seq_commits", // number of (internal?) commits per metaedge of a motif (occurrence)
+  "mo_line_mods", // sum of line changes in a motif (occurrence) (internal commits)
+  "mo_file_mods", // sum of file changed (possibly with duplicate entries) in a motif (occurrence) (internal commits)
 
-    "mg_mo-me_authors",     // number of authors of internal commits per motif-belonging metaedge in the metagraph (each metaedge is considered only once)
-    "mg_mo-me_seq_commits", // number of internal commits per motif-belonging metaedge in the metagraph (each metaedge is considered only once)
-    "mg_non-mo-me_authors", // number of authors of internal commits per non-motif-belonging metaedge in the metagraph
-    "mg_non-mo-me_seq_commits", // number of internal commits per non-motif-belonging metaedge in the metagraph
-    "mg_me_authors",    // number of authors of internal commits per metaedge in the metagraph
-    "mg_seq_commits",   // number of internal commits per metaedge in the metagraph
-    "mg_layer_width",   // number of non-sequential commits (structural nodes) in a metagraph layer
-    "mg_layer_density", // number of metaedges within two consecutive metagraph layers
-    "mg_layer_time"     // duration of the time window of metagraph layers
+  "mg_mo-me_authors_int",     // number of authors of internal commits per motif-belonging metaedge in the metagraph (each metaedge is considered only once)
+  "mg_mo-me_authors_ext",     // number of authors of structural commits per motif-belonging metaedge in the metagraph (each metaedge is considered only once)
+  "mg_mo-me_authors_both",     // number of authors of (internal && structural) commits per motif-belonging metaedge in the metagraph (each metaedge is considered only once)
+  "mg_mo-me_seq_commits", // number of internal commits per motif-belonging metaedge in the metagraph (each metaedge is considered only once)
+  "mg_non-mo-me_authors_int", // number of authors of internal commits per non-motif-belonging metaedge in the metagraph
+  "mg_non-mo-me_authors_ext", // number of authors of structural commits per non-motif-belonging metaedge in the metagraph
+  "mg_non-mo-me_authors_both", // number of authors of (internal && structural) commits per non-motif-belonging metaedge in the metagraph
+  "mg_non-mo-me_seq_commits", // number of internal commits per non-motif-belonging metaedge in the metagraph
+  "mg_me_authors_int",    // number of authors of internal commits per metaedge in the metagraph
+  "mg_me_authors_ext",    // number of authors of structural commits per metaedge in the metagraph
+  "mg_me_authors_both",    // number of authors of (internal && structural) commits per metaedge in the metagraph
+  "mg_seq_commits",   // number of internal commits per metaedge in the metagraph
+  "mg_layer_width",   // number of non-sequential commits (structural nodes) in a metagraph layer
+  "mg_layer_density", // number of metaedges within two consecutive metagraph layers
+  "mg_layer_time",     // duration of the time window of metagraph layers
+  "mg_me_line_mods", // sum of line changes in the metaedges (internal commits)
+  "mg_me_file_mods", // sum of file changed (possibly with duplicate entries) in the metaedges (internal commits)
+  "mg_non-mo-me_line_mods", // sum of line changes in non-motif-belonging metaedges (internal commits)
+  "mg_non-mo-me_file_mods", // sum of file changed (possibly with duplicate entries) in non-motif-belonging metaedges (internal commits)
+  "mg_mo-me_line_mods", // sum of line changes in motif-belonging metaedges (internal commits)
+  "mg_mo-me_file_mods"  // sum of file changed (possibly with duplicate entries) in motif-belonging metaedges (internal commits)
 };
 
 static String[] aggregatesNames = new String[] { // XXX A = 7
-    "_min", "_25p", "_med", "_75p", "_max", "_avg", "_stdev"};
+  "_min", "_25p", "_med", "_75p", "_max", "_avg", "_stdev"};
 
 static String[] colHeader = null;
 
 
 static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean printout) {
-  // Fixed = 10 + ( Motif = 7 + Graph = 8) metrics x Aggregates = 7 XXX
-  final int M = 9, G = 9, F = 10, A = 7; // -> F + ((M + G) * A) = 115
-  double[][] res = new double[motifs.size()][F + ((M + G) * A)];
+  // Fixed = 10 + ( Motif = 13 + Graph = 21) metrics x Aggregates = 7 XXX
+  final int M = 13, G = 21, F = 10, A = 7; // -> F + ((M + G) * A) = 248
+  double[][] res = new double[motifs.size()][F + (M + G) * A];
   for (double[] row : res)
     Arrays.fill(row, 0.0);
   Iterator<Motif> moIt = motifs.iterator();
@@ -665,25 +661,39 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
   DescriptiveStatistics mgLayerStats[] = mg.getLayerStats();
   DescriptiveStatistics mgAuthorStats[] = getMetaEdgeAuthorStats(mg, motifs);
   DescriptiveStatistics mgCommitStats[] = getMetaEdgeCommitStats(mg, motifs);
-  for (int i = 0; i < M; i++) {
+  DescriptiveStatistics mgModStats[] = getMetaEdgeModStats(mg, motifs);
+  for (int i = 0; i < M; i++)
     ds[i] = new DescriptiveStatistics();
-  }
   Motif mo;
   int i, j = -1;
+  int[] moAuths, moMods;
   int[] mgSummary = mg.getSummaryStats();
   int mgAuth = getMetaGraphAuthors(mg);
   int allMoEdges;
+  String line;
   PrintWriter pout = null;
   try {
-    ds[9] = mgAuthorStats[2]; // XXX from M for each ds in G
-    ds[10] = mgCommitStats[2];
-    ds[11] = mgAuthorStats[1];
-    ds[12] = mgCommitStats[1];
-    ds[13] = mgAuthorStats[0];
-    ds[14] = mg.getInternalCommitStats();
-    ds[15] = mgLayerStats[0];
-    ds[16] = mgLayerStats[1];
-    ds[17] = mgLayerStats[2];
+    ds[13] = mgAuthorStats[6]; // XXX from M for each ds in G
+    ds[14] = mgAuthorStats[7];
+    ds[15] = mgAuthorStats[8];
+    ds[16] = mgCommitStats[2];
+    ds[17] = mgAuthorStats[3];
+    ds[18] = mgAuthorStats[4];
+    ds[19] = mgAuthorStats[5];
+    ds[20] = mgCommitStats[1];
+    ds[21] = mgAuthorStats[0];
+    ds[22] = mgAuthorStats[1];
+    ds[23] = mgAuthorStats[2];
+    ds[24] = mg.getInternalCommitStats();
+    ds[25] = mgLayerStats[0];
+    ds[26] = mgLayerStats[1];
+    ds[27] = mgLayerStats[2];
+    ds[28] = mgModStats[0];
+    ds[29] = mgModStats[1];
+    ds[30] = mgModStats[2];
+    ds[31] = mgModStats[3];
+    ds[32] = mgModStats[4];
+    ds[33] = mgModStats[5];
     ArrayList<MetaEdge> edges = new ArrayList<MetaEdge>(mgSummary[3]);
     while (moIt.hasNext()) {
       mo = moIt.next();
@@ -695,9 +705,8 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
     while (moIt.hasNext()) {
       mo = moIt.next();
       try {
-        for (i = 0; i < M; i++) {
+        for (i = 0; i < M; i++)
           ds[i].clear();
-        }
         j++;
         if (printout) {
           pout = new PrintWriter(new FileWriter(GitWorks.pwd + "/gdata/" + mo.name + ".gdata",
@@ -722,16 +731,20 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
         res[j][8] = mgAuth;
         res[j][9] = allMoEdges;
         for (MotifOccurrence ma : mo.occurrences) {
-          if (printout)
-            pout.println(res[j][0] + "\t" + ma.mNodes.length + "\t" + ma.mEdges.size() + "\t" // XXX for each res in F
+          if (printout) {
+            moAuths = getMetaEdgeAuthors(Arrays.asList(ma.getAllEdges()));
+            moMods = getMetaEdgeMods(Arrays.asList(ma.getAllEdges()));
+            line = "" + res[j][0] + "\t" + ma.mNodes.length + "\t" + ma.mEdges.size() + "\t" // XXX for each res in F
                 + res[j][3] + "\t" + mg.getDiameter() + "\t" + res[j][5] + "\t" + res[j][6] + "\t"
                 + res[j][7] + "\t" + res[j][8] + "\t" + res[j][9] + "\t"
                 + ma.minLayer + "\t" + ma.maxLayer + "\t" + ma.minTimestamp + "\t" + ma.maxTimestamp + "\t" // XXX for each measure in M
                 + ma.totEdges + "\t" + ma.numParallels + "\t" + ma.weight + "\t"
-                + getMetaEdgeAuthors(ma.mEdges, true) + "\t"+ getMetaEdgeCommits(ma.mEdges, true)+ "\t"
-                + ds[9].getMean() + "\t" + ds[10].getMean() + "\t" + ds[11].getMean() + "\t"  // XXX from M for each ds in G 
-                + ds[12].getMean() + "\t" + ds[13].getMean() + "\t" + ds[14].getMean() + "\t"
-                + ds[15].getMean() + "\t" + ds[16].getMean() + "\t" + ds[17].getMean());
+                + moAuths[0] + "\t" + moAuths[1] + "\t" + moAuths[2] + "\t" + getMetaEdgeCommits(Arrays.asList(ma.getAllEdges()), true) + "\t"
+                + moMods[0] + "\t" + moMods[1];
+            for (i = 0; i < G; i++)                 // from M for each ds in G
+              line += "\t" + ds[M + i].getMean();
+            pout.println(line);
+          }
           ds[0].addValue(ma.minLayer); // XXX from 0 for each ds in M
           ds[1].addValue(ma.maxLayer);
           ds[2].addValue(ma.minTimestamp);
@@ -740,8 +753,12 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
           ds[5].addValue(ma.numParallels);
           ds[6].addValue(ma.weight);
         }
-        ds[7] = mgAuthorStats[3 + j];
-        ds[8] = mgCommitStats[3 + j];  // XXX           "
+        ds[7] = mgAuthorStats[9 + 3 * j];
+        ds[8] = mgAuthorStats[9 + 3 * j + 1];
+        ds[9] = mgAuthorStats[9 + 3 * j + 2];
+        ds[10] = mgCommitStats[3 + j];
+        ds[11] = mgModStats[6 + 2 * j];
+        ds[12] = mgModStats[6 + 2 * j + 1];  // XXX           "
         for (i = 0; i < ds.length; i++) { // XXX A = 7
           res[j][F + i * A + 0] = ds[i].getMin();
           res[j][F + i * A + 1] = ds[i].getPercentile(25);
@@ -769,38 +786,39 @@ static double[][] getMotifStats(MetaGraph mg, ArrayList<Motif> motifs, boolean p
 
 
 /**
- * @param me
- * @param allCommits
- *          If true, the result accounts for the first and last node of the metaedges; otherwise,
- *          only internal nodes are considered.
+ * @param edges
  * @return The number of distinct authors of commits in the metaedges.
+ *         First the authors of internal commits, then the authors of structural commits,
+ *         then the authors of structural commits that are also authors of internal commits.
  */
-static int getMetaEdgeAuthors(ArrayList<MetaEdge> edges, boolean allCommits) {
-  ArrayList<String> auth = new ArrayList<String>();
+static int[] getMetaEdgeAuthors(List<MetaEdge> edges) {
+  int com = 0;
+  ArrayList<String> intl = new ArrayList<String>();
+  ArrayList<String> ext = new ArrayList<String>();
   for (MetaEdge me : edges) {
-    if (me.getWeight() > 0) for (Commit c : me.getInternals()) {
-      GitWorks.addUnique(auth, c.getAuthoringInfo().getEmailAddress());
-    }
-    if (allCommits) {
-      GitWorks.addUnique(auth, me.first.getAuthoringInfo().getEmailAddress());
-      GitWorks.addUnique(auth, me.last.getAuthoringInfo().getEmailAddress());
-    }
+    if (me.getWeight() > 0) for (Commit c : me.getInternals())
+      GitWorks.addUnique(intl, c.getAuthoringInfo().getEmailAddress());
+    GitWorks.addUnique(ext, me.first.getAuthoringInfo().getEmailAddress());
+    GitWorks.addUnique(ext, me.last.getAuthoringInfo().getEmailAddress());
   }
-  return auth.size();
+  for (String a : ext)
+    if (Collections.binarySearch(intl, a) >= 0)
+      com++;
+  return new int[] {intl.size(), ext.size(), com};
 }
 
 
 /**
- * @param me
+ * @param list
  * @param allCommits
  *          If true, the result accounts for the first and last node of the metaedges; otherwise,
  *          only internal commits are considered.
  * @return The number of distinct commits in the metaedges.
  */
-static int getMetaEdgeCommits(ArrayList<MetaEdge> edges, boolean allCommits) {
-  ArrayList<String> coms = new ArrayList<String>();
+static int getMetaEdgeCommits(List<MetaEdge> list, boolean allCommits) {
+  ArrayList<Commit> coms = new ArrayList<Commit>();
   int weights = 0;
-  for (MetaEdge me : edges) {
+  for (MetaEdge me : list) {
     weights += me.getWeight();
     if (allCommits) {
       GitWorks.addUnique(coms, me.first);
@@ -808,6 +826,26 @@ static int getMetaEdgeCommits(ArrayList<MetaEdge> edges, boolean allCommits) {
     }
   }
   return coms.size() + weights;
+}
+
+
+/**
+ * @param edges
+ * @return The number of mods in the internal commits of the metaedges.
+ *         First the sum of line mods, then the sum of file mods.
+ */
+static int[] getMetaEdgeMods(List<MetaEdge> edges) {
+  int[] res = new int[] {0, 0};
+  ArrayList<Commit> coms;
+  for (MetaEdge me : edges) {
+    if (me.getWeight() == 0) continue;
+    coms = me.getInternals();
+    for (Commit c : coms) {
+      res[0] += c.mLines;
+      res[1] += c.mFiles;
+    }
+  }
+  return res;
 }
 
 
@@ -820,10 +858,10 @@ static int getMetaGraphAuthors(MetaGraph mg) {
 
 
 /**
- * Statistics about the number of interal commits per metaedge. The first array is global, the
+ * Statistics about the number of internal commits per metaedge. The first array is global, the
  * second only about non-motifs, the third only about motif metaedges. Then one array per motifs,
  * according to the second argument.
- * 
+ *
  * @param mg
  * @param motifs
  * @return Aggregates of the number of internal commits per metaedge.
@@ -866,22 +904,22 @@ static DescriptiveStatistics[] getMetaEdgeCommitStats(MetaGraph mg, ArrayList<Mo
 
 
 /**
- * Statistics about the number of authors per metaedge (only internal commits). The first array is
- * global, the second only about non-motifs, the third only about motif metaedges. Then one array
+ * Statistics about the number of mods (coupled: lines and files) per metaedge (internal commits). The first couple is
+ * global, the second only about non-motifs, the third only about motif metaedges. Then one couple
  * per motifs, according to the second argument.
- * 
+ *
  * @param mg
  * @param motifs
- * @return Aggregates of the number of authors per metaedge (only internal commits).
+ * @return Aggregates of the number of mods per metaedge.
  */
-static DescriptiveStatistics[] getMetaEdgeAuthorStats(MetaGraph mg, ArrayList<Motif> motifs) {
-  DescriptiveStatistics[] res = new DescriptiveStatistics[3 + motifs.size()];
+static DescriptiveStatistics[] getMetaEdgeModStats(MetaGraph mg, ArrayList<Motif> motifs) {
+  DescriptiveStatistics[] res = new DescriptiveStatistics[3 * 2 + motifs.size() * 2];
   for (int i = 0; i < res.length; i++)
     res[i] = new DescriptiveStatistics();
   ArrayList<MetaEdge> edges = new ArrayList<MetaEdge>();
   Iterator<MetaEdge> mIt;
   MetaEdge me;
-  int m; double auth;
+  int m; int[] mods;
   boolean inMotif;
   for (Dag d : mg.dags) {
     mIt = d.getMetaEdges();
@@ -889,19 +927,82 @@ static DescriptiveStatistics[] getMetaEdgeAuthorStats(MetaGraph mg, ArrayList<Mo
       edges.clear();
       me = mIt.next();
       edges.add(me);
-      auth = getMetaEdgeAuthors(edges, false);
+      mods = getMetaEdgeMods(edges);
       inMotif = false;
       m = 0;
       for (Motif mo : motifs) {
         if (Collections.binarySearch(mo.allEdges, me) >= 0) {
           inMotif = true;
-          res[3 + m].addValue(auth);
+          res[6 + 2 * m].addValue(mods[0]);
+          res[6 + 2 * m + 1].addValue(mods[1]);
         }
         m++;
       }
-      res[0].addValue(auth);
-      if (inMotif) res[2].addValue(auth);
-      else res[1].addValue(auth);
+      res[0].addValue(mods[0]);
+      res[1].addValue(mods[1]);
+      if (inMotif) {
+        res[4].addValue(mods[0]);
+        res[5].addValue(mods[1]);
+      }
+      else {
+        res[2].addValue(mods[0]);
+        res[3].addValue(mods[1]);
+      }
+    }
+  }
+  return res;
+}
+
+
+/**
+ * Statistics about the number of authors per metaedge (internal, structural, both). The first triplet is
+ * global, the second only about non-motifs, the third only about motif metaedges. Then one triplet
+ * per motifs, according to the second argument.
+ *
+ * @param mg
+ * @param motifs
+ * @return Aggregates of the number of authors per metaedge.
+ */
+static DescriptiveStatistics[] getMetaEdgeAuthorStats(MetaGraph mg, ArrayList<Motif> motifs) {
+  DescriptiveStatistics[] res = new DescriptiveStatistics[3 * 3 + motifs.size() * 3];
+  for (int i = 0; i < res.length; i++)
+    res[i] = new DescriptiveStatistics();
+  ArrayList<MetaEdge> edges = new ArrayList<MetaEdge>();
+  Iterator<MetaEdge> mIt;
+  MetaEdge me;
+  int m; int[] auth;
+  boolean inMotif;
+  for (Dag d : mg.dags) {
+    mIt = d.getMetaEdges();
+    while (mIt.hasNext()) {
+      edges.clear();
+      me = mIt.next();
+      edges.add(me);
+      auth = getMetaEdgeAuthors(edges);
+      inMotif = false;
+      m = 0;
+      for (Motif mo : motifs) {
+        if (Collections.binarySearch(mo.allEdges, me) >= 0) {
+          inMotif = true;
+          res[9 + 3 * m].addValue(auth[0]);
+          res[9 + 3 * m + 1].addValue(auth[1]);
+          res[9 + 3 * m + 2].addValue(auth[2]);
+        }
+        m++;
+      }
+      res[0].addValue(auth[0]);
+      res[1].addValue(auth[1]);
+      res[2].addValue(auth[2]);
+      if (inMotif) {
+        res[6].addValue(auth[0]);
+        res[7].addValue(auth[1]);
+        res[8].addValue(auth[2]);
+      }
+      else {
+        res[3].addValue(auth[0]);
+        res[4].addValue(auth[1]);
+        res[5].addValue(auth[2]);
+      }
     }
   }
   return res;
@@ -929,9 +1030,7 @@ static DirectedSparseGraph<Commit, MetaEdge> makeSimpleGraph(MetaGraph mg,
         temp = g.findEdge(me.first, me.last);
         if (temp.compareTo(me) > 0) { // me takes the place of temp in g
           g.removeEdge(temp);
-          if (!g.addEdge(me, me.first, me.last)) {
-            System.err.println("Results : Unexpected ERROR in makeSimpleGraph.");
-          }
+          if (!g.addEdge(me, me.first, me.last)) System.err.println("Results : Unexpected ERROR in makeSimpleGraph.");
         }
         parallel = twins.get(me.first.id.getName() + me.last.id.getName());
         parallel.add(me);
@@ -977,15 +1076,14 @@ static void motifsFeatsCorrelation(ArrayList<MetaGraph> mgs, ArrayList<Features>
   for (String mn : motifNames) {
     i = 0;
     XYSeriesChart chart = new XYSeriesChart(new String[] {mn, " # motif", "# measure"});
-    for (ArrayList<Motif> hm : rMotifs) {
+    for (ArrayList<Motif> hm : rMotifs)
       // System.out.println(f.name);
       numMotifs[i++] = hm.get(k).occurrences.size();
-    }
     motifRank = IndexedSortable.sortedPermutation(numMotifs, false);
     for (int j = 0; j < featNames.length; j++) {
       sc = new SpearmansCorrelation();
       System.out
-          .println(mn + " & " + featNames[j] + " : " + sc.correlation(numMotifs, featVals[j]));
+      .println(mn + " & " + featNames[j] + " : " + sc.correlation(numMotifs, featVals[j]));
       chart.addDataset(featNames[j], motifRank, featRanks[j]);
     }
     k++;
@@ -998,7 +1096,7 @@ static void motifsFeatsCorrelation(ArrayList<MetaGraph> mgs, ArrayList<Features>
 static void footPrint(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
   Features f;
   Iterator<Features> fIt = fl.iterator();
-  XYSeriesChart chart = new XYSeriesChart(new String[] {"footprints", "", ""});
+  //  XYSeriesChart chart = new XYSeriesChart(new String[] {"footprints", "", ""});
   double allMax = 0.0;
   double[] max = new double[mgs.size()];
   Arrays.fill(max, 0.0);
@@ -1032,13 +1130,13 @@ static void footPrint(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
           + f.name.split(GitWorks.safe_sep)[1] + ".footprint.gdata"));
       i = 0;
       for (int s = 0; s < lSizes[0].length; s++) {
-        vals[i++] = (allMax / 2) - (lSizes[1][s] / 2.0);
-        vals[i++] = (allMax / 2) + (lSizes[1][s] / 2.0);
-        pOut.println("" + ((max[c] / 2) - (lSizes[1][s] / 2.0)) + "\t"
-            + ((max[c] / 2) + (lSizes[1][s] / 2.0)) + "\t" + lSizes[0][s]
-            + "\t" + lTimes[0][s] + "\t" + lTimes[1][s]);
+        vals[i++] = allMax / 2 - lSizes[1][s] / 2.0;
+        vals[i++] = allMax / 2 + lSizes[1][s] / 2.0;
+        pOut.println("" + (max[c] / 2 - lSizes[1][s] / 2.0) + "\t"
+            + (max[c] / 2 + lSizes[1][s] / 2.0) + "\t" + lSizes[0][s]
+                + "\t" + lTimes[0][s] + "\t" + lTimes[1][s]);
       }
-      chart.addDataset(f.name + "_" + c, x, vals);
+      //      chart.addDataset(f.name + "_" + c, x, vals);
       pOut.flush();
     }
     catch (IOException ioe) {
@@ -1053,10 +1151,58 @@ static void footPrint(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
 }
 
 
+private static ArrayList<Motif> importPolygs(String name, MetaGraph mg, Graph<Commit, MetaEdge> g,
+    HashMap<String, ArrayList<MetaEdge>> twins) throws IOException {
+  ArrayList<Motif> res = new ArrayList<Motif>();
+  BufferedReader in = new BufferedReader(new FileReader(GitWorks.pwd + "/polygs/" + name + ".polygs"));
+  String line, tokens[];
+  Motif motif = null;
+  MetaEdge ed;
+  MutableObjectId id = new MutableObjectId();
+  ArrayList<MetaEdge> edges = new ArrayList<MetaEdge>();
+  ArrayList<Commit> nodes = new ArrayList<Commit>();
+  while ((line = in.readLine()) != null) {
+    tokens = line.split(" ");
+    if (tokens.length > 1) {
+      if (tokens[1].equals("|")) motif = new Motif(tokens[0].trim() + GitWorks.safe_sep + name.split(GitWorks.safe_sep)[1],
+          Integer.valueOf(tokens[2].trim()), Integer.valueOf(tokens[5].trim()));
+      else { // read a polyg in this line
+        nodes.clear();
+        for (String s : tokens) {
+          id.fromString(s);
+          GitWorks.addUnique(nodes, (Commit)GitWorks.getElement(mg.allCommits, id));
+        }
+        for (Commit c : nodes)
+          for (int e : c.edges) {
+            ed = mg.getEdge(e);
+            if (Collections.binarySearch(nodes, ed.first) >= 0
+                && Collections.binarySearch(nodes, ed.last) >= 0
+                && g.containsEdge(ed))
+              GitWorks.addUnique(edges, ed);
+          }
+        if (edges.size() != nodes.size())
+          System.err.println("ERROR : in " + name + "'s " + motif.name + " : "
+              + edges.size() + " (edges) != " + nodes.size() + " (nodes) !!!");
+        edges.trimToSize();
+        motif.addOccurrence(edges, twins);
+        edges = new ArrayList<MetaEdge>();
+      }
+    } else if (tokens[0].equals("----")) { // end of occurrences of a polig
+      motif.occurrences.trimToSize();
+      motif.cStats.trimToSize();
+      GitWorks.addUnique(res, motif);
+      motif = null; // trivial check: a malformed file causes a NullPointerException
+    }
+  }
+  in.close();
+  return res;
+}
+
+
 private static ArrayList<Motif> importMotifs(String name, MetaGraph mg,
     HashMap<String, ArrayList<MetaEdge>> twins) throws IOException {
   ArrayList<Motif> res = new ArrayList<Motif>();
-  BufferedReader in = new BufferedReader(new FileReader(GitWorks.pwd + "/motifs/" + name
+  BufferedReader in = new BufferedReader(new FileReader(GitWorks.pwd + "/motifs/" + name // XXX
       + ".motifs"));
   String line, tokens[];
   Motif motif = null;
@@ -1068,18 +1214,13 @@ private static ArrayList<Motif> importMotifs(String name, MetaGraph mg,
       if (tokens[0].equals("[")) { // read control stats // FIXME if repo name starts with [ ???
         for (int i = 1; i < tokens.length - 1; i++)
           motif.cStats.add(Double.valueOf(tokens[i]));
-        if (motif.cStats.size() == 5) { // no z-score, we should compute it and add it
-          computeScore = true;
-        } else {
-          motif.zScore = motif.cStats.remove(5).doubleValue();
-        }
-      } else if (tokens[1].equals("|")) { // name, numNodes and numEdges of the motif
-        motif = new Motif(tokens[0].trim() + GitWorks.safe_sep + name.split(GitWorks.safe_sep)[1],
-            Integer.valueOf(tokens[2].trim()), Integer.valueOf(tokens[5].trim()));
-      } else { // read a motif in this line
-        for (String s : tokens) {
+        if (motif.cStats.size() == 5) computeScore = true;
+        else motif.zScore = motif.cStats.remove(5).doubleValue();
+      } else if (tokens[1].equals("|")) motif = new Motif(tokens[0].trim() + GitWorks.safe_sep + name.split(GitWorks.safe_sep)[1],
+          Integer.valueOf(tokens[2].trim()), Integer.valueOf(tokens[5].trim()));
+      else { // read a motif in this line
+        for (String s : tokens)
           edges.add(mg.getEdge(Integer.valueOf(s)));
-        }
         edges.trimToSize();
         motif.addOccurrence(edges, twins);
         edges = new ArrayList<MetaEdge>();
@@ -1100,7 +1241,8 @@ private static ArrayList<Motif> importMotifs(String name, MetaGraph mg,
 
 
 static void exportGraph(String name, Graph<Commit, MetaEdge> g) throws IOException {
-  File gFile = new File(GitWorks.pwd + "/motifs/" + name + ".graph");
+  //File gFile = new File(GitWorks.pwd + "/motifs/" + name + ".graph"); // XXX
+  File gFile = new File(GitWorks.pwd + "/polygs/" + name + ".graph");
   PrintWriter pout = new PrintWriter(new BufferedWriter(new FileWriter(gFile)));
   pout.println("nodes " + g.getVertexCount());
   for (Commit c : g.getVertices())
@@ -1113,7 +1255,7 @@ static void exportGraph(String name, Graph<Commit, MetaEdge> g) throws IOExcepti
 }
 
 
-/************* FEATURES AND SUBGRAPH DISTRIBUTIONS ************/ // XXX
+/************* FEATURES AND SUBGRAPH DISTRIBUTIONS ************/
 
 static private boolean haveSameDistribution(double[] val1, double[] val2) {
   int min = 0, i, t;
@@ -1131,7 +1273,7 @@ static private boolean haveSameDistribution(double[] val1, double[] val2) {
     ds.addValue(d);
     if (d >= 2.0) v1f.addValue(d);
   }
-  System.err.println("unique count = " + v1f.getUniqueCount()); // XXX
+  System.err.println("unique count = " + v1f.getUniqueCount());
   v1 = new Comparable[v1f.getUniqueCount()];
   v1Freq = new double[v1.length];
   i = 0;
@@ -1192,9 +1334,7 @@ static private boolean haveSameDistribution(double[] val1, double[] val2) {
       }
     }
   }
-  if (min == 0) {
-    min = v1.length;
-  }
+  if (min == 0) min = v1.length;
 
   Number[][][] data = new Number[2][][];
   data[0] = new Number[2][v1.length];
@@ -1228,12 +1368,10 @@ static private boolean haveSameDistribution(double[] val1, double[] val2) {
 static private ArrayList<Commit> selectMeaningful(Dag d) {
   ArrayList<Commit> res = new ArrayList<Commit>(d.nodes.size() + d.leaves.size() + d.roots.size());
   res.addAll(d.nodes);
-  for (Commit c : d.leaves) {
+  for (Commit c : d.leaves)
     if (c.inDegree > 1) GitWorks.addUnique(res, c);
-  }
-  for (Commit c : d.roots) {
+  for (Commit c : d.roots)
     if (c.outDegree > 1) GitWorks.addUnique(res, c);
-  }
   return res;
 }
 
@@ -1258,7 +1396,7 @@ static void computeDistros(ArrayList<MetaGraph> mgs, FeatureList fl) {
     deg1 = new double[coms.size()];
     i = 0;
     for (Commit c : coms)
-      deg1[i++] = (double)(c.inDegree + c.outDegree);
+      deg1[i++] = c.inDegree + c.outDegree;
     if (haveSameDistribution(deg1, null))
       normal.add(mg);
     else
@@ -1278,7 +1416,7 @@ static void computeDistros(ArrayList<MetaGraph> mgs, FeatureList fl) {
     deg1 = new double[coms.size()];
     k = 0;
     for (Commit c : coms)
-      deg1[k++] = (double)(c.inDegree + c.outDegree);
+      deg1[k++] = c.inDegree + c.outDegree;
     for (j = i + 1; j < non_normal.size(); j++) {
       mg2 = non_normal.get(j);
       d = mg2.getDensestDag();
@@ -1290,7 +1428,7 @@ static void computeDistros(ArrayList<MetaGraph> mgs, FeatureList fl) {
       deg2 = new double[coms.size()];
       k = 0;
       for (Commit c : coms)
-        deg2[k++] = (double)(c.inDegree + c.outDegree);
+        deg2[k++] = c.inDegree + c.outDegree;
       if (haveSameDistribution(deg1, deg2))
         System.err.println("YES!!");
       else
@@ -1300,7 +1438,7 @@ static void computeDistros(ArrayList<MetaGraph> mgs, FeatureList fl) {
 }
 
 static final String[] resultNames = {"totCommits", "totNodes", "numLeaves", "maxInDegree",
-    "maxOutDegree", "medInDegree", "medOutDegree", "maxDegree", "medDegree", "maxDiff", "medDiff"};
+  "maxOutDegree", "medInDegree", "medOutDegree", "maxDegree", "medDegree", "maxDiff", "medDiff"};
 
 static final int totCommits = 0;
 
@@ -1364,10 +1502,10 @@ static void computeSubGraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> f
             + Results.ages + ").");
         continue;
       }
-      counter[Results.totCommits][i] = ((double)d.getNumCommits()) / mg.allCommits.size();
-      counter[Results.totNodes][i] = ((double)coms.size())
+      counter[Results.totCommits][i] = (double)d.getNumCommits() / mg.allCommits.size();
+      counter[Results.totNodes][i] = (double)coms.size()
           / (d.leaves.size() + d.nodes.size() + d.roots.size());
-      counter[Results.numLeaves][i] = ((double)d.leaves.size())
+      counter[Results.numLeaves][i] = (double)d.leaves.size()
           / (d.leaves.size() + d.nodes.size() + d.roots.size());
       inDegs = new int[coms.size()];
       outDegs = new int[coms.size()];
@@ -1382,9 +1520,9 @@ static void computeSubGraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> f
         outDegs[j] = c.outDegree;
         degs[j] = c.outDegree + c.inDegree;
         comIndx[j] = Collections.binarySearch(allComs, c);
-        comDiff[j] = ((double)f.acCommitDiffusion[comIndx[j]]) / f.commitDiffusion[comIndx[j]];
-        comRank[j] = f.commitRank[comIndx[j]]; // TODO
-        comAuthor[j] = f.commitAuthor[comIndx[j]]; // TODO
+        comDiff[j] = (double)f.acCommitDiffusion[comIndx[j]] / f.commitDiffusion[comIndx[j]];
+        comRank[j] = f.commitRank[comIndx[j]]; // FIXME ???
+        comAuthor[j] = f.commitAuthor[comIndx[j]]; // FIXME ???
         j++;
       }
       Arrays.sort(inDegs);
@@ -1403,9 +1541,8 @@ static void computeSubGraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> f
     counters.add(counter);
     f.deleteExtra();
     chart = new XYSeriesChart(new String[] {f.name, "Ages", "Values"});
-    for (i = 0; i < Results.resultNames.length; i++) {
+    for (i = 0; i < Results.resultNames.length; i++)
       chart.addDataset(resultNames[i], null, counter[i]);
-    }
     chart.plotWindow();
   }
 

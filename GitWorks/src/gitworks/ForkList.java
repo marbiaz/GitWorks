@@ -6,9 +6,9 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.ArrayList;
 
 
 public class ForkList extends ArrayList<ForkEntry> implements Externalizable {
@@ -119,7 +119,7 @@ public boolean addAll(java.util.Collection<? extends ForkEntry> f) {
 
 
 // return the result of binarySearch !!
-int addEntry(ForkEntry e) {
+public int addEntry(ForkEntry e) {
   int i = Collections.binarySearch(this, e);
   if (i < 0) {
     super.add(-i - 1, e);
@@ -161,8 +161,7 @@ public String toString() {
 }
 
 
-// it is meant to be used only once, i.e. if NO metaEntry has been added to this object yet.
-void addMetaEntries() throws Exception { //TODO: add some trimming to save space
+public void addMetaEntries() throws Exception { // TODO: add some trimming to save space
   ForkEntry roots[] = toArray(new ForkEntry[0]);
   for (int i = 0; i < roots.length; i++) {
     GitWorks.dfsVisit(Integer.MAX_VALUE, roots[i], ForkEntry.addTreeToList, this);

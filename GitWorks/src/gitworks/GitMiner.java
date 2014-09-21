@@ -238,7 +238,11 @@ private String printCommit(RevCommit c) {
 
 // print some structural info about the git repo
 String printRepoInfo() {
-  String out = "Current GIT_DIR : " + git.getRepository().getDirectory().getAbsolutePath() + "\n";
+  String out;
+  if (git == null) {
+    out = name + "'s repo is not loaded.";
+  } else {
+    out = "Current GIT_DIR : " + git.getRepository().getDirectory().getAbsolutePath() + "\n";
   StoredConfig config = git.getRepository().getConfig();
   Set<String> sections = config.getSections();
   Set<String> subsections;
@@ -249,6 +253,7 @@ String printRepoInfo() {
     for (String ss : subsections)
       out += ss + "  ";
     out += ">\n";
+  }
   }
   return out;
 }
@@ -622,7 +627,7 @@ String getInfo() {
 
 
 @SuppressWarnings("unchecked")
-void analyzeForkTree(ForkEntry fe) throws Exception {
+void analyzeUmbrella(ForkEntry fe) throws Exception {
 
   RevWalk walk = null;
 

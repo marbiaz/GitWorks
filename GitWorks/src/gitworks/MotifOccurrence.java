@@ -9,13 +9,13 @@ import java.util.HashMap;
 public class MotifOccurrence implements Comparable<MotifOccurrence> {
 
 Commit[] mNodes; // sorted array of terminal commits
-ArrayList<MetaEdge> mEdges; // sorted list of simple metaedges
-HashMap<MetaEdge, MetaEdge[]> parallels; // map of sorted arrays of parallel edges
+ArrayList<MetaEdge> mEdges; // sorted list of single metaedges (no parallel)
+HashMap<MetaEdge, MetaEdge[]> parallels; // map of sorted arrays of parallel edges (including edges in mEdges)
 int minLayer;
 int maxLayer;
 long minTimestamp;
 long maxTimestamp;
-int totEdges;
+int totEdges; // total number of edges (parallel included)
 int numParallels; // how many groups of parallels
 int weight;
 
