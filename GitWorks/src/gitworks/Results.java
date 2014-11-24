@@ -557,6 +557,10 @@ static void metagraphStats(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
       par = twins2motif(f.name, twins);
       try {
         // computeMotifs(f.name, g); // XXX
+        exportGraph(f.name, g);
+        Runtime.getRuntime()
+            .exec("java -jar " + GitWorks.pwd + "/GitWorks/lib/gitPatternFinder.jar " + f.name)
+                .waitFor();
         motifs = importPolygs(f.name, mg, g, twins); // importMotifs(f.name, mg, twins);
         motifs.add(par);
         rMotifs.add(motifs);
@@ -1154,7 +1158,7 @@ static void footPrint(ArrayList<MetaGraph> mgs, ArrayList<Features> fl) {
 private static ArrayList<Motif> importPolygs(String name, MetaGraph mg, Graph<Commit, MetaEdge> g,
     HashMap<String, ArrayList<MetaEdge>> twins) throws IOException {
   ArrayList<Motif> res = new ArrayList<Motif>();
-  BufferedReader in = new BufferedReader(new FileReader(GitWorks.pwd + "/polygs/" + name + ".polygs"));
+  BufferedReader in = new BufferedReader(new FileReader(GitWorks.pwd + "/" + name + ".polygs"));
   String line, tokens[];
   Motif motif = null;
   MetaEdge ed;
@@ -1242,7 +1246,7 @@ private static ArrayList<Motif> importMotifs(String name, MetaGraph mg,
 
 static void exportGraph(String name, Graph<Commit, MetaEdge> g) throws IOException {
   //File gFile = new File(GitWorks.pwd + "/motifs/" + name + ".graph"); // XXX
-  File gFile = new File(GitWorks.pwd + "/polygs/" + name + ".graph");
+  File gFile = new File(GitWorks.pwd + "/" + name + ".graph");
   PrintWriter pout = new PrintWriter(new BufferedWriter(new FileWriter(gFile)));
   pout.println("nodes " + g.getVertexCount());
   for (Commit c : g.getVertices())

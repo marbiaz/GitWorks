@@ -349,7 +349,7 @@ public static void main(String[] args) throws Exception {
       System.gc();
     }
   }
-  if (compuForkTrees && newAnalysis) {
+  if (computeUmbrellas && newAnalysis) {
     exportData(projects, trees_out_dir + "dumpFiles/" + "forkListDump");
   }
   if (compuFeatures && !resultsOnly) {
